@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "dexie": "^4.3.0",
+    "dexie-cloud-addon": "^4.3.9",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },

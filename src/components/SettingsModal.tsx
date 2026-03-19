@@ -33,7 +33,7 @@ export function SettingsModal({
   onAddContext, onDeleteContext,
   onClose,
 }: Props) {
-  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'backup'>('obszary');
+  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'backup' | 'sync'>('obszary');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [ctxName, setCtxName] = useState('');
@@ -50,10 +50,85 @@ export function SettingsModal({
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [autoBackup, setAutoBackup] = useState<ExportData | null>(null);
+  const [cloudUrl, setCloudUrl] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
+  const [urlDraft, setUrlDraft] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
+  const [urlError, setUrlError] = useState<string | null>(null);
+  const [syncEmail, setSyncEmail] = useState('');
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'sending' | 'awaiting-otp' | 'verifying'>('idle');
+  const [syncOtp, setSyncOtp] = useState('');
+  const [currentUser, setCurrentUser] = useState<{ userId?: string; email?: string; isLoggedIn: boolean } | null>(null);
 
   useEffect(() => {
     setAutoBackup(loadAutoBackup());
   }, []);
+
+  useEffect(() => {
+    if (!cloudUrl) return;
+    try {
+      const subscription = db.cloud.currentUser.subscribe((user) => {
+        setCurrentUser(user ? { userId: user.userId, email: user.email, isLoggedIn: !!user.userId } : { isLoggedIn: false });
+      });
+      return () => subscription.unsubscribe();
+    } catch {
+      // cloud not configured
+    }
+  }, [cloudUrl]);
+
+  const validateDexieCloudUrl = (url: string): string | null => {
+    if (!url) return null;
+    try {
+      const parsed = new URL(url);
+      if (!parsed.hostname.endsWith('.dexie.cloud')) return 'URL musi wskazywać na domenę *.dexie.cloud';
+      return null;
+    } catch {
+      return 'Nieprawidłowy URL';
+    }
+  };
+
+  const handleSaveUrl = () => {
+    const err = validateDexieCloudUrl(urlDraft);
+    if (err) { setUrlError(err); return; }
+    setUrlError(null);
+    if (urlDraft) {
+      localStorage.setItem('dopadone-cloud-url', urlDraft);
+    } else {
+      localStorage.removeItem('dopadone-cloud-url');
+    }
+    setCloudUrl(urlDraft);
+    window.location.reload();
+  };
+
+  const handleLogin = async () => {
+    if (!syncEmail.trim()) return;
+    setSyncStatus('sending');
+    try {
+      await db.cloud.login({ email: syncEmail.trim(), grant_type: 'otp' });
+      setSyncStatus('awaiting-otp');
+    } catch {
+      setSyncStatus('idle');
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    if (!syncOtp.trim()) return;
+    setSyncStatus('verifying');
+    try {
+      await db.cloud.login({ email: syncEmail.trim(), grant_type: 'otp', otp: syncOtp.trim() });
+      setSyncStatus('idle');
+      setSyncOtp('');
+    } catch {
+      setSyncStatus('awaiting-otp');
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await db.cloud.logout();
+      setCurrentUser(null);
+    } catch {
+      // ignore
+    }
+  };
 
   const handleDragStart = (index: number) => setDragIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -192,6 +267,12 @@ export function SettingsModal({
           >
             Kopia zapasowa
           </button>
+          <button
+            className={`settings-nav-item ${activeCategory === 'sync' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('sync')}
+          >
+            Synchronizacja
+          </button>
         </div>
 
         <div className="settings-content">
@@ -199,7 +280,8 @@ export function SettingsModal({
             <span>
               {activeCategory === 'obszary' ? 'Obszary i podobszary'
                 : activeCategory === 'konteksty' ? 'Konteksty'
-                : 'Kopia zapasowa'}
+                : activeCategory === 'backup' ? 'Kopia zapasowa'
+                : 'Synchronizacja'}
             </span>
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
@@ -466,6 +548,99 @@ export function SettingsModal({
                       </div>
                     </div>
                   </div>
+                )}
+              </div>
+            )}
+            {activeCategory === 'sync' && (
+              <div className="sync-section">
+                <label className="sync-label">URL bazy Dexie Cloud</label>
+                <p style={{ fontSize: '0.85em', opacity: 0.7, margin: '8px 0 12px' }}>
+                  Pobierz URL z <a href="https://dexie.cloud" target="_blank" rel="noreferrer">dexie.cloud</a> po założeniu bazy danych.
+                </p>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                  <input
+                    type="url"
+                    placeholder="https://xxx.dexie.cloud"
+                    value={urlDraft}
+                    onChange={e => { setUrlDraft(e.target.value); setUrlError(null); }}
+                    style={{ flex: 1, minWidth: '200px' }}
+                  />
+                  <button className="sync-btn" onClick={handleSaveUrl}>
+                    Zapisz i przeładuj
+                  </button>
+                </div>
+                {urlError && <p style={{ color: '#a33a2a', fontSize: '0.85em', margin: '4px 0 0' }}>{urlError}</p>}
+
+                {cloudUrl && (
+                  <>
+                    <div style={{ marginTop: '24px', padding: '12px', background: 'rgba(75, 90, 75, 0.08)', borderRadius: '6px' }}>
+                      <p style={{ margin: '0 0 6px', fontSize: '0.85em', fontWeight: 'bold' }}>Status połączenia:</p>
+                      {currentUser?.isLoggedIn ? (
+                        <div>
+                          <p style={{ margin: '0 0 10px', fontSize: '0.9em' }}>
+                            Zalogowany jako: {currentUser.email ?? currentUser.userId}
+                          </p>
+                          <button className="sync-btn" onClick={handleLogout}>
+                            Wyloguj
+                          </button>
+                        </div>
+                      ) : (
+                        <p style={{ margin: 0, fontSize: '0.9em', opacity: 0.7 }}>Niezalogowany</p>
+                      )}
+                    </div>
+
+                    {!currentUser?.isLoggedIn && (
+                      <div style={{ marginTop: '20px' }}>
+                        <label className="sync-label">Logowanie przez email (OTP)</label>
+                        {syncStatus === 'idle' && (
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                            <input
+                              type="email"
+                              placeholder="Email"
+                              value={syncEmail}
+                              onChange={e => setSyncEmail(e.target.value)}
+                              style={{ flex: 1 }}
+                            />
+                            <button className="sync-btn" onClick={handleLogin}>
+                              Wyślij kod
+                            </button>
+                          </div>
+                        )}
+                        {syncStatus === 'sending' && (
+                          <p style={{ fontSize: '0.9em', opacity: 0.7, marginTop: '8px' }}>Wysyłanie kodu…</p>
+                        )}
+                        {(syncStatus === 'awaiting-otp' || syncStatus === 'verifying') && (
+                          <div style={{ marginTop: '8px' }}>
+                            <p style={{ fontSize: '0.85em', opacity: 0.8, marginBottom: '8px' }}>
+                              Wpisz kod OTP z emaila ({syncEmail}):
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                              <input
+                                type="text"
+                                placeholder="Kod OTP"
+                                value={syncOtp}
+                                onChange={e => setSyncOtp(e.target.value)}
+                                style={{ flex: 1 }}
+                              />
+                              <button
+                                className="sync-btn"
+                                onClick={handleVerifyOtp}
+                                disabled={syncStatus === 'verifying'}
+                              >
+                                {syncStatus === 'verifying' ? 'Weryfikacja…' : 'Weryfikuj'}
+                              </button>
+                            </div>
+                            <button
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '0.85em', marginTop: '6px', padding: 0 }}
+                              onClick={() => { setSyncStatus('idle'); setSyncOtp(''); }}
+                            >
+                              Wróć
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             )}
