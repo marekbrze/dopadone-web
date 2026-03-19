@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Context, ExportData, ImportPreview, ImportMode } from '../types';
-import { db } from '../db';
+import { db, isCloudSchema } from '../db';
+import { migrateToCloudSchema } from '../utils/cloudMigration';
 import {
   exportAllData,
   parseImportFile,
@@ -57,6 +58,7 @@ export function SettingsModal({
   const [syncStatus, setSyncStatus] = useState<'idle' | 'sending' | 'awaiting-otp' | 'verifying'>('idle');
   const [syncOtp, setSyncOtp] = useState('');
   const [currentUser, setCurrentUser] = useState<{ userId?: string; email?: string; isLoggedIn: boolean } | null>(null);
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     setAutoBackup(loadAutoBackup());
@@ -553,6 +555,25 @@ export function SettingsModal({
             )}
             {activeCategory === 'sync' && (
               <div className="sync-section">
+                {!isCloudSchema() && (
+                  <div style={{ marginBottom: '24px', padding: '12px', background: 'rgba(163,58,42,0.08)', borderRadius: '6px', border: '1px solid rgba(163,58,42,0.2)' }}>
+                    <p style={{ margin: '0 0 8px', fontSize: '0.85em', fontWeight: 'bold' }}>Synchronizacja nieaktywna</p>
+                    <p style={{ margin: '0 0 12px', fontSize: '0.85em', opacity: 0.8 }}>
+                      Baza danych używa lokalnego schematu. Aby uruchomić sync między urządzeniami, wykonaj migrację — dane zostaną zachowane.
+                    </p>
+                    <button
+                      className="sync-btn"
+                      disabled={migrating}
+                      onClick={async () => {
+                        if (!confirm('Aplikacja wykona migrację i przeładuje stronę. Dane zostaną zachowane. Kontynuować?')) return;
+                        setMigrating(true);
+                        await migrateToCloudSchema();
+                      }}
+                    >
+                      {migrating ? 'Migrowanie…' : 'Włącz synchronizację'}
+                    </button>
+                  </div>
+                )}
                 <label className="sync-label">URL bazy Dexie Cloud</label>
                 <p style={{ fontSize: '0.85em', opacity: 0.7, margin: '8px 0 12px' }}>
                   Pobierz URL z <a href="https://dexie.cloud" target="_blank" rel="noreferrer">dexie.cloud</a> po założeniu bazy danych.

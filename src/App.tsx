@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { AppState, Project, Task } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context } from './types';
 import { loadData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
@@ -9,6 +9,8 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { saveAutoBackup } from './utils/dataPortability';
+import { completeMigrationIfPending } from './utils/cloudMigration';
+import { isCloudSchema } from './db';
 import './App.css';
 
 function newId() {
@@ -52,7 +54,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadData().then(d => {
+    completeMigrationIfPending().then(() => loadData()).then(d => {
       setData(d);
       setSelectedAreaId(d.areas[0]?.id ?? '');
     });
@@ -133,28 +135,52 @@ export default function App() {
   const addArea = async (name: string) => {
     const colors = ['#5c4a38', '#4a6852', '#6b5230', '#4a5c68', '#7a5c48'];
     const color = colors[data.areas.length % colors.length];
-    const area = { id: newId(), name, color };
-    await db.areas.put(area);
+    let area: Area;
+    if (isCloudSchema()) {
+      const id = await db.areas.add({ name, color }) as string;
+      area = { id, name, color };
+    } else {
+      area = { id: newId(), name, color };
+      await db.areas.put(area);
+    }
     setData(d => d ? ({ ...d, areas: [...d.areas, area] }) : d);
   };
 
   const addLifter = async (name: string) => {
-    const lifter = { id: newId(), name, areaId: selectedAreaId };
-    await db.lifters.put(lifter);
+    let lifter: Lifter;
+    if (isCloudSchema()) {
+      const id = await db.lifters.add({ name, areaId: selectedAreaId }) as string;
+      lifter = { id, name, areaId: selectedAreaId };
+    } else {
+      lifter = { id: newId(), name, areaId: selectedAreaId };
+      await db.lifters.put(lifter);
+    }
     setData(d => d ? ({ ...d, lifters: [...d.lifters, lifter] }) : d);
   };
 
   const addProject = async (name: string, parentProjectId: string | null = null) => {
-    const proj: Project = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
-    await db.projects.put(proj);
+    let proj: Project;
+    if (isCloudSchema()) {
+      const id = await db.projects.add({ name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId }) as string;
+      proj = { id, name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
+    } else {
+      proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
+      await db.projects.put(proj);
+    }
     setData(d => d ? ({ ...d, projects: [...d.projects, proj] }) : d);
   };
 
   // Tasks
   const addTask = async (name: string) => {
     if (!selectedProjectId) return;
-    const task: Task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
-    await db.tasks.put(task);
+    let task: Task;
+    if (isCloudSchema()) {
+      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null }) as string;
+      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
+    } else {
+      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
+      await db.tasks.put(task);
+    }
     setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
@@ -290,8 +316,14 @@ export default function App() {
 
   // Contexts
   const addContext = async (name: string, icon: string) => {
-    const ctx = { id: newId(), name, icon };
-    await db.contexts.put(ctx);
+    let ctx: Context;
+    if (isCloudSchema()) {
+      const id = await db.contexts.add({ name, icon }) as string;
+      ctx = { id, name, icon };
+    } else {
+      ctx = { id: newId(), name, icon };
+      await db.contexts.put(ctx);
+    }
     setData(d => d ? ({ ...d, contexts: [...d.contexts, ctx] }) : d);
   };
 
