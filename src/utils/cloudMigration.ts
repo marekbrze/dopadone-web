@@ -30,6 +30,15 @@ export async function completeMigrationIfPending(): Promise<void> {
       areas: Area[]; lifters: Lifter[]; projects: Project[]; tasks: Task[]; contexts: Context[]
     }
 
+    // Wipe any existing remote data before pushing local records
+    await Promise.all([
+      db.tasks.clear(),
+      db.contexts.clear(),
+      db.projects.clear(),
+      db.lifters.clear(),
+      db.areas.clear(),
+    ])
+
     const areaIdMap = new Map<string, string>()
     for (const area of areas) {
       const newId = await db.areas.add({ name: area.name, color: area.color }) as string
@@ -78,6 +87,12 @@ export async function completeMigrationIfPending(): Promise<void> {
   } catch (err) {
     console.error('Migration restore failed:', err)
   }
+}
+
+export async function connectToExistingCloud(): Promise<void> {
+  localStorage.setItem('dopadone-schema', 'cloud')
+  await db.delete()
+  window.location.reload()
 }
 
 function sortByParent(projects: Project[]): Project[] {

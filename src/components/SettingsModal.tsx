@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Context, ExportData, ImportPreview, ImportMode } from '../types';
 import { db, isCloudSchema } from '../db';
-import { migrateToCloudSchema } from '../utils/cloudMigration';
+import { migrateToCloudSchema, connectToExistingCloud } from '../utils/cloudMigration';
 import {
   exportAllData,
   parseImportFile,
@@ -556,22 +556,42 @@ export function SettingsModal({
             {activeCategory === 'sync' && (
               <div className="sync-section">
                 {!isCloudSchema() && (
-                  <div style={{ marginBottom: '24px', padding: '12px', background: 'rgba(163,58,42,0.08)', borderRadius: '6px', border: '1px solid rgba(163,58,42,0.2)' }}>
-                    <p style={{ margin: '0 0 8px', fontSize: '0.85em', fontWeight: 'bold' }}>Synchronizacja nieaktywna</p>
-                    <p style={{ margin: '0 0 12px', fontSize: '0.85em', opacity: 0.8 }}>
-                      Baza danych używa lokalnego schematu. Aby uruchomić sync między urządzeniami, wykonaj migrację — dane zostaną zachowane.
-                    </p>
-                    <button
-                      className="sync-btn"
-                      disabled={migrating}
-                      onClick={async () => {
-                        if (!confirm('Aplikacja wykona migrację i przeładuje stronę. Dane zostaną zachowane. Kontynuować?')) return;
-                        setMigrating(true);
-                        await migrateToCloudSchema();
-                      }}
-                    >
-                      {migrating ? 'Migrowanie…' : 'Włącz synchronizację'}
-                    </button>
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ margin: '0 0 12px', fontSize: '0.85em', fontWeight: 'bold' }}>Włącz synchronizację</p>
+                    <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                      <div style={{ flex: 1, minWidth: '200px', padding: '12px', background: 'rgba(75,90,75,0.08)', borderRadius: '6px', border: '1px solid rgba(75,90,75,0.2)' }}>
+                        <p style={{ margin: '0 0 6px', fontSize: '0.85em', fontWeight: 'bold' }}>Wyślij lokalne dane do chmury</p>
+                        <p style={{ margin: '0 0 12px', fontSize: '0.82em', opacity: 0.8 }}>
+                          Zakładasz nową bazę w Dexie Cloud. Twoje lokalne dane zostaną tam przesłane.
+                        </p>
+                        <button
+                          className="sync-btn"
+                          disabled={migrating}
+                          onClick={async () => {
+                            if (!confirm('Aplikacja wykona migrację i przeładuje stronę.\n\nUWAGA: Wszelkie dane już istniejące w zdalnej bazie zostaną usunięte i zastąpione danymi lokalnymi.\n\nKontynuować?')) return;
+                            setMigrating(true);
+                            await migrateToCloudSchema();
+                          }}
+                        >
+                          {migrating ? 'Migrowanie…' : 'Migruj i wyślij'}
+                        </button>
+                      </div>
+                      <div style={{ flex: 1, minWidth: '200px', padding: '12px', background: 'rgba(163,58,42,0.08)', borderRadius: '6px', border: '1px solid rgba(163,58,42,0.2)' }}>
+                        <p style={{ margin: '0 0 6px', fontSize: '0.85em', fontWeight: 'bold' }}>Pobierz dane z chmury</p>
+                        <p style={{ margin: '0 0 12px', fontSize: '0.82em', opacity: 0.8 }}>
+                          Podłączasz się do bazy, która już ma dane. Lokalne dane zostaną usunięte i zastąpione tymi z serwera.
+                        </p>
+                        <button
+                          className="sync-btn"
+                          onClick={async () => {
+                            if (!confirm('Lokalne dane zostaną usunięte i zastąpione danymi z chmury. Kontynuować?')) return;
+                            await connectToExistingCloud();
+                          }}
+                        >
+                          Połącz i zastąp
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 )}
                 <label className="sync-label">URL bazy Dexie Cloud</label>
