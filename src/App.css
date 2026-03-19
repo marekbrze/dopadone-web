@@ -5,25 +5,36 @@
 }
 
 :root {
+  /* Paper palette */
   --bg: #f4efe5;
   --surface: #faf7f0;
   --surface2: #ece7da;
   --border: #cfc7b4;
   --border-light: #e2dbd0;
+
+  /* Text — all pass WCAG AA on --bg (#f4efe5, luminance 0.874)
+     --text        #1c1712  contrast 17.2:1  ✓ AAA
+     --text-muted  #5c4e40  contrast  7.1:1  ✓ AA
+     --text-faint  #736151  contrast  5.2:1  ✓ AA               */
   --text: #1c1712;
-  --text-muted: #8c7d6c;
-  --text-faint: #b8a898;
+  --text-muted: #5c4e40;
+  --text-faint: #736151;
+
+  /* Accent */
   --accent: #5c4a38;
-  --accent-soft: #8b7355;
+  --accent-soft: #7a6150;
+
   --radius: 1px;
 }
 
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Lora', Georgia, 'Times New Roman', serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-weight: 400;
   height: 100vh;
   overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
 #root {
@@ -43,23 +54,23 @@ body {
 .app-header {
   display: flex;
   align-items: center;
-  gap: 0;
   padding: 0 28px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   height: 52px;
   flex-shrink: 0;
+  gap: 0;
 }
 
 .logo {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-style: italic;
-  font-weight: 500;
-  font-size: 18px;
-  letter-spacing: 0.01em;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   color: var(--text);
   white-space: nowrap;
-  margin-right: 24px;
+  margin-right: 28px;
   flex-shrink: 0;
 }
 
@@ -80,7 +91,7 @@ body {
   border-bottom: 2px solid transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 13px;
   font-weight: 400;
   padding: 18px 18px 16px;
@@ -101,7 +112,6 @@ body {
 .area-tab.add-tab {
   color: var(--text-faint);
   font-size: 12px;
-  font-style: italic;
 }
 
 .area-tab.add-tab:hover { color: var(--text-muted); }
@@ -114,10 +124,10 @@ body {
   border-radius: var(--radius);
   color: var(--text-muted);
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
-  font-weight: 400;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   padding: 5px 13px;
   white-space: nowrap;
@@ -166,11 +176,11 @@ body {
 }
 
 .column-header h2 {
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: var(--text-muted);
 }
 
@@ -211,7 +221,7 @@ body {
 
 .empty-hint {
   color: var(--text-faint);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 13px;
   font-style: italic;
   padding: 20px 0;
@@ -222,12 +232,13 @@ body {
 
 .list-item {
   padding: 10px 0;
+  padding-left: 2px;
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 400;
   border-left: 2px solid transparent;
-  padding-left: 2px;
-  transition: color 0.1s, padding-left 0.1s;
+  transition: color 0.1s, padding-left 0.15s;
   color: var(--text);
   line-height: 1.4;
 }
@@ -238,6 +249,7 @@ body {
   border-left-color: var(--accent);
   padding-left: 10px;
   color: var(--accent);
+  font-weight: 500;
 }
 
 /* ── Project items ───────────────────────────────────────── */
@@ -251,8 +263,9 @@ body {
   border-bottom: 1px solid var(--border-light);
   cursor: pointer;
   font-size: 14px;
+  font-weight: 400;
   border-left: 2px solid transparent;
-  transition: color 0.1s, padding-left 0.1s;
+  transition: color 0.1s, padding-left 0.15s;
   color: var(--text);
   line-height: 1.4;
 }
@@ -263,6 +276,7 @@ body {
   border-left-color: var(--accent);
   padding-left: 10px;
   color: var(--accent);
+  font-weight: 500;
 }
 
 .tree-icon {
@@ -279,16 +293,15 @@ body {
   border-left: 2px solid transparent;
   padding: 12px 0;
   padding-left: 2px;
-  margin-bottom: 0;
   cursor: pointer;
-  transition: background 0.1s, padding-left 0.1s;
+  transition: background 0.1s, padding-left 0.15s;
 }
 
 .task-item:hover {
   background: rgba(92, 74, 56, 0.04);
 }
 
-.task-item.done { opacity: 0.38; }
+.task-item.done { opacity: 0.40; }
 
 .task-item.selected {
   border-left-color: var(--accent);
@@ -308,12 +321,12 @@ body {
   accent-color: var(--accent);
   cursor: pointer;
   flex-shrink: 0;
-  opacity: 0.7;
 }
 
 .task-name {
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 14px;
+  font-weight: 400;
   flex: 1;
   color: var(--text);
   line-height: 1.4;
@@ -329,7 +342,6 @@ body {
   height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
-  opacity: 0.75;
 }
 
 /* ── Effort pills ────────────────────────────────────────── */
@@ -345,10 +357,10 @@ body {
   border-radius: var(--radius);
   color: var(--text-muted);
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.06em;
   padding: 3px 6px;
   transition: background 0.1s, color 0.1s, border-color 0.1s;
 }
@@ -369,10 +381,10 @@ body {
 
 .tag {
   border-radius: var(--radius);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   text-transform: uppercase;
   padding: 1px 6px;
 }
@@ -380,13 +392,13 @@ body {
 .effort-tag {
   background: rgba(92, 74, 56, 0.08);
   color: var(--accent-soft);
-  border: 1px solid rgba(92, 74, 56, 0.18);
+  border: 1px solid rgba(92, 74, 56, 0.20);
 }
 
 .context-tag {
   background: rgba(74, 96, 82, 0.08);
-  color: #4a6852;
-  border: 1px solid rgba(74, 96, 82, 0.18);
+  color: #3e6047;
+  border: 1px solid rgba(74, 96, 82, 0.20);
 }
 
 .delete-btn {
@@ -401,7 +413,7 @@ body {
   flex-shrink: 0;
 }
 
-.delete-btn:hover { color: #a33a2a; }
+.delete-btn:hover { color: #9b3226; }
 
 /* ── Modal ───────────────────────────────────────────────── */
 
@@ -428,10 +440,11 @@ body {
 }
 
 .modal h3 {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 17px;
-  font-weight: 500;
-  font-style: italic;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
   margin-bottom: 24px;
   color: var(--text);
 }
@@ -443,8 +456,9 @@ body {
   border-bottom: 1px solid var(--border);
   border-radius: 0;
   color: var(--text);
-  font-family: 'Lora', Georgia, serif;
-  font-size: 14px;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 300;
   padding: 8px 0;
   outline: none;
   margin-bottom: 28px;
@@ -457,7 +471,6 @@ body {
 
 .modal input[type="text"]::placeholder {
   color: var(--text-faint);
-  font-style: italic;
 }
 
 .modal-actions {
@@ -470,10 +483,10 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   padding: 7px 18px;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
@@ -514,10 +527,12 @@ body {
 }
 
 .panel-header h3 {
-  font-family: 'Playfair Display', Georgia, serif;
-  font-size: 17px;
-  font-weight: 500;
-  font-style: italic;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text);
 }
 
 .close-btn {
@@ -551,12 +566,13 @@ body {
 
 .context-row:last-child { border-bottom: none; }
 
-.context-icon { font-size: 17px; }
+.context-icon { font-size: 16px; }
 
 .context-name {
   flex: 1;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 14px;
+  font-weight: 400;
 }
 
 .emoji-picker {
@@ -571,7 +587,7 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   cursor: pointer;
-  font-size: 17px;
+  font-size: 16px;
   padding: 4px 6px;
   transition: background 0.1s, border-color 0.1s;
 }
@@ -601,8 +617,9 @@ body {
   border-bottom: 1px solid var(--border);
   border-radius: 0;
   color: var(--text);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 14px;
+  font-weight: 300;
   padding: 8px 0;
   outline: none;
 }
@@ -611,7 +628,6 @@ body {
 
 .context-add-row input::placeholder {
   color: var(--text-faint);
-  font-style: italic;
 }
 
 .context-add-row button {
@@ -620,10 +636,10 @@ body {
   border-radius: var(--radius);
   color: var(--surface);
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   padding: 7px 16px;
   transition: opacity 0.15s;
@@ -648,16 +664,16 @@ body {
   padding: 14px 20px 12px;
   border-top: 2px solid var(--border);
   border-bottom: 1px solid var(--border-light);
-  flex-shrink: 0;
   background: var(--surface);
+  flex-shrink: 0;
 }
 
 .detail-title {
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   color: var(--text-muted);
 }
 
@@ -679,12 +695,12 @@ body {
 }
 
 .detail-field label {
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.10em;
-  color: var(--text-faint);
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
 }
 
 .detail-name-input {
@@ -693,9 +709,9 @@ body {
   border-bottom: 1px solid var(--border-light);
   border-radius: 0;
   color: var(--text);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 400;
   padding: 6px 0;
   outline: none;
   transition: border-color 0.15s;
@@ -708,7 +724,7 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 14px;
   cursor: pointer;
   text-transform: none;
@@ -721,7 +737,6 @@ body {
   height: 14px;
   accent-color: var(--accent);
   cursor: pointer;
-  opacity: 0.7;
 }
 
 .detail-select {
@@ -729,7 +744,7 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   color: var(--text);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 13px;
   font-weight: 400;
   cursor: pointer;
@@ -750,15 +765,15 @@ body {
   border: 1px solid var(--border-light);
   border-radius: var(--radius);
   color: var(--text);
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 13px;
-  font-style: italic;
+  font-weight: 300;
   padding: 10px 12px;
   outline: none;
   resize: vertical;
   min-height: 100px;
   transition: border-color 0.15s;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 
 .detail-notes:focus { border-color: var(--accent); }
@@ -769,14 +784,14 @@ body {
 
 .delete-task-btn {
   background: transparent;
-  border: 1px solid rgba(163, 58, 42, 0.22);
+  border: 1px solid rgba(155, 50, 38, 0.25);
   border-radius: var(--radius);
-  color: #a33a2a;
+  color: #9b3226;
   cursor: pointer;
-  font-family: 'Lora', Georgia, serif;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
   font-weight: 600;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
   padding: 7px 14px;
   transition: background 0.15s, border-color 0.15s;
@@ -785,6 +800,6 @@ body {
 }
 
 .delete-task-btn:hover {
-  background: rgba(163, 58, 42, 0.06);
-  border-color: rgba(163, 58, 42, 0.38);
+  background: rgba(155, 50, 38, 0.06);
+  border-color: rgba(155, 50, 38, 0.40);
 }
