@@ -1,4 +1,5 @@
 import type { Project } from '../types';
+import { RowMenuButton } from './RowMenuButton';
 
 interface Props {
   projects: Project[];
@@ -6,10 +7,11 @@ interface Props {
   selectedProjectId: string | null;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (id: string) => void;
   depth?: number;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, depth = 0 }: Props) {
+export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onEdit, depth = 0 }: Props) {
   return (
     <>
       {projects.map(project => {
@@ -26,9 +28,10 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 {children.length > 0 && <span className="tree-icon">▸</span>}
                 <span>{project.name}</span>
               </div>
-              {onDelete && (
-                <button className="delete-btn" onClick={e => { e.stopPropagation(); onDelete(project.id); }}>✕</button>
-              )}
+              <RowMenuButton
+                onEdit={onEdit ? () => onEdit(project.id) : undefined}
+                onDelete={onDelete ? () => onDelete(project.id) : undefined}
+              />
             </div>
             {children.length > 0 && (
               <ProjectTree
@@ -37,6 +40,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 selectedProjectId={selectedProjectId}
                 onSelect={onSelect}
                 onDelete={onDelete}
+                onEdit={onEdit}
                 depth={depth + 1}
               />
             )}

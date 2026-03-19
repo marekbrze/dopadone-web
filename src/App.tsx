@@ -5,6 +5,8 @@ import { AddItemModal } from './components/AddItemModal';
 import { ProjectTree } from './components/ProjectTree';
 import { SettingsModal } from './components/SettingsModal';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
+import { RowMenuButton } from './components/RowMenuButton';
+import { ItemDetailPanel } from './components/ItemDetailPanel';
 import './App.css';
 
 function uid() {
@@ -23,6 +25,8 @@ export default function App() {
   const [selectedLifterId, setSelectedLifterId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
 
   useEffect(() => { saveData(data); }, [data]);
@@ -32,16 +36,22 @@ export default function App() {
     setSelectedLifterId(null);
     setSelectedProjectId(null);
     setSelectedTaskId(null);
+    setEditingLifterId(null);
+    setEditingProjectId(null);
   };
 
   const selectLifter = (id: string) => {
     setSelectedLifterId(prev => prev === id ? null : id);
     setSelectedProjectId(null);
     setSelectedTaskId(null);
+    setEditingLifterId(null);
+    setEditingProjectId(null);
   };
 
   const selectTask = (id: string) => {
     setSelectedTaskId(prev => prev === id ? null : id);
+    setEditingLifterId(null);
+    setEditingProjectId(null);
   };
 
   const lifters = data.lifters.filter(l => l.areaId === selectedAreaId);
@@ -115,6 +125,7 @@ export default function App() {
       setSelectedProjectId(null);
       setSelectedTaskId(null);
     }
+    if (editingProjectId && ids.includes(editingProjectId)) setEditingProjectId(null);
   };
 
   const deleteLifter = (id: string) => {
@@ -133,6 +144,25 @@ export default function App() {
       setSelectedProjectId(null);
       setSelectedTaskId(null);
     }
+    if (editingLifterId === id) setEditingLifterId(null);
+  };
+
+  const renameLifter = (id: string, name: string) =>
+    setData(d => ({ ...d, lifters: d.lifters.map(l => l.id === id ? { ...l, name } : l) }));
+
+  const renameProject = (id: string, name: string) =>
+    setData(d => ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, name } : p) }));
+
+  const openLifterEdit = (id: string) => {
+    setEditingLifterId(id);
+    setEditingProjectId(null);
+    setSelectedTaskId(null);
+  };
+
+  const openProjectEdit = (id: string) => {
+    setEditingProjectId(id);
+    setEditingLifterId(null);
+    setSelectedTaskId(null);
   };
 
   const deleteArea = (id: string) => {
@@ -151,6 +181,15 @@ export default function App() {
     if (selectedAreaId === id) {
       const remaining = data.areas.filter(a => a.id !== id);
       selectArea(remaining[0]?.id ?? '');
+    } else {
+      // Clear editing state if the edited item belongs to the deleted area
+      setData(d => {
+        const lifterIds = new Set(d.lifters.filter(l => l.areaId === id).map(l => l.id));
+        const projectIds = new Set(d.projects.filter(p => p.areaId === id).map(p => p.id));
+        if (editingLifterId && lifterIds.has(editingLifterId)) setEditingLifterId(null);
+        if (editingProjectId && projectIds.has(editingProjectId)) setEditingProjectId(null);
+        return d;
+      });
     }
   };
 
@@ -198,7 +237,7 @@ export default function App() {
         </button>
       </header>
 
-      <main className={`columns${selectedTask ? ' panel-open' : ''}`}>
+      <main className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}>
         {/* Column 1: Lifters */}
         <section className="column">
           <div className="column-header" style={{ borderTopColor: selectedArea?.color }}>
@@ -216,7 +255,10 @@ export default function App() {
                 >
                   {l.name}
                 </div>
-                <button className="delete-btn" onClick={e => { e.stopPropagation(); deleteLifter(l.id); }}>✕</button>
+                <RowMenuButton
+                  onEdit={() => openLifterEdit(l.id)}
+                  onDelete={() => deleteLifter(l.id)}
+                />
               </div>
             ))}
           </div>
@@ -243,6 +285,7 @@ export default function App() {
               selectedProjectId={selectedProjectId}
               onSelect={id => { setSelectedProjectId(prev => prev === id ? null : id); setSelectedTaskId(null); }}
               onDelete={deleteProject}
+              onEdit={openProjectEdit}
             />
           </div>
         </section>
@@ -285,7 +328,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* Column 4: Task Detail Panel */}
+        {/* Column 4: Task Detail Panel / Item Edit Panel */}
         {selectedTask && (
           <TaskDetailPanel
             task={selectedTask}
@@ -295,6 +338,30 @@ export default function App() {
             onClose={() => setSelectedTaskId(null)}
           />
         )}
+        {!selectedTask && editingLifterId && (() => {
+          const lifter = data.lifters.find(l => l.id === editingLifterId);
+          return lifter ? (
+            <ItemDetailPanel
+              title="Podobszar"
+              name={lifter.name}
+              onRename={n => renameLifter(editingLifterId, n)}
+              onDelete={() => { deleteLifter(editingLifterId); setEditingLifterId(null); }}
+              onClose={() => setEditingLifterId(null)}
+            />
+          ) : null;
+        })()}
+        {!selectedTask && !editingLifterId && editingProjectId && (() => {
+          const project = data.projects.find(p => p.id === editingProjectId);
+          return project ? (
+            <ItemDetailPanel
+              title="Projekt"
+              name={project.name}
+              onRename={n => renameProject(editingProjectId, n)}
+              onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
+              onClose={() => setEditingProjectId(null)}
+            />
+          ) : null;
+        })()}
       </main>
 
       {modal === 'area' && <AddItemModal title="Nowy obszar" placeholder="np. Finanse" onAdd={addArea} onClose={() => setModal(null)} />}
