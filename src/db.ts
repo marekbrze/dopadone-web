@@ -3,7 +3,6 @@ import dexieCloud from 'dexie-cloud-addon'
 import type { Area, Lifter, Project, Task, Context } from './types'
 
 const getCloudUrl = () => localStorage.getItem('dopadone-cloud-url');
-export const isSchemaV2 = () => localStorage.getItem('dopadone-schema') === 'v2';
 
 export class DopadoneDB extends Dexie {
   areas!: Table<Area>
@@ -14,18 +13,18 @@ export class DopadoneDB extends Dexie {
 
   constructor() {
     const cloudUrl = getCloudUrl();
-    const v2 = isSchemaV2();
-    // @id syntax requires the addon even without a cloud URL configured
-    super('dopadone', { addons: (v2 || !!cloudUrl) ? [dexieCloud] : [] });
-    // v2: @id = cloud-synced auto-generated primary key (requires fresh DB — see cloudMigration.ts)
-    // v1: &id = explicit unique primary key (legacy, no cloud sync)
-    this.version(1).stores(v2 ? {
-      areas:    '@id, name',
-      lifters:  '@id, areaId',
-      projects: '@id, areaId, lifterId, parentProjectId',
-      tasks:    '@id, projectId, contextId, done',
-      contexts: '@id, name',
-    } : {
+    super('dopadone', { addons: cloudUrl ? [dexieCloud] : [] });
+    // v2: plain 'id' primary key — Dexie Cloud syncs client-generated UUIDs fine.
+    // Migration from v1 (&id → id) just removes the redundant unique index; no primary key
+    // type change, so Dexie handles it automatically without errors.
+    this.version(2).stores({
+      areas:    'id, name',
+      lifters:  'id, areaId',
+      projects: 'id, areaId, lifterId, parentProjectId',
+      tasks:    'id, projectId, contextId, done',
+      contexts: 'id, name',
+    });
+    this.version(1).stores({
       areas:    '&id, name',
       lifters:  '&id, areaId',
       projects: '&id, areaId, lifterId, parentProjectId',
