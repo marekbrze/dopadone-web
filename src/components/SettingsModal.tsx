@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Context, ExportData, ImportPreview, ImportMode } from '../types';
-import { db } from '../db';
+import { db, isSchemaV2 } from '../db';
+import { migrateToCloudSchema } from '../utils/cloudMigration';
 import {
   exportAllData,
   parseImportFile,
@@ -57,6 +58,7 @@ export function SettingsModal({
   const [syncStatus, setSyncStatus] = useState<'idle' | 'sending' | 'awaiting-otp' | 'verifying'>('idle');
   const [syncOtp, setSyncOtp] = useState('');
   const [currentUser, setCurrentUser] = useState<{ userId?: string; email?: string; isLoggedIn: boolean } | null>(null);
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     setAutoBackup(loadAutoBackup());
@@ -553,6 +555,29 @@ export function SettingsModal({
             )}
             {activeCategory === 'sync' && (
               <div className="sync-section">
+                <label className="sync-label">Schemat bazy danych</label>
+                {isSchemaV2() ? (
+                  <div style={{ marginBottom: '24px', padding: '10px 12px', background: 'rgba(75, 90, 75, 0.1)', borderRadius: '6px', fontSize: '0.85em' }}>
+                    Schemat v2 (@id) — synchronizacja z chmurą aktywna.
+                  </div>
+                ) : (
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ fontSize: '0.85em', opacity: 0.7, margin: '8px 0 10px' }}>
+                      Aktualna baza używa schematu v1 (&amp;id). Aby synchronizacja z Dexie Cloud działała, wykonaj jednorazową migrację — dane zostaną zachowane.
+                    </p>
+                    <button
+                      className="sync-btn"
+                      disabled={migrating}
+                      onClick={async () => {
+                        if (!confirm('Aplikacja wykona migrację bazy danych i przeładuje stronę. Dane zostaną zachowane. Kontynuować?')) return;
+                        setMigrating(true);
+                        await migrateToCloudSchema();
+                      }}
+                    >
+                      {migrating ? 'Migrowanie…' : 'Migruj do schematu v2'}
+                    </button>
+                  </div>
+                )}
                 <label className="sync-label">URL bazy Dexie Cloud</label>
                 <p style={{ fontSize: '0.85em', opacity: 0.7, margin: '8px 0 12px' }}>
                   Pobierz URL z <a href="https://dexie.cloud" target="_blank" rel="noreferrer">dexie.cloud</a> po założeniu bazy danych.

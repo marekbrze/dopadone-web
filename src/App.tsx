@@ -9,6 +9,7 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { saveAutoBackup } from './utils/dataPortability';
+import { completeMigrationIfPending } from './utils/cloudMigration';
 import './App.css';
 
 function newId() {
@@ -52,7 +53,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    loadData().then(d => {
+    completeMigrationIfPending().then(() => loadData()).then(d => {
       setData(d);
       setSelectedAreaId(d.areas[0]?.id ?? '');
     });
