@@ -14,14 +14,6 @@ export class DopadoneDB extends Dexie {
   constructor() {
     const cloudUrl = getCloudUrl();
     super('dopadone', { addons: cloudUrl ? [dexieCloud] : [] });
-    // Version 2: migration from &id (v1) to @id (v2) schema for cloud sync support
-    this.version(2).stores({
-      areas:    '@id, name',
-      lifters:  '@id, areaId',
-      projects: '@id, areaId, lifterId, parentProjectId',
-      tasks:    '@id, projectId, contextId, done',
-      contexts: '@id, name',
-    });
     this.version(1).stores({
       areas:    '&id, name',
       lifters:  '&id, areaId',
