@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import type { Task, Context, Effort } from '../types';
 
 const EFFORTS: { value: Effort; label: string }[] = [
@@ -38,6 +38,17 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose }:
     setLocalNotes(task.notes);
   }, [task.id]);
 
+  const handleKeydown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [handleKeydown]);
+
   const commitName = () => {
     const trimmed = localName.trim();
     if (trimmed && trimmed !== task.name) {
@@ -54,9 +65,14 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose }:
   };
 
   return (
-    <div className="task-detail-panel">
+    <div
+      className="task-detail-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="task-detail-title"
+    >
       <div className="detail-header">
-        <span className="detail-title">Szczegóły zadania</span>
+        <span className="detail-title" id="task-detail-title">Szczegóły zadania</span>
         <button className="close-btn" onClick={onClose}>✕</button>
       </div>
       <div className="task-detail-body">

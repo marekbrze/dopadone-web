@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Props {
   title: string;
@@ -15,6 +15,17 @@ export function ItemDetailPanel({ title, name, onRename, onDelete, onClose }: Pr
     setLocalName(name);
   }, [name]);
 
+  const handleKeydown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  }, [onClose]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeydown);
+    return () => document.removeEventListener('keydown', handleKeydown);
+  }, [handleKeydown]);
+
   const commit = () => {
     const trimmed = localName.trim();
     if (trimmed && trimmed !== name) {
@@ -25,9 +36,14 @@ export function ItemDetailPanel({ title, name, onRename, onDelete, onClose }: Pr
   };
 
   return (
-    <div className="task-detail-panel">
+    <div
+      className="task-detail-panel item-detail-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="item-detail-title"
+    >
       <div className="detail-header">
-        <span className="detail-title">{title}</span>
+        <span className="detail-title" id="item-detail-title">{title}</span>
         <button className="close-btn" onClick={onClose}>✕</button>
       </div>
       <div className="task-detail-body">

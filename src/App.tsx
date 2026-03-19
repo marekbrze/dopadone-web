@@ -30,6 +30,26 @@ export default function App() {
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
+  const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
+
+  const toggleColumn = (id: string) => {
+    setExpandedColumns(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleColumnKeydown = (e: React.KeyboardEvent, id: string) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      toggleColumn(id);
+    }
+  };
 
   useEffect(() => {
     loadData().then(d => {
@@ -313,12 +333,29 @@ export default function App() {
 
       <main className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}>
         {/* Column 1: Lifters */}
-        <section className="column">
-          <div className="column-header" style={{ borderTopColor: selectedArea?.color }}>
-            <h2>Podobszary</h2>
-            <button onClick={() => setModal('lifter')}>+</button>
+        <section
+          className={`column ${expandedColumns.has('lifters') ? 'expanded' : ''}`}
+          id="column-lifters"
+        >
+          <div
+            className="column-header"
+            style={{ borderTopColor: selectedArea?.color }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={expandedColumns.has('lifters')}
+            aria-controls="column-body-lifters"
+            onClick={() => toggleColumn('lifters')}
+            onKeyDown={e => handleColumnKeydown(e, 'lifters')}
+          >
+            <h2 id="column-header-lifters">Podobszary</h2>
+            <button onClick={e => { e.stopPropagation(); setModal('lifter'); }}>+</button>
           </div>
-          <div className="column-body">
+          <div
+            className="column-body"
+            id="column-body-lifters"
+            role="region"
+            aria-labelledby="column-header-lifters"
+          >
             {lifters.length === 0 && <p className="empty-hint">Brak podobszarów w tym obszarze</p>}
             {lifters.map(l => (
               <div key={l.id} className="list-item-row">
@@ -339,17 +376,34 @@ export default function App() {
         </section>
 
         {/* Column 2: Projects */}
-        <section className="column">
-          <div className="column-header" style={{ borderTopColor: selectedArea?.color }}>
-            <h2>Projekty</h2>
+        <section
+          className={`column ${expandedColumns.has('projects') ? 'expanded' : ''}`}
+          id="column-projects"
+        >
+          <div
+            className="column-header"
+            style={{ borderTopColor: selectedArea?.color }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={expandedColumns.has('projects')}
+            aria-controls="column-body-projects"
+            onClick={() => toggleColumn('projects')}
+            onKeyDown={e => handleColumnKeydown(e, 'projects')}
+          >
+            <h2 id="column-header-projects">Projekty</h2>
             <div className="header-actions">
               {selectedProjectId && (
-                <button onClick={() => setModal('subproject')} title="Dodaj podprojekt">⤷</button>
+                <button onClick={e => { e.stopPropagation(); setModal('subproject'); }} title="Dodaj podprojekt">⤷</button>
               )}
-              <button onClick={() => setModal('project')}>+</button>
+              <button onClick={e => { e.stopPropagation(); setModal('project'); }}>+</button>
             </div>
           </div>
-          <div className="column-body">
+          <div
+            className="column-body"
+            id="column-body-projects"
+            role="region"
+            aria-labelledby="column-header-projects"
+          >
             {rootProjects.length === 0 && (
               <p className="empty-hint">Brak projektów{selectedLifterId ? ' dla tego podobszaru' : ''}</p>
             )}
@@ -365,15 +419,32 @@ export default function App() {
         </section>
 
         {/* Column 3: Tasks */}
-        <section className="column">
-          <div className="column-header" style={{ borderTopColor: selectedArea?.color }}>
-            <h2>Zadania</h2>
+        <section
+          className={`column ${expandedColumns.has('tasks') ? 'expanded' : ''}`}
+          id="column-tasks"
+        >
+          <div
+            className="column-header"
+            style={{ borderTopColor: selectedArea?.color }}
+            role="button"
+            tabIndex={0}
+            aria-expanded={expandedColumns.has('tasks')}
+            aria-controls="column-body-tasks"
+            onClick={() => toggleColumn('tasks')}
+            onKeyDown={e => handleColumnKeydown(e, 'tasks')}
+          >
+            <h2 id="column-header-tasks">Zadania</h2>
             <button
-              onClick={() => setModal('task')}
+              onClick={e => { e.stopPropagation(); setModal('task'); }}
               style={!selectedProjectId ? { visibility: 'hidden' } : {}}
             >+</button>
           </div>
-          <div className="column-body">
+          <div
+            className="column-body"
+            id="column-body-tasks"
+            role="region"
+            aria-labelledby="column-header-tasks"
+          >
             {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
             {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
             {tasks.map(task => {

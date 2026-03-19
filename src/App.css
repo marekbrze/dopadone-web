@@ -1099,3 +1099,117 @@ body {
 .context-menu-item.danger { color: #9b3226; }
 
 .context-menu-item.danger:hover { background: rgba(155,50,38,.06); }
+
+/* ── Mobile (<768px) ───────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .columns {
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .column {
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .column-header {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+  }
+
+  .column-header::after {
+    content: '▾';
+    margin-left: auto;
+    padding-left: 8px;
+    font-size: 12px;
+    color: var(--text-faint);
+    transition: transform 0.2s ease;
+  }
+
+  .column.expanded .column-header::after {
+    transform: rotate(180deg);
+  }
+
+  .column-header button {
+    position: relative;
+    z-index: 1;
+  }
+
+  .column-body {
+    display: none;
+    max-height: 0;
+    overflow: hidden;
+  }
+
+  .column.expanded .column-body {
+    display: block;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+
+  .app-header {
+    padding: 0 12px;
+    height: 48px;
+  }
+
+  .logo {
+    font-size: 12px;
+    margin-right: 12px;
+  }
+
+  .area-tab {
+    padding: 14px 12px 12px;
+    font-size: 12px;
+  }
+
+  .settings-btn {
+    padding: 5px 8px;
+    font-size: 0;
+  }
+
+  .settings-btn::before {
+    content: '⚙';
+    font-size: 14px;
+  }
+
+  .task-detail-panel,
+  .item-detail-panel {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    max-width: 100%;
+    height: 100%;
+    border-left: none;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  .task-detail-panel .detail-header,
+  .item-detail-panel .detail-header {
+    position: sticky;
+    top: 0;
+    background: var(--surface);
+    z-index: 1;
+  }
+}
+
+/* ── Desktop (>=768px) ─────────────────────────────────────── */
+
+@media (min-width: 768px) {
+  .columns {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    transition: grid-template-columns 0.25s ease;
+  }
+
+  .columns.panel-open {
+    grid-template-columns: 1fr 1fr 1fr 300px;
+  }
+}
