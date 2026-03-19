@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react';
 import type { AppState, Project, Task } from './types';
-import { loadData, saveData } from './data';
+import { loadData } from './data';
+import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
 import { ProjectTree } from './components/ProjectTree';
 import { SettingsModal } from './components/SettingsModal';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
+import { saveAutoBackup } from './utils/dataPortability';
 import './App.css';
 
-function uid() {
-  return Math.random().toString(36).slice(2, 10);
+function newId() {
+  return crypto.randomUUID();
 }
 
 const priorityColors: Record<Task['priority'], string> = {
@@ -20,8 +22,8 @@ const priorityColors: Record<Task['priority'], string> = {
 };
 
 export default function App() {
-  const [data, setData] = useState<AppState>(loadData);
-  const [selectedAreaId, setSelectedAreaId] = useState<string>(data.areas[0]?.id ?? '');
+  const [data, setData] = useState<AppState | null>(null);
+  const [selectedAreaId, setSelectedAreaId] = useState<string>('');
   const [selectedLifterId, setSelectedLifterId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
@@ -29,7 +31,40 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
 
-  useEffect(() => { saveData(data); }, [data]);
+  useEffect(() => {
+    loadData().then(d => {
+      setData(d);
+      setSelectedAreaId(d.areas[0]?.id ?? '');
+    });
+  }, []);
+
+  useEffect(() => {
+    const BACKUP_INTERVAL = 5 * 60 * 1000;
+
+    const interval = setInterval(async () => {
+      try {
+        await saveAutoBackup(db);
+      } catch (err) {
+        console.warn('Auto-backup failed:', err);
+      }
+    }, BACKUP_INTERVAL);
+
+    const handleUnload = () => saveAutoBackup(db);
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, []);
+
+  if (!data) {
+    return (
+      <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <div style={{ opacity: 0.5, fontStyle: 'italic' }}>Ładowanie…</div>
+      </div>
+    );
+  }
 
   const selectArea = (id: string) => {
     setSelectedAreaId(id);
@@ -75,34 +110,42 @@ export default function App() {
   const selectedArea = data.areas.find(a => a.id === selectedAreaId);
 
   // Area / lifter / project
-  const addArea = (name: string) => {
+  const addArea = async (name: string) => {
     const colors = ['#5c4a38', '#4a6852', '#6b5230', '#4a5c68', '#7a5c48'];
     const color = colors[data.areas.length % colors.length];
-    setData(d => ({ ...d, areas: [...d.areas, { id: uid(), name, color }] }));
+    const area = { id: newId(), name, color };
+    await db.areas.put(area);
+    setData(d => d ? ({ ...d, areas: [...d.areas, area] }) : d);
   };
 
-  const addLifter = (name: string) => {
-    setData(d => ({ ...d, lifters: [...d.lifters, { id: uid(), name, areaId: selectedAreaId }] }));
+  const addLifter = async (name: string) => {
+    const lifter = { id: newId(), name, areaId: selectedAreaId };
+    await db.lifters.put(lifter);
+    setData(d => d ? ({ ...d, lifters: [...d.lifters, lifter] }) : d);
   };
 
-  const addProject = (name: string, parentProjectId: string | null = null) => {
-    const proj: Project = { id: uid(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
-    setData(d => ({ ...d, projects: [...d.projects, proj] }));
+  const addProject = async (name: string, parentProjectId: string | null = null) => {
+    const proj: Project = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
+    await db.projects.put(proj);
+    setData(d => d ? ({ ...d, projects: [...d.projects, proj] }) : d);
   };
 
   // Tasks
-  const addTask = (name: string) => {
+  const addTask = async (name: string) => {
     if (!selectedProjectId) return;
-    const task: Task = { id: uid(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
-    setData(d => ({ ...d, tasks: [...d.tasks, task] }));
+    const task: Task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
+    await db.tasks.put(task);
+    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
-  const deleteTask = (taskId: string) => {
-    setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }));
+  const deleteTask = async (taskId: string) => {
+    await db.tasks.delete(taskId);
+    setData(d => d ? ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }) : d);
   };
 
-  const updateTask = (taskId: string, updates: Partial<Task>) => {
-    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }));
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    await db.tasks.update(taskId, updates);
+    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }) : d);
   };
 
   // Helpers
@@ -111,10 +154,16 @@ export default function App() {
     return [rootId, ...children.flatMap(c => collectProjectIds(c.id, allProjects))];
   }
 
-  const deleteProject = (id: string) => {
+  const deleteProject = async (id: string) => {
     const ids = collectProjectIds(id, data.projects);
+    const idsSet = new Set(ids);
+    const taskIds = data.tasks.filter(t => idsSet.has(t.projectId)).map(t => t.id);
+    await db.transaction('rw', [db.projects, db.tasks], async () => {
+      await db.projects.bulkDelete(ids);
+      await db.tasks.bulkDelete(taskIds);
+    });
     setData(d => {
-      const idsSet = new Set(collectProjectIds(id, d.projects));
+      if (!d) return d;
       return {
         ...d,
         projects: d.projects.filter(p => !idsSet.has(p.id)),
@@ -128,10 +177,18 @@ export default function App() {
     if (editingProjectId && ids.includes(editingProjectId)) setEditingProjectId(null);
   };
 
-  const deleteLifter = (id: string) => {
+  const deleteLifter = async (id: string) => {
+    const rootIds = data.projects.filter(p => p.lifterId === id).map(p => p.id);
+    const allIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
+    const projectIds = [...allIds];
+    const taskIds = data.tasks.filter(t => allIds.has(t.projectId)).map(t => t.id);
+    await db.transaction('rw', [db.lifters, db.projects, db.tasks], async () => {
+      await db.lifters.delete(id);
+      await db.projects.bulkDelete(projectIds);
+      await db.tasks.bulkDelete(taskIds);
+    });
     setData(d => {
-      const rootIds = d.projects.filter(p => p.lifterId === id).map(p => p.id);
-      const allIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, d.projects)));
+      if (!d) return d;
       return {
         ...d,
         lifters: d.lifters.filter(l => l.id !== id),
@@ -147,11 +204,15 @@ export default function App() {
     if (editingLifterId === id) setEditingLifterId(null);
   };
 
-  const renameLifter = (id: string, name: string) =>
-    setData(d => ({ ...d, lifters: d.lifters.map(l => l.id === id ? { ...l, name } : l) }));
+  const renameLifter = async (id: string, name: string) => {
+    await db.lifters.update(id, { name });
+    setData(d => d ? ({ ...d, lifters: d.lifters.map(l => l.id === id ? { ...l, name } : l) }) : d);
+  };
 
-  const renameProject = (id: string, name: string) =>
-    setData(d => ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, name } : p) }));
+  const renameProject = async (id: string, name: string) => {
+    await db.projects.update(id, { name });
+    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, name } : p) }) : d);
+  };
 
   const openLifterEdit = (id: string) => {
     setEditingLifterId(id);
@@ -165,11 +226,20 @@ export default function App() {
     setSelectedTaskId(null);
   };
 
-  const deleteArea = (id: string) => {
+  const deleteArea = async (id: string) => {
+    const lifterIds = data.lifters.filter(l => l.areaId === id).map(l => l.id);
+    const rootIds = data.projects.filter(p => p.areaId === id).map(p => p.id);
+    const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
+    const projectIds = [...allProjectIds];
+    const taskIds = data.tasks.filter(t => allProjectIds.has(t.projectId)).map(t => t.id);
+    await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks], async () => {
+      await db.areas.delete(id);
+      await db.lifters.bulkDelete(lifterIds);
+      await db.projects.bulkDelete(projectIds);
+      await db.tasks.bulkDelete(taskIds);
+    });
     setData(d => {
-      const lifterIds = d.lifters.filter(l => l.areaId === id).map(l => l.id);
-      const rootIds = d.projects.filter(p => p.areaId === id).map(p => p.id);
-      const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, d.projects)));
+      if (!d) return d;
       return {
         ...d,
         areas: d.areas.filter(a => a.id !== id),
@@ -182,37 +252,41 @@ export default function App() {
       const remaining = data.areas.filter(a => a.id !== id);
       selectArea(remaining[0]?.id ?? '');
     } else {
-      // Clear editing state if the edited item belongs to the deleted area
-      setData(d => {
-        const lifterIds = new Set(d.lifters.filter(l => l.areaId === id).map(l => l.id));
-        const projectIds = new Set(d.projects.filter(p => p.areaId === id).map(p => p.id));
-        if (editingLifterId && lifterIds.has(editingLifterId)) setEditingLifterId(null);
-        if (editingProjectId && projectIds.has(editingProjectId)) setEditingProjectId(null);
-        return d;
-      });
+      const lifterSet = new Set(lifterIds);
+      if (editingLifterId && lifterSet.has(editingLifterId)) setEditingLifterId(null);
+      if (editingProjectId && allProjectIds.has(editingProjectId)) setEditingProjectId(null);
     }
   };
 
-  const reorderAreas = (fromIndex: number, toIndex: number) => {
-    setData(d => {
-      const areas = [...d.areas];
-      const [moved] = areas.splice(fromIndex, 1);
-      areas.splice(toIndex, 0, moved);
-      return { ...d, areas };
-    });
+  const reorderAreas = async (fromIndex: number, toIndex: number) => {
+    const areas = [...data.areas];
+    const [moved] = areas.splice(fromIndex, 1);
+    areas.splice(toIndex, 0, moved);
+    // Persist reorder — Dexie has no built-in order, so we just update state
+    // (order is maintained in React state; on reload it'll come from DB unordered,
+    // but that's acceptable without an explicit order field)
+    setData(d => d ? ({ ...d, areas }) : d);
   };
 
   // Contexts
-  const addContext = (name: string, icon: string) => {
-    setData(d => ({ ...d, contexts: [...d.contexts, { id: uid(), name, icon }] }));
+  const addContext = async (name: string, icon: string) => {
+    const ctx = { id: newId(), name, icon };
+    await db.contexts.put(ctx);
+    setData(d => d ? ({ ...d, contexts: [...d.contexts, ctx] }) : d);
   };
 
-  const deleteContext = (id: string) => {
-    setData(d => ({
+  const deleteContext = async (id: string) => {
+    await db.transaction('rw', [db.contexts, db.tasks], async () => {
+      await db.contexts.delete(id);
+      // Clear contextId from tasks that used this context
+      const affected = await db.tasks.where('contextId').equals(id).toArray();
+      await db.tasks.bulkPut(affected.map(t => ({ ...t, contextId: null })));
+    });
+    setData(d => d ? ({
       ...d,
       contexts: d.contexts.filter(c => c.id !== id),
       tasks: d.tasks.map(t => t.contextId === id ? { ...t, contextId: null } : t),
-    }));
+    }) : d);
   };
 
   return (

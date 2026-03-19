@@ -44,3 +44,20 @@ export interface AppState {
   tasks: Task[];
   contexts: Context[];
 }
+
+export interface ExportData {
+  version: 1;
+  exportedAt: string;
+  checksum?: string;
+  data: AppState;
+}
+
+export type ImportMode = 'merge' | 'replace';
+
+export interface ImportPreview {
+  areas: { added: number; updated: number };
+  lifters: { added: number; updated: number };
+  projects: { added: number; updated: number };
+  tasks: { added: number; updated: number };
+  contexts: { added: number; updated: number };
+}

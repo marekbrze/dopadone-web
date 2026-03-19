@@ -824,6 +824,71 @@ body {
 
 .context-add-row button:hover { opacity: 0.85; }
 
+/* ── Sync Section ────────────────────────────────────────── */
+
+.sync-section {
+  padding: 4px 0;
+}
+
+.sync-info p,
+.sync-logged-in p {
+  line-height: 1.5;
+}
+
+.sync-login-form {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.sync-login-form input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0;
+  font-size: 0.9em;
+  color: var(--text);
+  outline: none;
+}
+
+.sync-login-form input:focus { border-bottom-color: var(--accent); }
+.sync-login-form input::placeholder { color: var(--text-faint); }
+
+.sync-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.78em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: opacity 0.15s;
+  white-space: nowrap;
+}
+
+.sync-btn:hover:not(:disabled) { opacity: 0.85; }
+.sync-btn:disabled { opacity: 0.45; cursor: default; }
+
+.sync-label {
+  font-size: 0.82em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  opacity: 0.55;
+}
+
+.sync-url-block { margin-bottom: 4px; }
+
+.sync-login-block { margin-top: 4px; }
+
+.sync-divider {
+  border: none;
+  border-top: 1px solid var(--border-light);
+  margin: 16px 0;
+}
+
 /* ── Task Detail Panel ───────────────────────────────────── */
 
 .task-detail-panel {
