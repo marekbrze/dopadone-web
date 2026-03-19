@@ -33,10 +33,11 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose }:
   const [localName, setLocalName] = useState(task.name);
   const [localNotes, setLocalNotes] = useState(task.notes);
 
-  useEffect(() => {
+  const prevTaskId = useState(task.id)[0];
+  if (task.id !== prevTaskId) {
     setLocalName(task.name);
     setLocalNotes(task.notes);
-  }, [task.id]);
+  }
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') {
