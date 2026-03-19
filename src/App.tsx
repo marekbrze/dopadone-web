@@ -56,7 +56,16 @@ export default function App() {
   useEffect(() => {
     completeMigrationIfPending().then(() => loadData()).then(d => {
       setData(d);
-      setSelectedAreaId(d.areas[0]?.id ?? '');
+      const firstArea = d.areas[0];
+      const areaId = firstArea?.id ?? '';
+      setSelectedAreaId(areaId);
+      const firstLifter = d.lifters.find(l => l.areaId === areaId);
+      const lifterId = firstLifter?.id ?? null;
+      setSelectedLifterId(lifterId);
+      const firstProject = d.projects.find(p =>
+        p.areaId === areaId && p.lifterId === lifterId && p.parentProjectId === null
+      );
+      setSelectedProjectId(firstProject?.id ?? null);
     });
   }, []);
 
@@ -90,16 +99,24 @@ export default function App() {
 
   const selectArea = (id: string) => {
     setSelectedAreaId(id);
-    setSelectedLifterId(null);
-    setSelectedProjectId(null);
+    const firstLifter = data.lifters.find(l => l.areaId === id);
+    const lifterId = firstLifter?.id ?? null;
+    setSelectedLifterId(lifterId);
+    const firstProject = data.projects.find(p =>
+      p.areaId === id && p.lifterId === lifterId && p.parentProjectId === null
+    );
+    setSelectedProjectId(firstProject?.id ?? null);
     setSelectedTaskId(null);
     setEditingLifterId(null);
     setEditingProjectId(null);
   };
 
   const selectLifter = (id: string) => {
-    setSelectedLifterId(prev => prev === id ? null : id);
-    setSelectedProjectId(null);
+    setSelectedLifterId(id);
+    const firstProject = data.projects.find(p =>
+      p.areaId === selectedAreaId && p.lifterId === id && p.parentProjectId === null
+    );
+    setSelectedProjectId(firstProject?.id ?? null);
     setSelectedTaskId(null);
     setEditingLifterId(null);
     setEditingProjectId(null);
