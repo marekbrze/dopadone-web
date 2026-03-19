@@ -12,9 +12,9 @@ function uid() {
 }
 
 const priorityColors: Record<Task['priority'], string> = {
-  low: '#8BC34A',
-  medium: '#FF9800',
-  high: '#F44336',
+  low: '#5a7a5e',
+  medium: '#a07830',
+  high: '#a33a2a',
 };
 
 export default function App() {
@@ -66,7 +66,7 @@ export default function App() {
 
   // Area / lifter / project
   const addArea = (name: string) => {
-    const colors = ['#9C27B0', '#FF9800', '#009688', '#F44336', '#3F51B5'];
+    const colors = ['#5c4a38', '#4a6852', '#6b5230', '#4a5c68', '#7a5c48'];
     const color = colors[data.areas.length % colors.length];
     setData(d => ({ ...d, areas: [...d.areas, { id: uid(), name, color }] }));
   };
@@ -111,7 +111,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <div className="logo">DoPaDone</div>
+        <div className="logo">Dopadone</div>
         <nav className="area-tabs">
           {data.areas.map(area => (
             <button

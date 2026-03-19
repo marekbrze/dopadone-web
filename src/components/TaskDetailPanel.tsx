@@ -10,9 +10,9 @@ const EFFORTS: { value: Effort; label: string }[] = [
 ];
 
 const priorityColors: Record<Task['priority'], string> = {
-  low: '#8BC34A',
-  medium: '#FF9800',
-  high: '#F44336',
+  low: '#5a7a5e',
+  medium: '#a07830',
+  high: '#a33a2a',
 };
 
 const priorityLabels: Record<Task['priority'], string> = {
