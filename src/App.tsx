@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context } from './types';
-import { loadData } from './data';
+import { loadData, queryAllData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
 import { ProjectTree } from './components/ProjectTree';
@@ -33,6 +34,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
+  const prevAreasCount = useRef(0);
 
   const toggleColumn = (id: string) => {
     setExpandedColumns(prev => {
@@ -54,7 +56,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    completeMigrationIfPending().then(() => loadData()).then(d => {
+    const applyInitialData = (d: AppState) => {
       setData(d);
       const firstArea = d.areas[0];
       const areaId = firstArea?.id ?? '';
@@ -66,7 +68,37 @@ export default function App() {
         p.areaId === areaId && p.lifterId === lifterId && p.parentProjectId === null
       );
       setSelectedProjectId(firstProject?.id ?? null);
-    });
+    };
+
+    let subscription: { unsubscribe: () => void } | null = null;
+
+    completeMigrationIfPending()
+      .then(() => loadData())
+      .then(d => {
+        prevAreasCount.current = d.areas.length;
+        applyInitialData(d);
+
+        // Subscribe to live updates (e.g. from Dexie Cloud sync)
+        subscription = liveQuery(() => queryAllData()).subscribe({
+          next: (updated) => {
+            const wasEmpty = prevAreasCount.current === 0 && updated.areas.length > 0;
+            prevAreasCount.current = updated.areas.length;
+            if (wasEmpty) {
+              // Cloud sync brought data into empty db — auto-select
+              applyInitialData(updated);
+            } else {
+              setData(updated);
+            }
+          },
+          error: (err) => console.error('liveQuery error:', err),
+        });
+      })
+      .catch(err => {
+        console.error('Failed to load data:', err);
+        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [] });
+      });
+
+    return () => subscription?.unsubscribe();
   }, []);
 
   useEffect(() => {

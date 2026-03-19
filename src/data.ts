@@ -1,5 +1,5 @@
 import type { AppState } from './types'
-import { db } from './db'
+import { db, isCloudSchema } from './db'
 
 const STORAGE_KEY = 'dopadone-data'
 
@@ -47,18 +47,7 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
   }
 }
 
-export async function loadData(): Promise<AppState> {
-  const count = await db.areas.count()
-  if (count === 0) {
-    const migrated = await migrateFromLocalStorage()
-    if (migrated) return migrated
-    // Fresh start: seed with defaults
-    await db.transaction('rw', [db.areas, db.contexts], async () => {
-      await db.areas.bulkAdd(defaultData.areas)
-      await db.contexts.bulkAdd(defaultData.contexts)
-    })
-    return defaultData
-  }
+export async function queryAllData(): Promise<AppState> {
   const [areas, lifters, projects, tasks, contexts] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
@@ -67,4 +56,21 @@ export async function loadData(): Promise<AppState> {
     db.contexts.toArray(),
   ])
   return { areas, lifters, projects, tasks, contexts }
+}
+
+export async function loadData(): Promise<AppState> {
+  const count = await db.areas.count()
+  if (count === 0) {
+    // Cloud mode: don't seed defaults — data comes from sync
+    if (isCloudSchema()) return { areas: [], lifters: [], projects: [], tasks: [], contexts: [] }
+    const migrated = await migrateFromLocalStorage()
+    if (migrated) return migrated
+    // Fresh local install: seed with defaults
+    await db.transaction('rw', [db.areas, db.contexts], async () => {
+      await db.areas.bulkAdd(defaultData.areas)
+      await db.contexts.bulkAdd(defaultData.contexts)
+    })
+    return defaultData
+  }
+  return queryAllData()
 }
