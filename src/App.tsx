@@ -1,31 +1,29 @@
 import { useState, useEffect } from 'react';
-import type { AppState, Project, Task, Effort } from './types';
+import type { AppState, Project, Task } from './types';
 import { loadData, saveData } from './data';
 import { AddItemModal } from './components/AddItemModal';
 import { ProjectTree } from './components/ProjectTree';
 import { ContextsPanel } from './components/ContextsPanel';
+import { TaskDetailPanel } from './components/TaskDetailPanel';
 import './App.css';
 
 function uid() {
   return Math.random().toString(36).slice(2, 10);
 }
 
-const EFFORTS: { value: Effort; label: string }[] = [
-  { value: 'xs', label: 'XS' },
-  { value: 's', label: 'S' },
-  { value: 'm', label: 'M' },
-  { value: 'l', label: 'L' },
-  { value: 'xl', label: 'XL' },
-];
+const priorityColors: Record<Task['priority'], string> = {
+  low: '#8BC34A',
+  medium: '#FF9800',
+  high: '#F44336',
+};
 
 export default function App() {
   const [data, setData] = useState<AppState>(loadData);
   const [selectedAreaId, setSelectedAreaId] = useState<string>(data.areas[0]?.id ?? '');
   const [selectedLifterId, setSelectedLifterId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'contexts'>(null);
-  const [editingTask, setEditingTask] = useState<string | null>(null);
-  const [editingTaskName, setEditingTaskName] = useState('');
 
   useEffect(() => { saveData(data); }, [data]);
 
@@ -33,11 +31,17 @@ export default function App() {
     setSelectedAreaId(id);
     setSelectedLifterId(null);
     setSelectedProjectId(null);
+    setSelectedTaskId(null);
   };
 
   const selectLifter = (id: string) => {
     setSelectedLifterId(prev => prev === id ? null : id);
     setSelectedProjectId(null);
+    setSelectedTaskId(null);
+  };
+
+  const selectTask = (id: string) => {
+    setSelectedTaskId(prev => prev === id ? null : id);
   };
 
   const lifters = data.lifters.filter(l => l.areaId === selectedAreaId);
@@ -57,6 +61,7 @@ export default function App() {
     ? data.tasks.filter(t => t.projectId === selectedProjectId)
     : [];
 
+  const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
   const selectedArea = data.areas.find(a => a.id === selectedAreaId);
 
   // Area / lifter / project
@@ -82,27 +87,12 @@ export default function App() {
     setData(d => ({ ...d, tasks: [...d.tasks, task] }));
   };
 
-  const toggleTask = (taskId: string) => {
-    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t) }));
-  };
-
   const deleteTask = (taskId: string) => {
     setData(d => ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }));
   };
 
-  const updateTask = <K extends keyof Task>(taskId: string, key: K, value: Task[K]) => {
-    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, [key]: value } : t) }));
-  };
-
-  const startEditTask = (task: Task) => {
-    setEditingTask(task.id);
-    setEditingTaskName(task.name);
-  };
-
-  const saveEditTask = () => {
-    if (!editingTask) return;
-    updateTask(editingTask, 'name', editingTaskName);
-    setEditingTask(null);
+  const updateTask = (taskId: string, updates: Partial<Task>) => {
+    setData(d => ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }));
   };
 
   // Contexts
@@ -116,18 +106,6 @@ export default function App() {
       contexts: d.contexts.filter(c => c.id !== id),
       tasks: d.tasks.map(t => t.contextId === id ? { ...t, contextId: null } : t),
     }));
-  };
-
-  const priorityColors: Record<Task['priority'], string> = {
-    low: '#8BC34A',
-    medium: '#FF9800',
-    high: '#F44336',
-  };
-
-  const priorityLabels: Record<Task['priority'], string> = {
-    low: 'Niska',
-    medium: 'Średnia',
-    high: 'Wysoka',
   };
 
   return (
@@ -152,7 +130,7 @@ export default function App() {
         </button>
       </header>
 
-      <main className="columns">
+      <main className={`columns${selectedTask ? ' panel-open' : ''}`}>
         {/* Column 1: Lifters */}
         <section className="column">
           <div className="column-header" style={{ borderTopColor: selectedArea?.color }}>
@@ -193,7 +171,7 @@ export default function App() {
               projects={rootProjects}
               allProjects={visibleProjects}
               selectedProjectId={selectedProjectId}
-              onSelect={id => setSelectedProjectId(prev => prev === id ? null : id)}
+              onSelect={id => { setSelectedProjectId(prev => prev === id ? null : id); setSelectedTaskId(null); }}
             />
           </div>
         </section>
@@ -210,77 +188,39 @@ export default function App() {
             {tasks.map(task => {
               const ctx = data.contexts.find(c => c.id === task.contextId);
               return (
-                <div key={task.id} className={`task-item ${task.done ? 'done' : ''}`}>
-                  {/* Row 1: checkbox + name */}
+                <div
+                  key={task.id}
+                  className={`task-item ${task.done ? 'done' : ''} ${task.id === selectedTaskId ? 'selected' : ''}`}
+                  onClick={() => selectTask(task.id)}
+                >
                   <div className="task-main">
-                    <input type="checkbox" checked={task.done} onChange={() => toggleTask(task.id)} />
-                    {editingTask === task.id ? (
-                      <input
-                        className="task-edit-input"
-                        value={editingTaskName}
-                        onChange={e => setEditingTaskName(e.target.value)}
-                        onBlur={saveEditTask}
-                        onKeyDown={e => { if (e.key === 'Enter') saveEditTask(); if (e.key === 'Escape') setEditingTask(null); }}
-                        autoFocus
-                      />
-                    ) : (
-                      <span className="task-name" onDoubleClick={() => startEditTask(task)}>{task.name}</span>
-                    )}
-                    <button className="delete-btn" onClick={() => deleteTask(task.id)}>✕</button>
+                    <input
+                      type="checkbox"
+                      checked={task.done}
+                      onChange={() => updateTask(task.id, { done: !task.done })}
+                      onClick={e => e.stopPropagation()}
+                    />
+                    <span className="task-name">{task.name}</span>
+                    <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                    {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                    {ctx && <span className="tag context-tag">{ctx.icon}</span>}
                   </div>
-
-                  {/* Row 2: meta controls */}
-                  <div className="task-meta">
-                    {/* Priority */}
-                    <select
-                      className="meta-select priority-select"
-                      value={task.priority}
-                      onChange={e => updateTask(task.id, 'priority', e.target.value as Task['priority'])}
-                      style={{ color: priorityColors[task.priority] }}
-                    >
-                      {(['high', 'medium', 'low'] as Task['priority'][]).map(p => (
-                        <option key={p} value={p}>{priorityLabels[p]}</option>
-                      ))}
-                    </select>
-
-                    {/* Effort */}
-                    <div className="effort-pills">
-                      {EFFORTS.map(e => (
-                        <button
-                          key={e.value}
-                          className={`effort-pill ${task.effort === e.value ? 'active' : ''}`}
-                          onClick={() => updateTask(task.id, 'effort', task.effort === e.value ? null : e.value)}
-                        >
-                          {e.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Context */}
-                    <select
-                      className="meta-select context-select"
-                      value={task.contextId ?? ''}
-                      onChange={e => updateTask(task.id, 'contextId', e.target.value || null)}
-                    >
-                      <option value="">— kontekst —</option>
-                      {data.contexts.map(c => (
-                        <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Tags row */}
-                  {(task.effort || ctx) && (
-                    <div className="task-tags">
-                      {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
-                      {ctx && <span className="tag context-tag">{ctx.icon} {ctx.name}</span>}
-                    </div>
-                  )}
                 </div>
               );
             })}
           </div>
         </section>
+
+        {/* Column 4: Task Detail Panel */}
+        {selectedTask && (
+          <TaskDetailPanel
+            task={selectedTask}
+            contexts={data.contexts}
+            onUpdate={(key, value) => updateTask(selectedTask.id, { [key]: value })}
+            onDelete={() => { deleteTask(selectedTask.id); setSelectedTaskId(null); }}
+            onClose={() => setSelectedTaskId(null)}
+          />
+        )}
       </main>
 
       {modal === 'area' && <AddItemModal title="Nowy obszar" placeholder="np. Finanse" onAdd={addArea} onClose={() => setModal(null)} />}
