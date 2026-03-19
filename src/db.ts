@@ -15,7 +15,8 @@ export class DopadoneDB extends Dexie {
   constructor() {
     const cloudUrl = getCloudUrl();
     const v2 = isSchemaV2();
-    super('dopadone', { addons: cloudUrl ? [dexieCloud] : [] });
+    // @id syntax requires the addon even without a cloud URL configured
+    super('dopadone', { addons: (v2 || !!cloudUrl) ? [dexieCloud] : [] });
     // v2: @id = cloud-synced auto-generated primary key (requires fresh DB — see cloudMigration.ts)
     // v1: &id = explicit unique primary key (legacy, no cloud sync)
     this.version(1).stores(v2 ? {
