@@ -27,40 +27,17 @@ interface Props {
 
 const EMOJI_OPTIONS = ['📞', '✉️', '💬', '🎨', '💻', '🏙️', '🛒', '📝', '🔧', '📱', '🤝', '📚', '🏠', '🚗', '💡', '⚡'];
 
-const validateDexieCloudUrl = (url: string): { valid: boolean; error?: string } => {
-  if (!url.trim()) return { valid: true };
-  try {
-    const parsed = new URL(url);
-    if (!parsed.hostname.endsWith('.dexie.cloud')) {
-      return { valid: false, error: 'URL musi kończyć się na .dexie.cloud' };
-    }
-    return { valid: true };
-  } catch {
-    return { valid: false, error: 'Nieprawidłowy format URL' };
-  }
-};
-
 export function SettingsModal({
   areas, lifters, contexts,
   onDeleteArea, onDeleteLifter, onReorderAreas,
-  onAddContext, onDeleteContext, onClose,
+  onAddContext, onDeleteContext,
+  onClose,
 }: Props) {
-  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'sync'>('obszary');
+  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'backup'>('obszary');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [ctxName, setCtxName] = useState('');
   const [ctxIcon, setCtxIcon] = useState('📝');
-
-  // Sync state
-  const [cloudUrl, setCloudUrl] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
-  const [urlDraft, setUrlDraft] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
-  const [urlError, setUrlError] = useState<string | null>(null);
-  const [syncEmail, setSyncEmail] = useState('');
-  const [syncStatus, setSyncStatus] = useState<'idle' | 'sending' | 'error'>('idle');
-  const [syncError, setSyncError] = useState('');
-  const [currentUser, setCurrentUser] = useState<{ email?: string; isLoggedIn: boolean } | null>(null);
-
-  // Export/import state
   const [exportPassword, setExportPassword] = useState('');
   const [exporting, setExporting] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -72,64 +49,11 @@ export function SettingsModal({
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-backup state
   const [autoBackup, setAutoBackup] = useState<ExportData | null>(null);
-
-  useEffect(() => {
-    if (!cloudUrl) return;
-    const sub = db.cloud.currentUser.subscribe(user => {
-      setCurrentUser({ email: user.email, isLoggedIn: user.isLoggedIn ?? false });
-    });
-    return () => sub.unsubscribe();
-  }, [cloudUrl]);
 
   useEffect(() => {
     setAutoBackup(loadAutoBackup());
   }, []);
-
-  const handleSaveUrl = () => {
-    const trimmed = urlDraft.trim();
-    const validation = validateDexieCloudUrl(trimmed);
-    
-    if (!validation.valid) {
-      setUrlError(validation.error ?? 'Nieprawidłowy URL');
-      return;
-    }
-    
-    setUrlError(null);
-    
-    if (trimmed) {
-      localStorage.setItem('dopadone-cloud-url', trimmed);
-    } else {
-      localStorage.removeItem('dopadone-cloud-url');
-    }
-    setCloudUrl(trimmed);
-    window.location.reload();
-  };
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!syncEmail.trim()) return;
-    setSyncStatus('sending');
-    setSyncError('');
-    try {
-      await db.cloud.login({ email: syncEmail.trim() });
-      setSyncStatus('idle');
-      setSyncEmail('');
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : 'Błąd logowania');
-      setSyncStatus('error');
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await db.cloud.logout();
-    } catch (err) {
-      setSyncError(err instanceof Error ? err.message : 'Błąd wylogowania');
-    }
-  };
 
   const handleDragStart = (index: number) => setDragIndex(index);
   const handleDragOver = (e: React.DragEvent, index: number) => {
@@ -156,7 +80,6 @@ export function SettingsModal({
     }
   };
 
-  // Export/Import handlers
   const handleExport = async () => {
     setExporting(true);
     try {
@@ -176,7 +99,7 @@ export function SettingsModal({
 
     const content = await file.text();
     const encrypted = isEncryptedFile(content);
-    
+
     setImportFile(file);
     setImportEncrypted(encrypted);
     setImportData(null);
@@ -264,10 +187,10 @@ export function SettingsModal({
             Konteksty
           </button>
           <button
-            className={`settings-nav-item ${activeCategory === 'sync' ? 'active' : ''}`}
-            onClick={() => setActiveCategory('sync')}
+            className={`settings-nav-item ${activeCategory === 'backup' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('backup')}
           >
-            Synchronizacja
+            Kopia zapasowa
           </button>
         </div>
 
@@ -276,7 +199,7 @@ export function SettingsModal({
             <span>
               {activeCategory === 'obszary' ? 'Obszary i podobszary'
                 : activeCategory === 'konteksty' ? 'Konteksty'
-                : 'Synchronizacja między urządzeniami'}
+                : 'Kopia zapasowa'}
             </span>
             <button className="close-btn" onClick={onClose}>✕</button>
           </div>
@@ -352,188 +275,83 @@ export function SettingsModal({
               </div>
             )}
 
-            {activeCategory === 'sync' && (
+            {activeCategory === 'backup' && (
               <div className="sync-section">
-                {/* URL configuration */}
-                <div className="sync-url-block">
-                  <label className="sync-label">Adres bazy Dexie Cloud</label>
-                  <p style={{ fontSize: '0.82em', opacity: 0.6, margin: '4px 0 10px' }}>
-                    Załóż własną bazę bezpłatnie na{' '}
-                    <strong>dexie.cloud</strong> i wklej URL poniżej.
-                    Bez URL dane pozostaną wyłącznie lokalnie.
-                  </p>
-                  <div className="sync-login-form">
+                <label className="sync-label">Eksport / Import</label>
+                <p style={{ fontSize: '0.85em', opacity: 0.7, margin: '8px 0 16px' }}>
+                  Eksportuj dane do pliku JSON. Możesz je zaimportować na innym urządzeniu.
+                </p>
+
+                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                  <button
+                    className="sync-btn"
+                    onClick={handleExport}
+                    disabled={exporting}
+                  >
+                    {exporting ? 'Eksportowanie…' : '📤 Eksportuj'}
+                  </button>
+                  <button
+                    className="sync-btn"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    📥 Importuj
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json"
+                    style={{ display: 'none' }}
+                    onChange={handleFileSelect}
+                  />
+                </div>
+
+                <div style={{ marginTop: '16px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9em' }}>
                     <input
-                      type="url"
-                      placeholder="https://twoja-baza.dexie.cloud"
-                      value={urlDraft}
-                      onChange={e => { setUrlDraft(e.target.value); setUrlError(null); }}
+                      type="checkbox"
+                      checked={!!exportPassword}
+                      onChange={e => setExportPassword(e.target.checked ? ' ' : '')}
                     />
-                    <button
-                      type="button"
-                      className="sync-btn"
-                      onClick={handleSaveUrl}
-                      disabled={urlDraft.trim() === cloudUrl}
-                    >
-                      Zapisz
-                    </button>
-                  </div>
-                  {urlError && (
-                    <p style={{ marginTop: '6px', color: '#a33a2a', fontSize: '0.85em' }}>{urlError}</p>
-                  )}
-                  {cloudUrl && (
-                    <p style={{ marginTop: '6px', fontSize: '0.78em', opacity: 0.5 }}>
-                      Aktywny URL: {cloudUrl}
-                    </p>
+                    Szyfruj plik hasłem (zalecane)
+                  </label>
+                  {exportPassword && (
+                    <input
+                      type="password"
+                      placeholder="Hasło do pliku"
+                      value={exportPassword.trim()}
+                      onChange={e => setExportPassword(e.target.value)}
+                      style={{ marginTop: '8px', width: '200px' }}
+                    />
                   )}
                 </div>
 
-                {/* Security warning */}
-                {cloudUrl && (
-                  <div className="sync-security-info" style={{ 
-                    marginTop: '12px', 
-                    padding: '10px', 
-                    background: 'rgba(163, 58, 42, 0.1)', 
-                    borderRadius: '6px',
-                    fontSize: '0.85em'
-                  }}>
-                    <p style={{ margin: '0 0 6px', color: '#a33a2a' }}>
-                      ⚠️ Nie udostępniaj URL bazy osobom niepowołanym.
+                {autoBackup && (
+                  <div style={{ marginTop: '20px', padding: '12px', background: 'rgba(75, 90, 75, 0.1)', borderRadius: '6px', fontSize: '0.85em' }}>
+                    <p style={{ margin: '0 0 6px' }}>
+                      <strong>Auto-backup lokalny:</strong> ✓
                     </p>
-                    <a 
-                      href="https://dexie.org/cloud/docs/access-control" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      style={{ color: '#6b8a6e' }}
-                    >
-                      📖 Jak skonfigurować dostęp do bazy
-                    </a>
+                    <p style={{ margin: '0 0 10px', opacity: 0.7 }}>
+                      Ostatni: {formatExportDate(autoBackup.exportedAt)}
+                    </p>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="sync-btn"
+                        style={{ fontSize: '0.9em' }}
+                        onClick={handleRestoreAutoBackup}
+                      >
+                        Przywróć
+                      </button>
+                      <button
+                        className="sync-btn"
+                        style={{ fontSize: '0.9em', opacity: 0.7 }}
+                        onClick={handleClearAutoBackup}
+                      >
+                        Usuń
+                      </button>
+                    </div>
                   </div>
                 )}
 
-                {/* Login/logout */}
-                {cloudUrl && (
-                  <div className="sync-login-block">
-                    <div className="sync-divider" />
-                    {currentUser?.isLoggedIn ? (
-                      <div className="sync-logged-in">
-                        <p>Zalogowano jako: <strong>{currentUser.email}</strong></p>
-                        <p style={{ marginTop: '4px', opacity: 0.65, fontSize: '0.85em' }}>
-                          Dane synchronizują się automatycznie między urządzeniami.
-                        </p>
-                        <button className="sync-btn" style={{ marginTop: '12px' }} onClick={handleLogout}>
-                          Wyloguj
-                        </button>
-                      </div>
-                    ) : (
-                      <div>
-                        <p style={{ marginBottom: '10px', opacity: 0.8, fontSize: '0.9em' }}>
-                          Zaloguj się przez e-mail, aby uruchomić synchronizację.
-                        </p>
-                        <form className="sync-login-form" onSubmit={handleLogin}>
-                          <input
-                            type="email"
-                            placeholder="adres@email.com"
-                            value={syncEmail}
-                            onChange={e => setSyncEmail(e.target.value)}
-                            disabled={syncStatus === 'sending'}
-                          />
-                          <button
-                            type="submit"
-                            className="sync-btn"
-                            disabled={syncStatus === 'sending' || !syncEmail.trim()}
-                          >
-                            {syncStatus === 'sending' ? 'Wysyłanie…' : 'Zaloguj się'}
-                          </button>
-                        </form>
-                        {syncError && (
-                          <p style={{ marginTop: '6px', color: '#a33a2a', fontSize: '0.85em' }}>{syncError}</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Backup section */}
-                <div className="sync-divider" style={{ marginTop: '20px' }} />
-                <div className="sync-backup-block" style={{ marginTop: '16px' }}>
-                  <label className="sync-label">Kopia zapasowa</label>
-                  
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '12px', flexWrap: 'wrap' }}>
-                    <button
-                      className="sync-btn"
-                      onClick={handleExport}
-                      disabled={exporting}
-                    >
-                      {exporting ? 'Eksportowanie…' : '📤 Eksportuj'}
-                    </button>
-                    <button
-                      className="sync-btn"
-                      onClick={() => fileInputRef.current?.click()}
-                    >
-                      📥 Importuj
-                    </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".json"
-                      style={{ display: 'none' }}
-                      onChange={handleFileSelect}
-                    />
-                  </div>
-
-                  <div style={{ marginTop: '12px' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9em' }}>
-                      <input
-                        type="checkbox"
-                        checked={!!exportPassword}
-                        onChange={e => setExportPassword(e.target.checked ? ' ' : '')}
-                      />
-                      Szyfruj plik hasłem (zalecane)
-                    </label>
-                    {exportPassword && (
-                      <input
-                        type="password"
-                        placeholder="Hasło do pliku"
-                        value={exportPassword.trim()}
-                        onChange={e => setExportPassword(e.target.value)}
-                        style={{ marginTop: '8px', width: '200px' }}
-                      />
-                    )}
-                  </div>
-
-                  {/* Auto-backup info */}
-                  <div style={{ marginTop: '16px', padding: '10px', background: 'rgba(75, 90, 75, 0.1)', borderRadius: '6px', fontSize: '0.85em' }}>
-                    <p style={{ margin: '0 0 6px', opacity: 0.8 }}>
-                      <strong>Auto-backup lokalny:</strong> {autoBackup ? '✓' : '✗'}
-                    </p>
-                    {autoBackup && (
-                      <>
-                        <p style={{ margin: '0 0 8px', opacity: 0.7 }}>
-                          Ostatni: {formatExportDate(autoBackup.exportedAt)}
-                        </p>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          <button 
-                            className="sync-btn" 
-                            style={{ fontSize: '0.9em' }}
-                            onClick={handleRestoreAutoBackup}
-                          >
-                            Przywróć
-                          </button>
-                          <button 
-                            className="sync-btn" 
-                            style={{ fontSize: '0.9em', opacity: 0.7 }}
-                            onClick={handleClearAutoBackup}
-                          >
-                            Usuń
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Import modal */}
                 {importFile && (
                   <div className="import-modal-overlay" style={{
                     position: 'fixed',
@@ -548,8 +366,9 @@ export function SettingsModal({
                     zIndex: 1000,
                   }}>
                     <div className="import-modal" style={{
-                      background: '#2a2e2a',
-                      borderRadius: '8px',
+                      background: 'var(--surface)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '4px',
                       padding: '20px',
                       maxWidth: '480px',
                       width: '90%',
@@ -557,8 +376,8 @@ export function SettingsModal({
                       overflow: 'auto',
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                        <h3 style={{ margin: 0 }}>Import danych</h3>
-                        <button onClick={resetImport} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer' }}>✕</button>
+                        <h3 style={{ margin: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Import danych</h3>
+                        <button onClick={resetImport} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
                       </div>
 
                       <p style={{ fontSize: '0.9em', opacity: 0.8, marginBottom: '12px' }}>
@@ -593,7 +412,7 @@ export function SettingsModal({
                           </p>
 
                           {importPreview && (
-                            <div style={{ marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px' }}>
+                            <div style={{ marginBottom: '16px', padding: '12px', background: 'var(--surface2)', borderRadius: '4px' }}>
                               <p style={{ margin: '0 0 8px', fontWeight: 'bold' }}>Podgląd zmian:</p>
                               <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.9em' }}>
                                 <li>Obszary: +{importPreview.areas.added} nowe, {importPreview.areas.updated} zmienione</li>
