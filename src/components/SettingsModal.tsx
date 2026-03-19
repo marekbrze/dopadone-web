@@ -66,7 +66,7 @@ export function SettingsModal({
     if (!cloudUrl) return;
     try {
       const subscription = db.cloud.currentUser.subscribe((user) => {
-        setCurrentUser(user ? { userId: user.userId, email: user.email, isLoggedIn: !!user.userId } : { isLoggedIn: false });
+        setCurrentUser(user ? { userId: user.userId, email: user.email, isLoggedIn: user.isLoggedIn ?? false } : { isLoggedIn: false });
       });
       return () => subscription.unsubscribe();
     } catch {
