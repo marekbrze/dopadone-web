@@ -82,6 +82,7 @@ export async function completeMigrationIfPending(): Promise<void> {
         notes: task.notes,
         effort: task.effort,
         contextId: task.contextId ? (contextIdMap.get(task.contextId) ?? task.contextId) : null,
+        blocking: task.blocking ?? false,
       })
     }
   } catch (err) {

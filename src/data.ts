@@ -32,6 +32,7 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
       ...t,
       effort: t.effort ?? null,
       contextId: t.contextId ?? null,
+      blocking: t.blocking ?? false,
     }))
     await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts], async () => {
       await db.areas.bulkPut(parsed.areas)
@@ -56,7 +57,8 @@ export async function queryAllData(): Promise<AppState> {
     db.contexts.toArray(),
   ])
   const areas = [...areasRaw].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
-  return { areas, lifters, projects, tasks, contexts }
+  const migratedTasks = tasks.map(t => ({ ...t, blocking: t.blocking ?? false }))
+  return { areas, lifters, projects, tasks: migratedTasks, contexts }
 }
 
 export async function loadData(): Promise<AppState> {

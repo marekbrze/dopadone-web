@@ -1210,6 +1210,20 @@ body {
   border-color: var(--accent-soft);
 }
 
+.doing-col-blocking {
+  cursor: default;
+  border-color: rgba(180, 60, 40, 0.35);
+}
+
+.doing-col-blocking .doing-col-header {
+  background: rgba(180, 60, 40, 0.07);
+  cursor: default;
+}
+
+.doing-col-blocking .doing-col-name {
+  color: #b43c28;
+}
+
 .doing-col-header {
   display: flex;
   align-items: center;

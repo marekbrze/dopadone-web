@@ -119,6 +119,42 @@ export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask, onCompl
     <div className="doing-view">
       <div className="doing-layout">
         <div className="doing-board">
+          {/* Fixed "Blokuje" column — always first */}
+          {(() => {
+            const blockingTasks = activeTasks.filter(t => t.blocking);
+            return (
+              <div className="doing-col doing-col-blocking">
+                <div className="doing-col-header">
+                  <span className="doing-col-name">🔴 Blokuje</span>
+                  <span className="doing-col-count">{blockingTasks.length}</span>
+                </div>
+                <div className="doing-col-body">
+                  {blockingTasks.length === 0 ? (
+                    <div className="doing-empty">Brak blokujących zadań</div>
+                  ) : (
+                    blockingTasks.map(task => (
+                      <div
+                        key={task.id}
+                        className={`task-item${task.id === selectedTaskId ? ' selected' : ''}`}
+                        onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                      >
+                        <div className="task-main">
+                          <input
+                            type="checkbox"
+                            checked={task.done}
+                            onChange={() => onUpdateTask(task.id, { done: !task.done })}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <span className="task-name">{task.name}</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {groupPrefs.map((pref, index) => {
             const ctx = pref.contextId ? contexts.find(c => c.id === pref.contextId) : null;
             if (pref.contextId !== null && !ctx) return null;

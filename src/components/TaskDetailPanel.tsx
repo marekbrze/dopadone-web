@@ -103,6 +103,18 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose, o
         </div>
 
         <div className="detail-field">
+          <label>Blokuje</label>
+          <label className="detail-checkbox-row">
+            <input
+              type="checkbox"
+              checked={task.blocking}
+              onChange={() => onUpdate('blocking', !task.blocking)}
+            />
+            <span>Ktoś czeka na moje działanie</span>
+          </label>
+        </div>
+
+        <div className="detail-field">
           <label>Priorytet</label>
           <select
             className="detail-select"

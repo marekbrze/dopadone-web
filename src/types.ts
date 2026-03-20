@@ -36,6 +36,7 @@ export interface Task {
   notes: string;
   effort: Effort | null;
   contextId: string | null;
+  blocking: boolean;
 }
 
 export interface AppState {
