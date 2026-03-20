@@ -116,11 +116,10 @@ export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask }: Props
 
   return (
     <div className="doing-view">
-      <div className={`doing-columns${selectedTask ? ' panel-open' : ''}`}>
-        <div className="doing-groups">
+      <div className="doing-layout">
+        <div className="doing-board">
           {groupPrefs.map((pref, index) => {
             const ctx = pref.contextId ? contexts.find(c => c.id === pref.contextId) : null;
-            // Skip groups for deleted contexts (except null group)
             if (pref.contextId !== null && !ctx) return null;
 
             const groupTasks = activeTasks.filter(t =>
@@ -132,21 +131,21 @@ export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask }: Props
             return (
               <div
                 key={pref.contextId ?? '__null__'}
-                className={`doing-group${pref.hidden ? ' hidden' : ''}${dragOverIndex === index ? ' drag-over' : ''}`}
+                className={`doing-col${pref.hidden ? ' hidden' : ''}${dragOverIndex === index ? ' drag-over' : ''}`}
                 draggable
                 onDragStart={() => handleDragStart(index)}
                 onDragOver={e => handleDragOver(e, index)}
                 onDrop={() => handleDrop(index)}
                 onDragEnd={handleDragEnd}
               >
-                <div className="doing-group-header" onClick={() => toggleGroup(index)}>
+                <div className="doing-col-header" onClick={() => toggleGroup(index)}>
                   <span className="doing-drag-handle" onMouseDown={e => e.stopPropagation()}>⠿</span>
-                  <span className="doing-group-name">{label}</span>
-                  <span className="doing-group-count">{groupTasks.length}</span>
-                  <span className="doing-group-toggle">{pref.hidden ? '▸' : '▾'}</span>
+                  <span className="doing-col-name">{label}</span>
+                  <span className="doing-col-count">{groupTasks.length}</span>
+                  <span className="doing-col-toggle">{pref.hidden ? '▸' : '▾'}</span>
                 </div>
                 {!pref.hidden && (
-                  <div className="doing-group-body">
+                  <div className="doing-col-body">
                     {groupTasks.length === 0 ? (
                       <div className="doing-empty">Brak zadań</div>
                     ) : (
