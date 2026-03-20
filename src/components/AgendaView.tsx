@@ -333,7 +333,7 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
 
   const getMinutesFromEvent = (e: React.MouseEvent<HTMLDivElement>): number => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top + (gridRef.current?.scrollTop ?? 0);
+    const y = e.clientY - rect.top;
     return Math.max(0, Math.min(snap15(y), 24 * 60 - 15));
   };
 
