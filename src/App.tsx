@@ -415,25 +415,26 @@ export default function App() {
             onClick={() => setCurrentView('do')}
           >Robienie</button>
         </div>
-        {currentView === 'plan' && (
-          <nav className="area-tabs">
-            {data.areas.map(area => (
-              <button
-                key={area.id}
-                className={`area-tab ${area.id === selectedAreaId ? 'active' : ''}`}
-                style={area.id === selectedAreaId ? { borderBottomColor: area.color, color: area.color } : {}}
-                onClick={() => selectArea(area.id)}
-              >
-                {area.name}
-              </button>
-            ))}
-            <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
-          </nav>
-        )}
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
         </button>
       </header>
+
+      {currentView === 'plan' && (
+        <nav className="local-nav">
+          {data.areas.map(area => (
+            <button
+              key={area.id}
+              className={`area-tab ${area.id === selectedAreaId ? 'active' : ''}`}
+              style={area.id === selectedAreaId ? { borderBottomColor: area.color, color: area.color } : {}}
+              onClick={() => selectArea(area.id)}
+            >
+              {area.name}
+            </button>
+          ))}
+          <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
+        </nav>
+      )}
 
       {currentView === 'do' && (
         <DoingView
