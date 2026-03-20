@@ -1046,6 +1046,33 @@ body {
   border-color: rgba(155, 50, 38, 0.40);
 }
 
+.next-action-btn {
+  background: transparent;
+  border: 1px solid rgba(60, 120, 70, 0.30);
+  border-radius: var(--radius);
+  color: #3a7848;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: background 0.15s, border-color 0.15s;
+  align-self: flex-start;
+  margin-top: 6px;
+}
+
+.next-action-btn:hover:not(:disabled) {
+  background: rgba(60, 120, 70, 0.06);
+  border-color: rgba(60, 120, 70, 0.50);
+}
+
+.next-action-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
 /* ── Row menu button (⋯) ─────────────────────────────────── */
 
 .row-menu-btn {

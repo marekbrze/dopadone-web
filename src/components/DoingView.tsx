@@ -41,9 +41,10 @@ interface Props {
   contexts: Context[];
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   onDeleteTask: (id: string) => Promise<void>;
+  onCompleteWithNextAction: (task: Task, nextActionName: string) => Promise<void>;
 }
 
-export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask }: Props) {
+export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask, onCompleteWithNextAction }: Props) {
   const [groupPrefs, setGroupPrefs] = useState<GroupPref[]>(() => loadPrefs(contexts));
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
@@ -181,6 +182,7 @@ export function DoingView({ tasks, contexts, onUpdateTask, onDeleteTask }: Props
             onUpdate={(key, value) => onUpdateTask(selectedTask.id, { [key]: value })}
             onDelete={() => { onDeleteTask(selectedTask.id); setSelectedTaskId(null); }}
             onClose={() => setSelectedTaskId(null)}
+            onCompleteWithNextAction={(name) => onCompleteWithNextAction(selectedTask, name)}
           />
         )}
       </div>

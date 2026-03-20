@@ -242,6 +242,21 @@ export default function App() {
     setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }) : d);
   };
 
+  const handleCompleteWithNextAction = async (task: Task, nextActionName: string) => {
+    await updateTask(task.id, { done: true });
+    let newTask: Task;
+    if (isCloudSchema()) {
+      const id = await db.tasks.add({ name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId }) as string;
+      newTask = { id, name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId };
+    } else {
+      newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId };
+      await db.tasks.put(newTask);
+    }
+    setData(d => d ? ({ ...d, tasks: [...d.tasks, newTask] }) : d);
+    setSelectedProjectId(task.projectId);
+    setSelectedTaskId(newTask.id);
+  };
+
   // Helpers
   function collectProjectIds(rootId: string, allProjects: Project[]): string[] {
     const children = allProjects.filter(p => p.parentProjectId === rootId);
@@ -427,6 +442,7 @@ export default function App() {
           contexts={data.contexts}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
+          onCompleteWithNextAction={handleCompleteWithNextAction}
         />
       )}
 
@@ -583,6 +599,7 @@ export default function App() {
             onUpdate={(key, value) => updateTask(selectedTask.id, { [key]: value })}
             onDelete={() => { deleteTask(selectedTask.id); setSelectedTaskId(null); }}
             onClose={() => setSelectedTaskId(null)}
+            onCompleteWithNextAction={(name) => handleCompleteWithNextAction(selectedTask, name)}
           />
         )}
         {!selectedTask && editingLifterId && (() => {

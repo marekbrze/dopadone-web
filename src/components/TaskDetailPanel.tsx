@@ -27,15 +27,18 @@ interface Props {
   onUpdate: (key: keyof Task, value: Task[keyof Task]) => void;
   onDelete: () => void;
   onClose: () => void;
+  onCompleteWithNextAction: (nextActionName: string) => void;
 }
 
-export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose }: Props) {
+export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose, onCompleteWithNextAction }: Props) {
   const [localName, setLocalName] = useState(task.name);
   const [localNotes, setLocalNotes] = useState(task.notes);
+  const [nextAction, setNextAction] = useState('');
 
   useEffect(() => {
     setLocalName(task.name);
     setLocalNotes(task.notes ?? '');
+    setNextAction('');
   }, [task.id]);
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
@@ -152,6 +155,24 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose }:
             placeholder="Dodaj notatki..."
             rows={4}
           />
+        </div>
+
+        <div className="detail-field">
+          <label>Następna akcja</label>
+          <input
+            className="detail-name-input"
+            value={nextAction}
+            onChange={e => setNextAction(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && nextAction.trim()) onCompleteWithNextAction(nextAction.trim()); }}
+            placeholder="Wpisz następne zadanie..."
+          />
+          <button
+            className="next-action-btn"
+            onClick={() => onCompleteWithNextAction(nextAction.trim())}
+            disabled={!nextAction.trim()}
+          >
+            Zakończ i utwórz
+          </button>
         </div>
 
         <button className="delete-task-btn" onClick={onDelete}>Usuń zadanie</button>
