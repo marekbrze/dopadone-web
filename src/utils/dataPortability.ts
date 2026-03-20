@@ -73,7 +73,7 @@ async function decryptData(encrypted: string, password: string): Promise<string>
 }
 
 function generateChecksum(data: AppState): string {
-  const counts = `${data.areas.length}-${data.lifters.length}-${data.projects.length}-${data.tasks.length}-${data.contexts.length}`;
+  const counts = `${data.areas.length}-${data.lifters.length}-${data.projects.length}-${data.tasks.length}-${data.contexts.length}-${data.workBlocks.length}`;
   return btoa(counts);
 }
 
@@ -81,17 +81,18 @@ export async function exportAllData(
   db: DopadoneDB,
   password?: string
 ): Promise<Blob> {
-  const [areas, lifters, projects, tasks, contexts] = await Promise.all([
+  const [areas, lifters, projects, tasks, contexts, workBlocks] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
+    db.workBlocks.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks };
   const exportData: ExportData = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     checksum: generateChecksum(data),
     data,
@@ -133,13 +134,14 @@ export async function previewImport(
   db: DopadoneDB,
   data: ExportData
 ): Promise<ImportPreview> {
-  const [existingAreas, existingLifters, existingProjects, existingTasks, existingContexts] = 
+  const [existingAreas, existingLifters, existingProjects, existingTasks, existingContexts, existingWorkBlocks] =
     await Promise.all([
       db.areas.toArray(),
       db.lifters.toArray(),
       db.projects.toArray(),
       db.tasks.toArray(),
       db.contexts.toArray(),
+      db.workBlocks.toArray(),
     ]);
 
   const countChanges = <T extends { id: string }>(existing: T[], incoming: T[]) => {
@@ -156,12 +158,15 @@ export async function previewImport(
     return { added, updated };
   };
 
+  const incomingWorkBlocks = data.data.workBlocks ?? [];
+
   return {
     areas: countChanges(existingAreas, data.data.areas),
     lifters: countChanges(existingLifters, data.data.lifters),
     projects: countChanges(existingProjects, data.data.projects),
     tasks: countChanges(existingTasks, data.data.tasks),
     contexts: countChanges(existingContexts, data.data.contexts),
+    workBlocks: countChanges(existingWorkBlocks, incomingWorkBlocks),
   };
 }
 
@@ -170,7 +175,8 @@ export async function executeImport(
   data: ExportData,
   mode: ImportMode
 ): Promise<void> {
-  await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts], async () => {
+  const workBlocks = data.data.workBlocks ?? [];
+  await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks], async () => {
     if (mode === 'replace') {
       await Promise.all([
         db.areas.clear(),
@@ -178,6 +184,7 @@ export async function executeImport(
         db.projects.clear(),
         db.tasks.clear(),
         db.contexts.clear(),
+        db.workBlocks.clear(),
       ]);
     }
 
@@ -187,22 +194,24 @@ export async function executeImport(
       db.projects.bulkPut(data.data.projects),
       db.tasks.bulkPut(data.data.tasks),
       db.contexts.bulkPut(data.data.contexts),
+      db.workBlocks.bulkPut(workBlocks),
     ]);
   });
 }
 
 export async function saveAutoBackup(db: DopadoneDB): Promise<void> {
-  const [areas, lifters, projects, tasks, contexts] = await Promise.all([
+  const [areas, lifters, projects, tasks, contexts, workBlocks] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
+    db.workBlocks.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks };
   const exportData: ExportData = {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     checksum: generateChecksum(data),
     data,

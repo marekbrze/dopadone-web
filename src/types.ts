@@ -39,16 +39,30 @@ export interface Task {
   blocking: boolean;
 }
 
+export interface WorkBlock {
+  id: string;
+  title: string;
+  date: string;           // "YYYY-MM-DD"
+  startMinutes: number;   // minutes from midnight
+  endMinutes: number;
+  areaIds: string[];
+  lifterIds: string[];
+  projectIds: string[];
+  contextIds: string[];
+  color?: string;
+}
+
 export interface AppState {
   areas: Area[];
   lifters: Lifter[];
   projects: Project[];
   tasks: Task[];
   contexts: Context[];
+  workBlocks: WorkBlock[];
 }
 
 export interface ExportData {
-  version: 1;
+  version: 1 | 2;
   exportedAt: string;
   checksum?: string;
   data: AppState;
@@ -62,4 +76,5 @@ export interface ImportPreview {
   projects: { added: number; updated: number };
   tasks: { added: number; updated: number };
   contexts: { added: number; updated: number };
+  workBlocks: { added: number; updated: number };
 }

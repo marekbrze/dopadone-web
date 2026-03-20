@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { liveQuery } from 'dexie';
-import type { AppState, Area, Lifter, Project, Task, Context } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock } from './types';
 import { loadData, queryAllData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
@@ -10,6 +10,7 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { DoingView } from './components/DoingView';
+import { AgendaView } from './components/AgendaView';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
@@ -35,7 +36,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
-  const [currentView, setCurrentView] = useState<'plan' | 'do'>('plan');
+  const [currentView, setCurrentView] = useState<'plan' | 'do' | 'agenda'>('plan');
   const prevAreasCount = useRef(0);
 
   const toggleColumn = (id: string) => {
@@ -97,7 +98,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Failed to load data:', err);
-        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [] });
+        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [] });
       });
 
     return () => subscription?.unsubscribe();
@@ -387,6 +388,29 @@ export default function App() {
     }
   };
 
+  // Work Blocks
+  const addWorkBlock = async (block: Omit<WorkBlock, 'id'>) => {
+    let wb: WorkBlock;
+    if (isCloudSchema()) {
+      const id = await db.workBlocks.add(block as WorkBlock) as string;
+      wb = { ...block, id };
+    } else {
+      wb = { ...block, id: newId() };
+      await db.workBlocks.put(wb);
+    }
+    setData(d => d ? ({ ...d, workBlocks: [...d.workBlocks, wb] }) : d);
+  };
+
+  const updateWorkBlock = async (id: string, updates: Partial<WorkBlock>) => {
+    await db.workBlocks.update(id, updates);
+    setData(d => d ? ({ ...d, workBlocks: d.workBlocks.map(wb => wb.id === id ? { ...wb, ...updates } : wb) }) : d);
+  };
+
+  const deleteWorkBlock = async (id: string) => {
+    await db.workBlocks.delete(id);
+    setData(d => d ? ({ ...d, workBlocks: d.workBlocks.filter(wb => wb.id !== id) }) : d);
+  };
+
   const deleteContext = async (id: string) => {
     await db.transaction('rw', [db.contexts, db.tasks], async () => {
       await db.contexts.delete(id);
@@ -414,6 +438,10 @@ export default function App() {
             className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
             onClick={() => setCurrentView('do')}
           >Robienie</button>
+          <button
+            className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
+            onClick={() => setCurrentView('agenda')}
+          >Agenda</button>
         </div>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
@@ -434,6 +462,19 @@ export default function App() {
           ))}
           <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
         </nav>
+      )}
+
+      {currentView === 'agenda' && (
+        <AgendaView
+          areas={data.areas}
+          lifters={data.lifters}
+          projects={data.projects}
+          contexts={data.contexts}
+          workBlocks={data.workBlocks}
+          onAdd={addWorkBlock}
+          onUpdate={updateWorkBlock}
+          onDelete={deleteWorkBlock}
+        />
       )}
 
       {currentView === 'do' && (
