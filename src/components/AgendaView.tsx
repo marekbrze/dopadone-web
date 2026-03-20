@@ -39,8 +39,8 @@ function parseTime(value: string): number {
   return h * 60 + m;
 }
 
-function snapTo30(minutes: number): number {
-  return Math.floor(minutes / 30) * 30;
+function snap15(minutes: number): number {
+  return Math.round(minutes / 15) * 15;
 }
 
 function getBlockColor(block: WorkBlock, areas: Area[]): string {
@@ -57,6 +57,7 @@ interface ModalProps {
   block: Partial<WorkBlock> | null; // null = create new
   defaultDate: string;
   defaultStartMinutes: number;
+  defaultEndMinutes?: number;
   areas: Area[];
   lifters: Lifter[];
   projects: Project[];
@@ -70,6 +71,7 @@ function WorkBlockModal({
   block,
   defaultDate,
   defaultStartMinutes,
+  defaultEndMinutes,
   areas,
   lifters,
   projects,
@@ -83,7 +85,7 @@ function WorkBlockModal({
   const [title, setTitle] = useState(block?.title ?? '');
   const [date, setDate] = useState(block?.date ?? defaultDate);
   const [startMin, setStartMin] = useState(block?.startMinutes ?? defaultStartMinutes);
-  const [endMin, setEndMin] = useState(block?.endMinutes ?? defaultStartMinutes + 60);
+  const [endMin, setEndMin] = useState(block?.endMinutes ?? defaultEndMinutes ?? defaultStartMinutes + 60);
   const [areaIds, setAreaIds] = useState<string[]>(block?.areaIds ?? []);
   const [lifterIds, setLifterIds] = useState<string[]>(block?.lifterIds ?? []);
   const [projectIds, setProjectIds] = useState<string[]>(block?.projectIds ?? []);
@@ -131,7 +133,7 @@ function WorkBlockModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Edytuj blok' : 'Nowy blok'}</h2>
           <button className="modal-close" onClick={onClose}>✕</button>
@@ -276,7 +278,8 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
-  const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number } | null>(null);
+  const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
+  const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Scroll to current hour on mount
@@ -287,6 +290,21 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
       gridRef.current.scrollTop = Math.max(0, minutes - 120);
     }
   }, []);
+
+  // Global mouseup to finish drag even if cursor leaves the column
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState) {
+        const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
+        const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
+        const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
+        setPendingSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
+        setDragState(null);
+      }
+    };
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [dragState]);
 
   const visibleDates = viewMode === 'week' ? getWeekDates(anchorDate) : [anchorDate];
 
@@ -313,12 +331,32 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
     });
   };
 
-  const handleColumnClick = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
+  const getMinutesFromEvent = (e: React.MouseEvent<HTMLDivElement>): number => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const y = e.clientY - rect.top + (gridRef.current?.scrollTop ?? 0) - 24; // offset for day header
-    const rawMin = Math.max(0, y);
-    const snapped = snapTo30(rawMin);
-    setPendingSlot({ date, startMinutes: snapped });
+    const y = e.clientY - rect.top + (gridRef.current?.scrollTop ?? 0);
+    return Math.max(0, Math.min(snap15(y), 24 * 60 - 15));
+  };
+
+  const handleMouseDown = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('.agenda-block')) return;
+    e.preventDefault();
+    const snapped = getMinutesFromEvent(e);
+    setDragState({ date, startMinutes: snapped, currentMinutes: snapped });
+  };
+
+  const handleMouseMove = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (!dragState || dragState.date !== date) return;
+    const snapped = getMinutesFromEvent(e);
+    setDragState(prev => prev ? { ...prev, currentMinutes: snapped } : null);
+  };
+
+  const finishDrag = (date: string) => {
+    if (!dragState || dragState.date !== date) return;
+    const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
+    const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
+    const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
+    setPendingSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
+    setDragState(null);
   };
 
   const handleSave = (data: Omit<WorkBlock, 'id'>) => {
@@ -397,7 +435,9 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
               <div
                 key={d}
                 className="agenda-day-col"
-                onClick={(e) => handleColumnClick(d, e)}
+                onMouseDown={(e) => handleMouseDown(d, e)}
+                onMouseMove={(e) => handleMouseMove(d, e)}
+                onMouseUp={() => finishDrag(d)}
               >
                 {/* Hour lines */}
                 {hours.map(h => (
@@ -407,6 +447,17 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
                     style={{ top: `${h * 60}px` }}
                   />
                 ))}
+
+                {/* Drag preview */}
+                {dragState?.date === d && dragState.startMinutes !== dragState.currentMinutes && (
+                  <div
+                    className="agenda-drag-preview"
+                    style={{
+                      top: `${Math.min(dragState.startMinutes, dragState.currentMinutes)}px`,
+                      height: `${Math.abs(dragState.currentMinutes - dragState.startMinutes)}px`,
+                    }}
+                  />
+                )}
 
                 {/* Work blocks */}
                 {dayBlocks.map(block => {
@@ -446,6 +497,7 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
           block={null}
           defaultDate={pendingSlot.date}
           defaultStartMinutes={pendingSlot.startMinutes}
+          defaultEndMinutes={pendingSlot.endMinutes}
           areas={areas}
           lifters={lifters}
           projects={projects}
