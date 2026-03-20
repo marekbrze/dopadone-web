@@ -192,7 +192,6 @@ export default function App() {
       area = { id: newId(), name, color };
       await db.areas.put(area);
     }
-    setData(d => d ? ({ ...d, areas: [...d.areas, area] }) : d);
   };
 
   const addLifter = async (name: string) => {
@@ -204,7 +203,6 @@ export default function App() {
       lifter = { id: newId(), name, areaId: selectedAreaId };
       await db.lifters.put(lifter);
     }
-    setData(d => d ? ({ ...d, lifters: [...d.lifters, lifter] }) : d);
   };
 
   const addProject = async (name: string, parentProjectId: string | null = null) => {
@@ -216,7 +214,6 @@ export default function App() {
       proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
       await db.projects.put(proj);
     }
-    setData(d => d ? ({ ...d, projects: [...d.projects, proj] }) : d);
   };
 
   // Tasks
@@ -230,7 +227,6 @@ export default function App() {
       task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null };
       await db.tasks.put(task);
     }
-    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -373,7 +369,6 @@ export default function App() {
       ctx = { id: newId(), name, icon };
       await db.contexts.put(ctx);
     }
-    setData(d => d ? ({ ...d, contexts: [...d.contexts, ctx] }) : d);
   };
 
   const deleteContext = async (id: string) => {
