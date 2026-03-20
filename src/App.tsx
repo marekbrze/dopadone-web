@@ -9,6 +9,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
+import { DoingView } from './components/DoingView';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
@@ -34,6 +35,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
+  const [currentView, setCurrentView] = useState<'plan' | 'do'>('plan');
   const prevAreasCount = useRef(0);
 
   const toggleColumn = (id: string) => {
@@ -184,12 +186,13 @@ export default function App() {
   const addArea = async (name: string) => {
     const colors = ['#5c4a38', '#4a6852', '#6b5230', '#4a5c68', '#7a5c48'];
     const color = colors[data.areas.length % colors.length];
+    const order = data.areas.length;
     let area: Area;
     if (isCloudSchema()) {
-      const id = await db.areas.add({ name, color }) as string;
-      area = { id, name, color };
+      const id = await db.areas.add({ name, color, order }) as string;
+      area = { id, name, color, order };
     } else {
-      area = { id: newId(), name, color };
+      area = { id: newId(), name, color, order };
       await db.areas.put(area);
     }
   };
@@ -353,10 +356,9 @@ export default function App() {
     const areas = [...data.areas];
     const [moved] = areas.splice(fromIndex, 1);
     areas.splice(toIndex, 0, moved);
-    // Persist reorder — Dexie has no built-in order, so we just update state
-    // (order is maintained in React state; on reload it'll come from DB unordered,
-    // but that's acceptable without an explicit order field)
-    setData(d => d ? ({ ...d, areas }) : d);
+    const withOrder = areas.map((a, i) => ({ ...a, order: i }));
+    await db.areas.bulkPut(withOrder);
+    // liveQuery will emit the update — no setData needed
   };
 
   // Contexts
@@ -389,25 +391,49 @@ export default function App() {
     <div className="app">
       <header className="app-header">
         <div className="logo">Dopadone</div>
-        <nav className="area-tabs">
-          {data.areas.map(area => (
-            <button
-              key={area.id}
-              className={`area-tab ${area.id === selectedAreaId ? 'active' : ''}`}
-              style={area.id === selectedAreaId ? { borderBottomColor: area.color, color: area.color } : {}}
-              onClick={() => selectArea(area.id)}
-            >
-              {area.name}
-            </button>
-          ))}
-          <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
-        </nav>
+        <div className="view-tabs">
+          <button
+            className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
+            onClick={() => setCurrentView('plan')}
+          >Planowanie</button>
+          <button
+            className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
+            onClick={() => setCurrentView('do')}
+          >Robienie</button>
+        </div>
+        {currentView === 'plan' && (
+          <nav className="area-tabs">
+            {data.areas.map(area => (
+              <button
+                key={area.id}
+                className={`area-tab ${area.id === selectedAreaId ? 'active' : ''}`}
+                style={area.id === selectedAreaId ? { borderBottomColor: area.color, color: area.color } : {}}
+                onClick={() => selectArea(area.id)}
+              >
+                {area.name}
+              </button>
+            ))}
+            <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
+          </nav>
+        )}
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
         </button>
       </header>
 
-      <main className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}>
+      {currentView === 'do' && (
+        <DoingView
+          tasks={data.tasks}
+          contexts={data.contexts}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+        />
+      )}
+
+      <main
+        className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
+        style={currentView !== 'plan' ? { display: 'none' } : undefined}
+      >
         {/* Column 1: Lifters */}
         <section
           className={`column ${expandedColumns.has('lifters') ? 'expanded' : ''}`}

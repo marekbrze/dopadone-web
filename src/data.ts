@@ -48,13 +48,14 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
 }
 
 export async function queryAllData(): Promise<AppState> {
-  const [areas, lifters, projects, tasks, contexts] = await Promise.all([
+  const [areasRaw, lifters, projects, tasks, contexts] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
   ])
+  const areas = [...areasRaw].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
   return { areas, lifters, projects, tasks, contexts }
 }
 
