@@ -487,7 +487,7 @@ export default function App() {
               projects={rootProjects}
               allProjects={visibleProjects}
               selectedProjectId={selectedProjectId}
-              onSelect={id => { setSelectedProjectId(prev => prev === id ? null : id); setSelectedTaskId(null); }}
+              onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); }}
               onDelete={deleteProject}
               onEdit={openProjectEdit}
             />
