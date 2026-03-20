@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Project, Context, WorkBlock } from '../types';
 
 interface Props {
@@ -185,16 +185,22 @@ function WorkBlockModal({
               <div className="agenda-filter-section">
                 <span className="agenda-filter-label">Obszary</span>
                 <div className="agenda-filter-checkboxes">
-                  {areas.map(a => (
-                    <label key={a.id} className="agenda-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={areaIds.includes(a.id)}
-                        onChange={() => setAreaIds(prev => toggleArr(prev, a.id))}
-                      />
-                      <span style={{ color: a.color }}>{a.name}</span>
-                    </label>
-                  ))}
+                  {areas.map(a => {
+                    const active = areaIds.includes(a.id);
+                    return (
+                      <button
+                        key={a.id}
+                        type="button"
+                        className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                        style={active
+                          ? { background: a.color, borderColor: a.color }
+                          : { borderColor: a.color, color: a.color }}
+                        onClick={() => setAreaIds(prev => toggleArr(prev, a.id))}
+                      >
+                        {a.name}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -204,14 +210,14 @@ function WorkBlockModal({
                 <span className="agenda-filter-label">Podobszary</span>
                 <div className="agenda-filter-checkboxes">
                   {filteredLifters.map(l => (
-                    <label key={l.id} className="agenda-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={lifterIds.includes(l.id)}
-                        onChange={() => setLifterIds(prev => toggleArr(prev, l.id))}
-                      />
+                    <button
+                      key={l.id}
+                      type="button"
+                      className={`agenda-filter-pill ${lifterIds.includes(l.id) ? 'active' : ''}`}
+                      onClick={() => setLifterIds(prev => toggleArr(prev, l.id))}
+                    >
                       {l.name}
-                    </label>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -222,14 +228,14 @@ function WorkBlockModal({
                 <span className="agenda-filter-label">Projekty</span>
                 <div className="agenda-filter-checkboxes">
                   {filteredProjects.map(p => (
-                    <label key={p.id} className="agenda-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={projectIds.includes(p.id)}
-                        onChange={() => setProjectIds(prev => toggleArr(prev, p.id))}
-                      />
+                    <button
+                      key={p.id}
+                      type="button"
+                      className={`agenda-filter-pill ${projectIds.includes(p.id) ? 'active' : ''}`}
+                      onClick={() => setProjectIds(prev => toggleArr(prev, p.id))}
+                    >
                       {p.name}
-                    </label>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -240,14 +246,14 @@ function WorkBlockModal({
                 <span className="agenda-filter-label">Konteksty</span>
                 <div className="agenda-filter-checkboxes">
                   {contexts.map(c => (
-                    <label key={c.id} className="agenda-checkbox-label">
-                      <input
-                        type="checkbox"
-                        checked={contextIds.includes(c.id)}
-                        onChange={() => setContextIds(prev => toggleArr(prev, c.id))}
-                      />
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={`agenda-filter-pill ${contextIds.includes(c.id) ? 'active' : ''}`}
+                      onClick={() => setContextIds(prev => toggleArr(prev, c.id))}
+                    >
                       {c.icon} {c.name}
-                    </label>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -283,6 +289,10 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
+  const [nowMinutes, setNowMinutes] = useState(() => {
+    const n = new Date();
+    return n.getHours() * 60 + n.getMinutes();
+  });
   const gridRef = useRef<HTMLDivElement>(null);
 
   // Scroll to current hour on mount
@@ -292,6 +302,16 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
       const minutes = now.getHours() * 60 + now.getMinutes();
       gridRef.current.scrollTop = Math.max(0, minutes - 120);
     }
+  }, []);
+
+  // Update current-time indicator every minute
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setNowMinutes(n.getHours() * 60 + n.getMinutes());
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // Global mouseup to finish drag even if cursor leaves the column
@@ -442,14 +462,24 @@ export function AgendaView({ areas, lifters, projects, contexts, workBlocks, onA
                 onMouseMove={(e) => handleMouseMove(d, e)}
                 onMouseUp={() => finishDrag(d)}
               >
-                {/* Hour lines */}
+                {/* Hour lines + half-hour dashes */}
                 {hours.map(h => (
-                  <div
-                    key={h}
-                    className="agenda-hour-line"
-                    style={{ top: `${h * 60}px` }}
-                  />
+                  <React.Fragment key={h}>
+                    <div
+                      className="agenda-hour-line"
+                      style={{ top: `${h * 60}px` }}
+                    />
+                    <div
+                      className="agenda-half-hour-line"
+                      style={{ top: `${h * 60 + 30}px` }}
+                    />
+                  </React.Fragment>
                 ))}
+
+                {/* Current-time indicator */}
+                {d === today && (
+                  <div className="agenda-now-line" style={{ top: `${nowMinutes}px` }} />
+                )}
 
                 {/* Drag preview */}
                 {dragState?.date === d && dragState.startMinutes !== dragState.currentMinutes && (
