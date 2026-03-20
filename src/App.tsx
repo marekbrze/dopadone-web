@@ -252,7 +252,6 @@ export default function App() {
       newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false };
       await db.tasks.put(newTask);
     }
-    setData(d => d ? ({ ...d, tasks: [...d.tasks, newTask] }) : d);
     setSelectedProjectId(task.projectId);
     setSelectedTaskId(newTask.id);
   };
