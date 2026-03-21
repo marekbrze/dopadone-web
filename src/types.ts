@@ -1,3 +1,7 @@
+export type DragPayload =
+  | { kind: 'task'; taskId: string }
+  | { kind: 'project'; projectId: string };
+
 export interface Area {
   id: string;
   name: string;

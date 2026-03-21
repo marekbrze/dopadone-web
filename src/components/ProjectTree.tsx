@@ -1,4 +1,5 @@
 import type { Project } from '../types';
+import type { DragPayload } from '../types';
 import { RowMenuButton } from './RowMenuButton';
 
 interface Props {
@@ -9,9 +10,16 @@ interface Props {
   onDelete?: (id: string) => void;
   onEdit?: (id: string) => void;
   depth?: number;
+  dragPayload?: DragPayload | null;
+  dropTargetProjectId?: string | null;
+  onProjectDragStart?: (id: string) => void;
+  onProjectDragEnd?: () => void;
+  onProjectDragOver?: (e: React.DragEvent, id: string) => void;
+  onProjectDrop?: (id: string) => void;
+  onProjectDragLeave?: (e: React.DragEvent, id: string) => void;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onEdit, depth = 0 }: Props) {
+export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onEdit, depth = 0, dragPayload, dropTargetProjectId, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave }: Props) {
   return (
     <>
       {projects.map(project => {
@@ -19,10 +27,18 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
         const isSelected = selectedProjectId === project.id;
         return (
           <div key={project.id}>
-            <div className="project-item-row">
+            <div
+              className={`project-item-row${dropTargetProjectId === project.id ? ' drop-target-active' : ''}`}
+              onDragOver={e => onProjectDragOver?.(e, project.id)}
+              onDrop={() => onProjectDrop?.(project.id)}
+              onDragLeave={e => onProjectDragLeave?.(e, project.id)}
+            >
               <div
                 className={`project-item ${isSelected ? 'selected' : ''}`}
                 style={{ paddingLeft: `${12 + depth * 16}px` }}
+                draggable
+                onDragStart={() => onProjectDragStart?.(project.id)}
+                onDragEnd={onProjectDragEnd}
                 onClick={() => onSelect(project.id)}
               >
                 {children.length > 0 && <span className="tree-icon">▸</span>}
@@ -42,6 +58,13 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onDelete={onDelete}
                 onEdit={onEdit}
                 depth={depth + 1}
+                dragPayload={dragPayload}
+                dropTargetProjectId={dropTargetProjectId}
+                onProjectDragStart={onProjectDragStart}
+                onProjectDragEnd={onProjectDragEnd}
+                onProjectDragOver={onProjectDragOver}
+                onProjectDrop={onProjectDrop}
+                onProjectDragLeave={onProjectDragLeave}
               />
             )}
           </div>

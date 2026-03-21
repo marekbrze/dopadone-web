@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { liveQuery } from 'dexie';
-import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, DragPayload } from './types';
 import { loadData, queryAllData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
@@ -37,6 +37,10 @@ export default function App() {
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [currentView, setCurrentView] = useState<'plan' | 'do' | 'agenda'>('plan');
+  const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
+  const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
+  const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
+  const [dropTargetRootZone, setDropTargetRootZone] = useState(false);
   const prevAreasCount = useRef(0);
 
   const toggleColumn = (id: string) => {
@@ -323,6 +327,67 @@ export default function App() {
     setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, name } : p) }) : d);
   };
 
+  const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
+    const task = data.tasks.find(t => t.id === taskId);
+    if (!task || task.projectId === targetProjectId) return;
+    await db.tasks.update(taskId, { projectId: targetProjectId });
+    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, projectId: targetProjectId } : t) }) : d);
+    if (selectedTaskId === taskId) setSelectedTaskId(null);
+  };
+
+  const moveProjectToLifter = async (projectId: string, targetLifterId: string) => {
+    const project = data.projects.find(p => p.id === projectId);
+    if (!project || (project.lifterId === targetLifterId && project.parentProjectId === null)) return;
+    await db.projects.update(projectId, { lifterId: targetLifterId, parentProjectId: null });
+    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, lifterId: targetLifterId, parentProjectId: null } : p) }) : d);
+  };
+
+  const reparentProject = async (projectId: string, newParentId: string | null) => {
+    const project = data.projects.find(p => p.id === projectId);
+    if (!project || project.parentProjectId === newParentId) return;
+    if (newParentId !== null) {
+      const descendants = collectProjectIds(projectId, data.projects);
+      if (descendants.includes(newParentId)) return;
+    }
+    const updates: Partial<Project> = { parentProjectId: newParentId };
+    if (newParentId !== null) {
+      const parent = data.projects.find(p => p.id === newParentId);
+      if (parent) updates.lifterId = parent.lifterId;
+    }
+    await db.projects.update(projectId, updates);
+    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, ...updates } : p) }) : d);
+  };
+
+  const handleProjectDragEnd = () => {
+    setDragPayload(null);
+    setDropTargetProjectId(null);
+    setDropTargetLifterId(null);
+    setDropTargetRootZone(false);
+  };
+
+  const handleProjectDragOver = (e: React.DragEvent, projectId: string) => {
+    if (!dragPayload) return;
+    e.preventDefault();
+    setDropTargetProjectId(projectId);
+  };
+
+  const handleProjectDrop = (targetProjectId: string) => {
+    if (!dragPayload) return;
+    setDropTargetProjectId(null);
+    if (dragPayload.kind === 'task') {
+      moveTaskToProject(dragPayload.taskId, targetProjectId);
+    } else if (dragPayload.kind === 'project') {
+      if (dragPayload.projectId !== targetProjectId) reparentProject(dragPayload.projectId, targetProjectId);
+    }
+    setDragPayload(null);
+  };
+
+  const handleProjectDragLeave = (e: React.DragEvent, projectId: string) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDropTargetProjectId(prev => prev === projectId ? null : prev);
+    }
+  };
+
   const openLifterEdit = (id: string) => {
     setEditingLifterId(id);
     setEditingProjectId(null);
@@ -521,7 +586,18 @@ export default function App() {
           >
             {lifters.length === 0 && <p className="empty-hint">Brak podobszarów w tym obszarze</p>}
             {lifters.map(l => (
-              <div key={l.id} className="list-item-row">
+              <div
+                key={l.id}
+                className={`list-item-row${dropTargetLifterId === l.id ? ' drop-target-active' : ''}`}
+                onDragOver={e => {
+                  if (dragPayload?.kind === 'project') { e.preventDefault(); setDropTargetLifterId(l.id); }
+                }}
+                onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetLifterId(null); }}
+                onDrop={e => {
+                  e.preventDefault(); setDropTargetLifterId(null);
+                  if (dragPayload?.kind === 'project') { moveProjectToLifter(dragPayload.projectId, l.id); setDragPayload(null); }
+                }}
+              >
                 <div
                   className={`list-item ${selectedLifterId === l.id ? 'selected' : ''}`}
                   onClick={() => selectLifter(l.id)}
@@ -567,6 +643,23 @@ export default function App() {
             role="region"
             aria-labelledby="column-header-projects"
           >
+            {dragPayload?.kind === 'project' && (() => {
+              const dragged = data.projects.find(p => p.id === (dragPayload as { kind: 'project'; projectId: string }).projectId);
+              return dragged?.parentProjectId !== null ? (
+                <div
+                  className={`root-drop-zone${dropTargetRootZone ? ' active' : ''}`}
+                  onDragOver={e => { e.preventDefault(); setDropTargetRootZone(true); }}
+                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetRootZone(false); }}
+                  onDrop={e => {
+                    e.preventDefault(); setDropTargetRootZone(false);
+                    reparentProject((dragPayload as { kind: 'project'; projectId: string }).projectId, null);
+                    setDragPayload(null);
+                  }}
+                >
+                  Upuść tutaj, aby przenieść do głównych projektów
+                </div>
+              ) : null;
+            })()}
             {rootProjects.length === 0 && (
               <p className="empty-hint">Brak projektów{selectedLifterId ? ' dla tego podobszaru' : ''}</p>
             )}
@@ -577,6 +670,13 @@ export default function App() {
               onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); }}
               onDelete={deleteProject}
               onEdit={openProjectEdit}
+              dragPayload={dragPayload}
+              dropTargetProjectId={dropTargetProjectId}
+              onProjectDragStart={id => setDragPayload({ kind: 'project', projectId: id })}
+              onProjectDragEnd={handleProjectDragEnd}
+              onProjectDragOver={handleProjectDragOver}
+              onProjectDrop={handleProjectDrop}
+              onProjectDragLeave={handleProjectDragLeave}
             />
           </div>
         </section>
@@ -616,6 +716,9 @@ export default function App() {
                 <div
                   key={task.id}
                   className={`task-item ${task.done ? 'done' : ''} ${task.id === selectedTaskId ? 'selected' : ''}`}
+                  draggable
+                  onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
+                  onDragEnd={() => setDragPayload(null)}
                   onClick={() => selectTask(task.id)}
                 >
                   <div className="task-main">

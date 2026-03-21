@@ -673,6 +673,39 @@ body {
 
 .project-item-row:hover .delete-btn { opacity: 1; }
 
+/* ── Drag-and-drop w ekranie planowania ─────────────────── */
+
+.task-item { cursor: grab; }
+.task-item input[type="checkbox"] { cursor: pointer; }
+.project-item { cursor: grab; }
+
+.project-item-row.drop-target-active > .project-item {
+  background: rgba(92, 74, 56, 0.08);
+  outline: 1px dashed var(--border);
+}
+
+.list-item-row.drop-target-active > .list-item {
+  background: rgba(92, 74, 56, 0.08);
+  outline: 1px dashed var(--border);
+}
+
+.root-drop-zone {
+  margin: 4px 0 8px;
+  padding: 7px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  font-size: 12px;
+  font-style: italic;
+  text-align: center;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.root-drop-zone.active {
+  background: rgba(92, 74, 56, 0.08);
+  border-style: solid;
+}
+
 /* ── Settings modal ──────────────────────────────────────── */
 
 .settings-modal {
