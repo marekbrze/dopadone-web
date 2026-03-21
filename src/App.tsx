@@ -475,6 +475,9 @@ export default function App() {
           onAdd={addWorkBlock}
           onUpdate={updateWorkBlock}
           onDelete={deleteWorkBlock}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onCompleteWithNextAction={handleCompleteWithNextAction}
         />
       )}
 

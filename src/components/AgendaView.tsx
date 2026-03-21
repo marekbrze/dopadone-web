@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Project, Context, WorkBlock, Task } from '../types';
+import { TaskDetailPanel } from './TaskDetailPanel';
 
 interface Props {
   areas: Area[];
@@ -11,6 +12,9 @@ interface Props {
   onAdd: (block: Omit<WorkBlock, 'id'>) => void;
   onUpdate: (id: string, updates: Partial<WorkBlock>) => void;
   onDelete: (id: string) => void;
+  onUpdateTask: (id: string, updates: Partial<Task>) => void;
+  onDeleteTask: (id: string) => void;
+  onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
 }
 
 function toDateString(d: Date): string {
@@ -297,12 +301,13 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, onAdd, onUpdate, onDelete }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedBlock = selectedBlockId ? workBlocks.find(b => b.id === selectedBlockId) ?? null : null;
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
@@ -316,8 +321,16 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   useEffect(() => {
     if (selectedBlockId && !workBlocks.find(b => b.id === selectedBlockId)) {
       setSelectedBlockId(null);
+      setSelectedTaskId(null);
     }
   }, [workBlocks, selectedBlockId]);
+
+  // Clear selected task if it no longer exists
+  useEffect(() => {
+    if (selectedTaskId && !tasks.find(t => t.id === selectedTaskId)) {
+      setSelectedTaskId(null);
+    }
+  }, [tasks, selectedTaskId]);
 
   const matchingTasks = selectedBlock ? getMatchingTasks(selectedBlock, tasks, projects) : [];
 
@@ -559,7 +572,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             <span className="agenda-block-panel-title">{selectedBlock.title}</span>
             <div className="agenda-block-panel-actions">
               <button onClick={() => setEditingBlock(selectedBlock)}>Edytuj blok</button>
-              <button onClick={() => setSelectedBlockId(null)}>✕</button>
+              <button onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); }}>✕</button>
             </div>
           </div>
           <div className="agenda-block-panel-body">
@@ -568,9 +581,21 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               : matchingTasks.map(task => {
                   const project = projects.find(p => p.id === task.projectId);
                   return (
-                    <div key={task.id} className="agenda-block-task-item">
-                      <span className="agenda-block-task-name">{task.name}</span>
-                      {project && <span className="agenda-block-task-project">{project.name}</span>}
+                    <div
+                      key={task.id}
+                      className={`agenda-block-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                      onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={task.done}
+                        onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: !task.done }); }}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <div className="agenda-block-task-info">
+                        <span className="agenda-block-task-name">{task.name}</span>
+                        {project && <span className="agenda-block-task-project">{project.name}</span>}
+                      </div>
                     </div>
                   );
                 })
@@ -578,6 +603,20 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           </div>
         </div>
       )}
+
+      {selectedTaskId && (() => {
+        const task = tasks.find(t => t.id === selectedTaskId);
+        return task ? (
+          <TaskDetailPanel
+            task={task}
+            contexts={contexts}
+            onUpdate={(key, value) => onUpdateTask(task.id, { [key]: value })}
+            onDelete={() => { onDeleteTask(task.id); setSelectedTaskId(null); }}
+            onClose={() => setSelectedTaskId(null)}
+            onCompleteWithNextAction={name => onCompleteWithNextAction(task, name)}
+          />
+        ) : null;
+      })()}
 
       {/* Modal: create */}
       {pendingSlot && !editingBlock && (

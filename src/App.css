@@ -1546,13 +1546,18 @@ body {
 }
 
 .agenda-block-panel {
-  width: 40%;
+  width: 280px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.agenda-view .task-detail-panel {
+  width: 300px;
+  flex-shrink: 0;
 }
 
 .agenda-block-panel-header {
@@ -1605,12 +1610,29 @@ body {
 
 .agenda-block-task-item {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  gap: 8px;
   padding: 8px 10px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   margin-bottom: 6px;
+  cursor: pointer;
+}
+
+.agenda-block-task-item:hover {
+  background: var(--surface2);
+}
+
+.agenda-block-task-item.selected {
+  background: var(--surface2);
+  border-color: var(--accent);
+}
+
+.agenda-block-task-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .agenda-block-task-name {
