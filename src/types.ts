@@ -21,6 +21,8 @@ export interface Project {
   areaId: string;
   lifterId: string | null;
   parentProjectId: string | null;
+  startDate?: string | null;  // "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
+  endDate?: string | null;    // "YYYY-MM-DD"
 }
 
 export type Effort = 'xs' | 's' | 'm' | 'l' | 'xl';

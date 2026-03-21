@@ -9,6 +9,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
+import { ProjectDetailPanel } from './components/ProjectDetailPanel';
 import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
 import { saveAutoBackup } from './utils/dataPortability';
@@ -322,10 +323,12 @@ export default function App() {
     setData(d => d ? ({ ...d, lifters: d.lifters.map(l => l.id === id ? { ...l, name } : l) }) : d);
   };
 
-  const renameProject = async (id: string, name: string) => {
-    await db.projects.update(id, { name });
-    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, name } : p) }) : d);
+  const updateProject = async (id: string, updates: Partial<Project>) => {
+    await db.projects.update(id, updates);
+    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, ...updates } : p) }) : d);
   };
+
+  const renameProject = (id: string, name: string) => updateProject(id, { name });
 
   const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
     const task = data.tasks.find(t => t.id === taskId);
@@ -765,10 +768,9 @@ export default function App() {
         {!selectedTask && !editingLifterId && editingProjectId && (() => {
           const project = data.projects.find(p => p.id === editingProjectId);
           return project ? (
-            <ItemDetailPanel
-              title="Projekt"
-              name={project.name}
-              onRename={n => renameProject(editingProjectId, n)}
+            <ProjectDetailPanel
+              project={project}
+              onUpdate={updates => updateProject(editingProjectId, updates)}
               onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
               onClose={() => setEditingProjectId(null)}
             />

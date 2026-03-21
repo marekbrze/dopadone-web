@@ -1117,6 +1117,47 @@ body {
 
 .detail-name-input:focus { border-bottom-color: var(--accent); }
 
+.detail-date-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.detail-date-row select {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  padding: 4px 0;
+  outline: none;
+  cursor: pointer;
+  min-width: 0;
+}
+
+.detail-date-row select:focus { border-bottom-color: var(--accent); }
+
+.detail-date-row select:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.detail-date-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 14px;
+  padding: 6px 0;
+  outline: none;
+  width: 100%;
+}
+
+.detail-date-input:focus { border-bottom-color: var(--accent); }
+
 .detail-checkbox-row {
   display: flex;
   align-items: center;
