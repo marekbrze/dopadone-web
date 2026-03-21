@@ -470,6 +470,7 @@ export default function App() {
           lifters={data.lifters}
           projects={data.projects}
           contexts={data.contexts}
+          tasks={data.tasks}
           workBlocks={data.workBlocks}
           onAdd={addWorkBlock}
           onUpdate={updateWorkBlock}
