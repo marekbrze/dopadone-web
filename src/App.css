@@ -1990,3 +1990,118 @@ body {
   border-color: var(--accent);
   color: var(--surface);
 }
+
+/* ── Manual block: left task panel ────────────────────────────────────────── */
+
+.agenda-left-panel {
+  width: 280px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  order: -1;
+}
+
+.agenda-left-panel-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.agenda-left-panel-search input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  box-sizing: border-box;
+}
+
+.agenda-left-task-item {
+  cursor: grab;
+  justify-content: space-between;
+}
+
+.agenda-left-task-item:active {
+  cursor: grabbing;
+}
+
+.agenda-left-task-add-btn {
+  flex-shrink: 0;
+  padding: 2px 7px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.agenda-left-task-add-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.agenda-right-task-remove-btn {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.agenda-block-task-item:hover .agenda-right-task-remove-btn {
+  opacity: 1;
+}
+
+.agenda-right-task-remove-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.agenda-block-panel.drop-target-active {
+  background: var(--surface2);
+  border-left-color: var(--accent);
+}
+
+/* ── Block type toggle in modal ──────────────────────────────────────────── */
+
+.agenda-block-type-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.agenda-block-type-btn {
+  flex: 1;
+  padding: 7px 10px;
+  border: none;
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+}
+
+.agenda-block-type-btn + .agenda-block-type-btn {
+  border-left: 1px solid var(--border);
+}
+
+.agenda-block-type-btn.active {
+  background: var(--surface2);
+  color: var(--text);
+  font-weight: 600;
+}

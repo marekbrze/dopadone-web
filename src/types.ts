@@ -45,6 +45,8 @@ export interface WorkBlock {
   date: string;           // "YYYY-MM-DD"
   startMinutes: number;   // minutes from midnight
   endMinutes: number;
+  blockType?: 'auto' | 'manual'; // undefined treated as 'auto'
+  taskIds?: string[];             // only used when blockType === 'manual'
   areaIds: string[];
   lifterIds: string[];
   projectIds: string[];
