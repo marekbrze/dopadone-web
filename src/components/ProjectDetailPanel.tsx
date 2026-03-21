@@ -155,17 +155,36 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
                 <option key={d} value={d}>{parseInt(d)}</option>
               ))}
             </select>
+            {startYear && (
+              <button
+                className="close-btn"
+                onClick={() => {
+                  setStartYear(''); setStartMonth(''); setStartDay('');
+                  onUpdate({ startDate: null });
+                }}
+                title="Wyczyść datę rozpoczęcia"
+              >✕</button>
+            )}
           </div>
         </div>
 
         <div className="detail-field">
           <label>Data zakończenia</label>
-          <input
-            type="date"
-            className="detail-date-input"
-            value={project.endDate ?? ''}
-            onChange={e => onUpdate({ endDate: e.target.value || null })}
-          />
+          <div className="detail-date-row">
+            <input
+              type="date"
+              className="detail-date-input"
+              value={project.endDate ?? ''}
+              onChange={e => onUpdate({ endDate: e.target.value || null })}
+            />
+            {project.endDate && (
+              <button
+                className="close-btn"
+                onClick={() => onUpdate({ endDate: null })}
+                title="Wyczyść datę zakończenia"
+              >✕</button>
+            )}
+          </div>
         </div>
 
         <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
