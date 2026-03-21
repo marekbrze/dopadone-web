@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Project } from '../types';
+import type { Project } from '../types';
 
 interface Props {
   project: Project;

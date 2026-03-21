@@ -328,7 +328,6 @@ export default function App() {
     setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, ...updates } : p) }) : d);
   };
 
-  const renameProject = (id: string, name: string) => updateProject(id, { name });
 
   const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
     const task = data.tasks.find(t => t.id === taskId);
