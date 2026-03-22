@@ -2229,6 +2229,7 @@ body {
   display: flex;
   border-bottom: 1px solid var(--border);
   padding: 0 20px;
+  margin-bottom: 20px;
 }
 .create-slot-tab {
   padding: 10px 16px;
