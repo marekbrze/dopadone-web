@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Task, Project, Context } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
 
@@ -128,6 +128,67 @@ interface RowProps {
   onAssign: (projectId: string) => void;
 }
 
+function ProjectPicker({ projects, onAssign }: { projects: Project[]; onAssign: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const ref = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  const filtered = query.trim()
+    ? projects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
+    : projects;
+
+  const close = useCallback(() => { setOpen(false); setQuery(''); }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    searchRef.current?.focus();
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, close]);
+
+  return (
+    <div className="inbox-project-picker" ref={ref} onClick={e => e.stopPropagation()}>
+      <button
+        className="inbox-project-picker-btn"
+        onClick={() => setOpen(v => !v)}
+        title="Przypisz do projektu"
+      >
+        Przypisz...
+      </button>
+      {open && (
+        <div className="inbox-project-dropdown">
+          <input
+            ref={searchRef}
+            className="inbox-project-search"
+            placeholder="Szukaj projektu..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') close(); }}
+          />
+          <div className="inbox-project-list">
+            {filtered.length === 0
+              ? <div className="inbox-project-option-empty">Brak wyników</div>
+              : filtered.map(p => (
+                <div
+                  key={p.id}
+                  className="inbox-project-option"
+                  onMouseDown={() => { onAssign(p.id); close(); }}
+                >
+                  {p.name}
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function InboxTaskRow({ task, projects, selected, onSelect, onToggleDone, onAssign }: RowProps) {
   return (
     <div className={`inbox-task-row${selected ? ' selected' : ''}`} onClick={onSelect}>
@@ -139,18 +200,7 @@ function InboxTaskRow({ task, projects, selected, onSelect, onToggleDone, onAssi
         className="inbox-task-checkbox"
       />
       <span className="inbox-task-name">{task.name}</span>
-      <select
-        className="inbox-task-project-select"
-        value=""
-        onChange={e => { if (e.target.value) onAssign(e.target.value); e.stopPropagation(); }}
-        onClick={e => e.stopPropagation()}
-        title="Przypisz do projektu"
-      >
-        <option value="" disabled>Przypisz...</option>
-        {projects.map(p => (
-          <option key={p.id} value={p.id}>{p.name}</option>
-        ))}
-      </select>
+      <ProjectPicker projects={projects} onAssign={onAssign} />
     </div>
   );
 }
