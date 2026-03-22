@@ -39,6 +39,8 @@ const DEFAULT_CONTEXTS = [
   { name: 'Na mieście', icon: '🏙️' },
 ];
 
+const EMOJI_OPTIONS = ['📝', '🛒', '🔧', '📱', '🤝', '📚', '🏠', '🚗', '💡', '⚡', '🎯', '🌿'];
+
 const STEPS: Step[] = ['welcome', 'areas', 'contexts', 'project'];
 const STEP_LABELS: Record<Step, string> = {
   welcome: 'Powitanie',
@@ -63,15 +65,11 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
   const [projectAreaName, setProjectAreaName] = useState('');
 
   const cardRef = useRef<HTMLDivElement>(null);
-  const customAreaRef = useRef<HTMLInputElement>(null);
-  const customContextRef = useRef<HTMLInputElement>(null);
 
-  // Focus card on mount for accessibility
   useEffect(() => {
     cardRef.current?.focus();
   }, []);
 
-  // Set default project area when entering project step
   useEffect(() => {
     if (step === 'project' && !projectAreaName) {
       const allAreas = getSelectedAreaObjects();
@@ -178,17 +176,15 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
             <div>
               <div className="onboarding-progress" aria-label={`Krok 2 z ${STEPS.length}`}>
                 {STEPS.slice(1).map((s, i) => (
-                  <div
-                    key={s}
-                    className={`onboarding-dot ${i === 0 ? 'active' : ''}`}
-                    title={STEP_LABELS[s]}
-                  />
+                  <div key={s} className={`onboarding-dot ${i === 0 ? 'active' : ''}`} title={STEP_LABELS[s]} />
                 ))}
               </div>
             </div>
             <div>
               <div className="onboarding-title" id="onboarding-title">Wybierz swoje obszary życia</div>
-              <div className="onboarding-subtitle">Możesz je zmienić w dowolnej chwili w Ustawieniach.</div>
+              <div className="onboarding-subtitle">
+                Obszary to bardzo wysokopoziomowe kategorie do rozdzielania planowania — np. Dom, Praca, Osobiste. Nie chodzi o szczegóły, tylko o główne sfery życia.
+              </div>
             </div>
             <div className="area-chips" role="group" aria-label="Sugestie obszarów">
               {AREA_SUGGESTIONS.map(area => {
@@ -226,24 +222,9 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
                 </button>
               ))}
             </div>
-            <div>
-              <div className="color-swatch-label">Kolor dla nowego obszaru:</div>
-              <div className="color-swatches" role="group" aria-label="Wybierz kolor">
-                {AREA_PALETTE.map(color => (
-                  <button
-                    key={color}
-                    type="button"
-                    className={`color-swatch ${pendingColor === color ? 'selected' : ''}`}
-                    style={{ background: color }}
-                    onClick={() => setPendingColor(color)}
-                    aria-label={color}
-                    aria-pressed={pendingColor === color}
-                  />
-                ))}
-              </div>
-              <div className="onboarding-custom-row" style={{ marginTop: 10 }}>
+            <div className="onboarding-custom-section">
+              <div className="onboarding-custom-row">
                 <input
-                  ref={customAreaRef}
                   type="text"
                   value={customAreaInput}
                   onChange={e => setCustomAreaInput(e.target.value)}
@@ -252,6 +233,22 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
                   maxLength={40}
                 />
                 <button type="button" className="onboarding-add-btn" onClick={addCustomArea} aria-label="Dodaj obszar">+</button>
+              </div>
+              <div className="onboarding-swatch-row">
+                <span className="color-swatch-label">Kolor:</span>
+                <div className="color-swatches" role="group" aria-label="Wybierz kolor">
+                  {AREA_PALETTE.map(color => (
+                    <button
+                      key={color}
+                      type="button"
+                      className={`color-swatch ${pendingColor === color ? 'selected' : ''}`}
+                      style={{ background: color }}
+                      onClick={() => setPendingColor(color)}
+                      aria-label={color}
+                      aria-pressed={pendingColor === color}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
             <div className="onboarding-nav">
@@ -300,6 +297,7 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
                     })}
                     aria-pressed={isSelected}
                   >
+                    {isSelected && <span className="context-check">✓</span>}
                     <span>{ctx.icon}</span>
                     {ctx.name}
                   </button>
@@ -314,32 +312,41 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
                   aria-pressed={true}
                   title="Kliknij, aby usunąć"
                 >
+                  <span className="context-check">✓</span>
                   <span>{ctx.icon}</span>
                   {ctx.name} ×
                 </button>
               ))}
             </div>
-            <div className="onboarding-custom-row">
-              <input
-                ref={customContextRef}
-                type="text"
-                value={customContextInput}
-                onChange={e => setCustomContextInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomContext(); } }}
-                placeholder="Dodaj własny kontekst..."
-                maxLength={30}
-              />
-              <select
-                value={customContextIcon}
-                onChange={e => setCustomContextIcon(e.target.value)}
-                aria-label="Wybierz ikonę"
-                style={{ width: 36, borderBottom: '1px solid var(--border)', padding: '4px 0 6px', background: 'transparent', border: 'none', fontSize: 16, cursor: 'pointer', outline: 'none' }}
-              >
-                {['📝', '🛒', '🔧', '📱', '🤝', '📚', '🏠', '🚗', '💡', '⚡', '🎯', '🌿'].map(e => (
-                  <option key={e} value={e}>{e}</option>
-                ))}
-              </select>
-              <button type="button" className="onboarding-add-btn" onClick={addCustomContext} aria-label="Dodaj kontekst">+</button>
+            <div className="onboarding-custom-section">
+              <div className="onboarding-custom-row">
+                <input
+                  type="text"
+                  value={customContextInput}
+                  onChange={e => setCustomContextInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomContext(); } }}
+                  placeholder="Dodaj własny kontekst..."
+                  maxLength={30}
+                />
+                <button type="button" className="onboarding-add-btn" onClick={addCustomContext} aria-label="Dodaj kontekst">+</button>
+              </div>
+              <div className="onboarding-swatch-row">
+                <span className="color-swatch-label">Emoji:</span>
+                <div className="emoji-swatches" role="group" aria-label="Wybierz emoji">
+                  {EMOJI_OPTIONS.map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className={`emoji-swatch ${customContextIcon === emoji ? 'selected' : ''}`}
+                      onClick={() => setCustomContextIcon(emoji)}
+                      aria-label={emoji}
+                      aria-pressed={customContextIcon === emoji}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
             <div className="onboarding-nav">
               <button className="onboarding-back" onClick={goBack} type="button">← Wróć</button>
@@ -392,11 +399,7 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
             <div className="onboarding-nav">
               <button className="onboarding-back" onClick={goBack} type="button">← Wróć</button>
               <div className="onboarding-nav-right">
-                <button
-                  className="onboarding-skip-link"
-                  onClick={handleComplete}
-                  type="button"
-                >
+                <button className="onboarding-skip-link" onClick={handleComplete} type="button">
                   Pomiń ten krok
                 </button>
                 <button
@@ -425,9 +428,11 @@ interface TourStep {
 }
 
 const TOUR_STEPS: TourStep[] = [
-  { selector: '[data-tour="inbox"]', text: 'Zadania bez projektu lądują tutaj. Dobry punkt startowy.' },
-  { selector: '[data-tour="today"]', text: 'Tu planujesz swój dzień — bloki czasowe i wydarzenia.' },
-  { selector: '[data-tour="plan"]', text: 'Tu organizujesz obszary, projekty i zadania.' },
+  { selector: '[data-tour="inbox"]', text: 'Zadania bez przypisanego projektu lądują tutaj. Dobry punkt startowy każdego dnia.' },
+  { selector: '[data-tour="today"]', text: 'Podgląd pracy — zadania zaplanowane na dziś i bloki czasowe.' },
+  { selector: '[data-tour="agenda"]', text: 'Planowanie dni — rozkładasz zadania i bloki na kolejne tygodnie.' },
+  { selector: '[data-tour="plan"]', text: 'Tu organizujesz obszary, projekty i zadania w hierarchii.' },
+  { selector: '[data-tour="settings"]', text: 'Ustawienia — zarządzaj obszarami, kontekstami, kopiami zapasowymi i synchronizacją.' },
 ];
 
 interface SpotlightProps {

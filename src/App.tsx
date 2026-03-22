@@ -827,6 +827,7 @@ export default function App() {
           <button
             className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
             onClick={() => setCurrentView('agenda')}
+            data-tour="agenda"
           >Agenda</button>
           <button
             className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
@@ -839,7 +840,7 @@ export default function App() {
           >Robienie</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
-        <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
+        <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia" data-tour="settings">
           ⚙ Ustawienia
         </button>
       </header>
