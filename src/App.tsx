@@ -597,6 +597,9 @@ export default function App() {
   return (
     <div className="app">
       <header className="app-header">
+        <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
         <div className="logo">Dopadone</div>
         <div className="view-tabs">
           <button
@@ -626,9 +629,6 @@ export default function App() {
           >Robienie</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
-        <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu">
-          <span /><span /><span />
-        </button>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
         </button>

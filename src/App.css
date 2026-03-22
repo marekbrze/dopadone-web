@@ -1551,7 +1551,7 @@ body {
 
   .logo {
     font-size: 12px;
-    margin-right: 12px;
+    margin-right: 0;
   }
 
   .area-tab {
@@ -1562,6 +1562,7 @@ body {
   .settings-btn {
     padding: 5px 8px;
     font-size: 0;
+    margin-left: auto;
   }
 
   .settings-btn::before {
@@ -1615,6 +1616,17 @@ body {
     display: none;
   }
 
+  .app-header {
+    position: relative;
+  }
+
+  .logo {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+  }
+
   .hamburger-btn {
     display: flex;
     flex-direction: column;
@@ -1624,7 +1636,6 @@ body {
     border: none;
     cursor: pointer;
     padding: 8px 6px;
-    margin-left: auto;
     flex-shrink: 0;
   }
 
