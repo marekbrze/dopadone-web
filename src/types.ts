@@ -80,6 +80,16 @@ export interface CalendarEvent {
   taskIds: string[];         // action point task IDs
 }
 
+export interface ProjectNote {
+  id: string;
+  projectId: string;
+  title?: string | null;
+  content: string;
+  createdAt: string;  // ISO 8601
+  updatedAt: string;  // ISO 8601
+  order?: number;
+}
+
 export interface AppState {
   areas: Area[];
   lifters: Lifter[];
@@ -88,6 +98,7 @@ export interface AppState {
   contexts: Context[];
   workBlocks: WorkBlock[];
   events: CalendarEvent[];
+  projectNotes: ProjectNote[];
 }
 
 export interface ExportData {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { liveQuery } from 'dexie';
-import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote } from './types';
 import { loadData, queryAllData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
@@ -14,6 +14,7 @@ import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
+import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
@@ -107,7 +108,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Failed to load data:', err);
-        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [] });
+        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [], projectNotes: [] });
       });
 
     return () => subscription?.unsubscribe();
@@ -203,6 +204,10 @@ export default function App() {
     ? data.tasks.filter(t => t.projectId === selectedProjectId)
     : [];
 
+  const projectNotes = selectedProjectId
+    ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId)
+    : [];
+
   const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
   const selectedArea = data.areas.find(a => a.id === selectedAreaId);
 
@@ -278,6 +283,30 @@ export default function App() {
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     await db.tasks.update(taskId, updates);
     setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }) : d);
+  };
+
+  const addNote = async (noteData: { title?: string; content: string }) => {
+    if (!selectedProjectId) return;
+    const now = new Date().toISOString();
+    if (isCloudSchema()) {
+      const id = await db.projectNotes.add({ projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now }) as string;
+      const note: ProjectNote = { id, projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now };
+      setData(d => d ? ({ ...d, projectNotes: [...d.projectNotes, note] }) : d);
+    } else {
+      const note: ProjectNote = { id: newId(), projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now };
+      await db.projectNotes.put(note);
+      setData(d => d ? ({ ...d, projectNotes: [...d.projectNotes, note] }) : d);
+    }
+  };
+
+  const updateNote = async (noteId: string, updates: Partial<ProjectNote>) => {
+    await db.projectNotes.update(noteId, updates);
+    setData(d => d ? ({ ...d, projectNotes: d.projectNotes.map(n => n.id === noteId ? { ...n, ...updates } : n) }) : d);
+  };
+
+  const deleteNote = async (noteId: string) => {
+    await db.projectNotes.delete(noteId);
+    setData(d => d ? ({ ...d, projectNotes: d.projectNotes.filter(n => n.id !== noteId) }) : d);
   };
 
   const handleCompleteWithNextAction = async (task: Task, nextActionName: string) => {
@@ -834,7 +863,7 @@ export default function App() {
       )}
 
       <main
-        className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
+        className={`columns${selectedProjectId ? ' notes-visible' : ''}${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
         style={currentView !== 'plan' ? { display: 'none' } : undefined}
       >
         {/* Column 1: Lifters */}
@@ -1021,7 +1050,20 @@ export default function App() {
           </div>
         </section>
 
-        {/* Column 4: Task Detail Panel / Item Edit Panel */}
+        {/* Column 4: Notes */}
+        {selectedProjectId && (
+          <section className="column column-notes" id="column-notes">
+            <ProjectNotesPanel
+              projectId={selectedProjectId}
+              notes={projectNotes}
+              onCreate={addNote}
+              onUpdate={updateNote}
+              onDelete={deleteNote}
+            />
+          </section>
+        )}
+
+        {/* Column 5: Task Detail Panel / Item Edit Panel */}
         {selectedTask && (
           <TaskDetailPanel
             task={selectedTask}
