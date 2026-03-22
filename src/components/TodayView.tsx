@@ -88,6 +88,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     offsetMinutes: number;
     currentMinutes: number;
     duration: number;
+    startClientY: number;
   } | null>(null);
   const dragMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
@@ -109,10 +110,12 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   useEffect(() => {
     const handleGlobalMouseUp = () => {
       if (blockDragState) {
-        onUpdateWorkBlock(blockDragState.blockId, {
-          startMinutes: blockDragState.currentMinutes,
-          endMinutes: blockDragState.currentMinutes + blockDragState.duration,
-        });
+        if (dragMovedRef.current) {
+          onUpdateWorkBlock(blockDragState.blockId, {
+            startMinutes: blockDragState.currentMinutes,
+            endMinutes: blockDragState.currentMinutes + blockDragState.duration,
+          });
+        }
         setBlockDragState(null);
         dragMovedRef.current = false;
         return;
@@ -272,6 +275,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         offsetMinutes: offset,
                         currentMinutes: block.startMinutes,
                         duration: block.endMinutes - block.startMinutes,
+                        startClientY: e.clientY,
                       });
                       return;
                     }
@@ -283,7 +287,9 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     if (blockDragState) {
                       const minutes = getMinutesFromEvent(e);
                       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
-                      dragMovedRef.current = true;
+                      if (Math.abs(e.clientY - blockDragState.startClientY) > 8) {
+                        dragMovedRef.current = true;
+                      }
                       setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart } : null);
                       return;
                     }

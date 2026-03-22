@@ -2420,11 +2420,15 @@ body {
   border-radius: 2px;
   padding: 5px 8px;
   overflow: hidden;
-  cursor: grab;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 1px;
   z-index: 1;
+}
+
+.agenda-block:not(.agenda-event):hover {
+  cursor: grab;
 }
 
 .agenda-block:hover {

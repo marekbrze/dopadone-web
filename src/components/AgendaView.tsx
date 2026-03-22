@@ -363,6 +363,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     offsetMinutes: number;
     currentMinutes: number;
     duration: number;
+    startClientY: number;
   } | null>(null);
   const dragMovedRef = useRef(false);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
@@ -533,6 +534,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         offsetMinutes: offset,
         currentMinutes: block.startMinutes,
         duration: block.endMinutes - block.startMinutes,
+        startClientY: e.clientY,
       });
       return;
     }
@@ -545,7 +547,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     if (blockDragState) {
       const minutes = getMinutesFromEvent(e);
       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
-      dragMovedRef.current = true;
+      if (Math.abs(e.clientY - blockDragState.startClientY) > 8) {
+        dragMovedRef.current = true;
+      }
       setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart, targetDate: date } : null);
       return;
     }
@@ -556,11 +560,13 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
 
   const finishDrag = (date: string) => {
     if (blockDragState) {
-      onUpdate(blockDragState.blockId, {
-        startMinutes: blockDragState.currentMinutes,
-        endMinutes: blockDragState.currentMinutes + blockDragState.duration,
-        date: blockDragState.targetDate,
-      });
+      if (dragMovedRef.current) {
+        onUpdate(blockDragState.blockId, {
+          startMinutes: blockDragState.currentMinutes,
+          endMinutes: blockDragState.currentMinutes + blockDragState.duration,
+          date: blockDragState.targetDate,
+        });
+      }
       setBlockDragState(null);
       dragMovedRef.current = false;
       return;
