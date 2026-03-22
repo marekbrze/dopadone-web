@@ -76,7 +76,7 @@ export async function completeMigrationIfPending(): Promise<void> {
     for (const task of tasks) {
       await db.tasks.add({
         name: task.name,
-        projectId: projectIdMap.get(task.projectId) ?? task.projectId,
+        projectId: task.projectId !== null ? (projectIdMap.get(task.projectId) ?? task.projectId) : null,
         done: task.done,
         priority: task.priority,
         notes: task.notes,

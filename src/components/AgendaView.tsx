@@ -15,6 +15,7 @@ interface Props {
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
+  onAddInboxTask: (name: string) => Promise<string>;
 }
 
 function toDateString(d: Date): string {
@@ -319,14 +320,14 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
     if (!project) return false;
 
     if (block.contextIds.length > 0 && !block.contextIds.includes(task.contextId ?? '')) return false;
-    if (block.projectIds.length > 0) return block.projectIds.includes(task.projectId);
+    if (block.projectIds.length > 0) return block.projectIds.includes(task.projectId ?? '');
     if (block.lifterIds.length > 0 && (!project.lifterId || !block.lifterIds.includes(project.lifterId))) return false;
     if (block.areaIds.length > 0 && !block.areaIds.includes(project.areaId)) return false;
     return true;
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
@@ -339,6 +340,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
   const [dropTargetActive, setDropTargetActive] = useState(false);
+  const [newBlockTaskName, setNewBlockTaskName] = useState('');
   const [nowMinutes, setNowMinutes] = useState(() => {
     const n = new Date();
     return n.getHours() * 60 + n.getMinutes();
@@ -389,6 +391,13 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     if (!selectedBlock) return;
     const current = selectedBlock.taskIds ?? [];
     onUpdate(selectedBlock.id, { taskIds: current.filter(id => id !== taskId) });
+  };
+
+  const handleAddNewTaskToBlock = async (name: string) => {
+    if (!selectedBlock) return;
+    const taskId = await onAddInboxTask(name);
+    const current = selectedBlock.taskIds ?? [];
+    onUpdate(selectedBlock.id, { taskIds: [...current, taskId] });
   };
 
   // Scroll to current hour on mount
@@ -687,10 +696,26 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               <button onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); }}>✕</button>
             </div>
           </div>
+          {isManual && (
+            <div className="agenda-block-add-task">
+              <input
+                type="text"
+                placeholder="Dodaj zadanie do bloku..."
+                value={newBlockTaskName}
+                onChange={e => setNewBlockTaskName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && newBlockTaskName.trim()) {
+                    handleAddNewTaskToBlock(newBlockTaskName.trim());
+                    setNewBlockTaskName('');
+                  }
+                }}
+              />
+            </div>
+          )}
           <div className="agenda-block-panel-body">
             {isManual ? (
               pinnedTasks.length === 0
-                ? <p className="agenda-block-panel-empty">Przeciągnij zadania z lewego panelu, aby dodać je do bloku.</p>
+                ? <p className="agenda-block-panel-empty">Przeciągnij zadania z lewego panelu lub wpisz nowe powyżej.</p>
                 : pinnedTasks.map(task => {
                     const project = projects.find(p => p.id === task.projectId);
                     return (

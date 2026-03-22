@@ -36,7 +36,7 @@ export interface Context {
 export interface Task {
   id: string;
   name: string;
-  projectId: string;
+  projectId: string | null;
   done: boolean;
   priority: 'low' | 'medium' | 'high';
   notes: string;

@@ -1587,6 +1587,234 @@ body {
   }
 }
 
+/* ── Inbox badge & quick-add button ─────────────────────────────── */
+
+.inbox-tab {
+  position: relative;
+}
+
+.inbox-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 6px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  vertical-align: middle;
+}
+
+.quick-add-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  white-space: nowrap;
+  margin-right: 8px;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.quick-add-btn:hover { opacity: 0.85; }
+
+/* ── Inbox View ───────────────────────────────────────────────────── */
+
+.inbox-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.inbox-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 40px;
+  overflow-y: auto;
+  max-width: 720px;
+}
+
+.inbox-main.panel-open {
+  max-width: 520px;
+}
+
+.inbox-header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.inbox-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0;
+}
+
+.inbox-count {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.inbox-add-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.inbox-add-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.inbox-add-input:focus {
+  border-color: var(--accent-soft);
+}
+
+.inbox-add-btn {
+  padding: 8px 16px;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.inbox-add-btn:disabled { opacity: 0.4; cursor: default; }
+.inbox-add-btn:not(:disabled):hover { opacity: 0.85; }
+
+.inbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inbox-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.inbox-task-row:hover { background: var(--surface2); }
+.inbox-task-row.selected { background: var(--surface2); outline: 1px solid var(--border); }
+
+.inbox-task-checkbox {
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+
+.inbox-task-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.inbox-list-done .inbox-task-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.inbox-task-project-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 2px 6px;
+  cursor: pointer;
+  font-family: inherit;
+  max-width: 160px;
+  outline: none;
+}
+
+.inbox-task-project-select:hover {
+  border-color: var(--accent-soft);
+}
+
+.inbox-empty {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 24px 0;
+  text-align: center;
+}
+
+.inbox-done-section {
+  margin-top: 24px;
+}
+
+.inbox-done-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+}
+
+.inbox-done-toggle:hover { color: var(--text); }
+
+/* ── Agenda: add task to manual block ────────────────────────────── */
+
+.agenda-block-add-task {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-block-add-task input {
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+.agenda-block-add-task input:focus {
+  border-color: var(--accent-soft);
+}
+
 /* ── Desktop (>=768px) ─────────────────────────────────────── */
 
 @media (min-width: 768px) {

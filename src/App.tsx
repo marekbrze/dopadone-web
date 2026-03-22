@@ -13,6 +13,7 @@ import { ProjectDetailPanel } from './components/ProjectDetailPanel';
 import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
+import { InboxView } from './components/InboxView';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
@@ -36,9 +37,9 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
+  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox'>('today');
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
@@ -128,6 +129,17 @@ export default function App() {
       clearInterval(interval);
       window.removeEventListener('beforeunload', handleUnload);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Space') {
+        e.preventDefault();
+        setModal('inbox-add');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   if (!data) {
@@ -239,6 +251,18 @@ export default function App() {
     }
   };
 
+  const addInboxTask = async (name: string): Promise<Task> => {
+    let task: Task;
+    if (isCloudSchema()) {
+      const id = await db.tasks.add({ name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
+      task = { id, name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+    } else {
+      task = { id: newId(), name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      await db.tasks.put(task);
+    }
+    return task;
+  };
+
   const deleteTask = async (taskId: string) => {
     await db.tasks.delete(taskId);
     setData(d => d ? ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }) : d);
@@ -272,7 +296,7 @@ export default function App() {
   const deleteProject = async (id: string) => {
     const ids = collectProjectIds(id, data.projects);
     const idsSet = new Set(ids);
-    const taskIds = data.tasks.filter(t => idsSet.has(t.projectId)).map(t => t.id);
+    const taskIds = data.tasks.filter(t => t.projectId !== null && idsSet.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.projects, db.tasks], async () => {
       await db.projects.bulkDelete(ids);
       await db.tasks.bulkDelete(taskIds);
@@ -282,7 +306,7 @@ export default function App() {
       return {
         ...d,
         projects: d.projects.filter(p => !idsSet.has(p.id)),
-        tasks: d.tasks.filter(t => !idsSet.has(t.projectId)),
+        tasks: d.tasks.filter(t => t.projectId === null || !idsSet.has(t.projectId)),
       };
     });
     if (selectedProjectId && ids.includes(selectedProjectId)) {
@@ -296,7 +320,7 @@ export default function App() {
     const rootIds = data.projects.filter(p => p.lifterId === id).map(p => p.id);
     const allIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
     const projectIds = [...allIds];
-    const taskIds = data.tasks.filter(t => allIds.has(t.projectId)).map(t => t.id);
+    const taskIds = data.tasks.filter(t => t.projectId !== null && allIds.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.lifters, db.projects, db.tasks], async () => {
       await db.lifters.delete(id);
       await db.projects.bulkDelete(projectIds);
@@ -308,7 +332,7 @@ export default function App() {
         ...d,
         lifters: d.lifters.filter(l => l.id !== id),
         projects: d.projects.filter(p => !allIds.has(p.id)),
-        tasks: d.tasks.filter(t => !allIds.has(t.projectId)),
+        tasks: d.tasks.filter(t => t.projectId === null || !allIds.has(t.projectId)),
       };
     });
     if (selectedLifterId === id) {
@@ -408,7 +432,7 @@ export default function App() {
     const rootIds = data.projects.filter(p => p.areaId === id).map(p => p.id);
     const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
     const projectIds = [...allProjectIds];
-    const taskIds = data.tasks.filter(t => allProjectIds.has(t.projectId)).map(t => t.id);
+    const taskIds = data.tasks.filter(t => t.projectId !== null && allProjectIds.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks], async () => {
       await db.areas.delete(id);
       await db.lifters.bulkDelete(lifterIds);
@@ -422,7 +446,7 @@ export default function App() {
         areas: d.areas.filter(a => a.id !== id),
         lifters: d.lifters.filter(l => !lifterIds.includes(l.id)),
         projects: d.projects.filter(p => !allProjectIds.has(p.id)),
-        tasks: d.tasks.filter(t => !allProjectIds.has(t.projectId)),
+        tasks: d.tasks.filter(t => t.projectId === null || !allProjectIds.has(t.projectId)),
       };
     });
     if (selectedAreaId === id) {
@@ -499,6 +523,15 @@ export default function App() {
         <div className="logo">Dopadone</div>
         <div className="view-tabs">
           <button
+            className={`view-tab inbox-tab ${currentView === 'inbox' ? 'active' : ''}`}
+            onClick={() => setCurrentView('inbox')}
+          >
+            Inbox
+            {data.tasks.filter(t => !t.done && t.projectId === null).length > 0 && (
+              <span className="inbox-badge">{data.tasks.filter(t => !t.done && t.projectId === null).length}</span>
+            )}
+          </button>
+          <button
             className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
             onClick={() => setCurrentView('today')}
           >Dziś</button>
@@ -515,6 +548,7 @@ export default function App() {
             onClick={() => setCurrentView('agenda')}
           >Agenda</button>
         </div>
+        <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
         </button>
@@ -534,6 +568,18 @@ export default function App() {
           ))}
           <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
         </nav>
+      )}
+
+      {currentView === 'inbox' && (
+        <InboxView
+          tasks={data.tasks.filter(t => t.projectId === null)}
+          projects={data.projects}
+          contexts={data.contexts}
+          onAddTask={name => addInboxTask(name).then(() => {})}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onAssignToProject={(taskId, projectId) => updateTask(taskId, { projectId })}
+        />
       )}
 
       {currentView === 'today' && (
@@ -561,6 +607,7 @@ export default function App() {
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
+          onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
         />
       )}
 
@@ -798,6 +845,7 @@ export default function App() {
       {modal === 'project' && <AddItemModal title="Nowy projekt" placeholder="np. Remont łazienki" onAdd={n => addProject(n)} onClose={() => setModal(null)} />}
       {modal === 'subproject' && <AddItemModal title="Nowy podprojekt" placeholder="np. Kafelki" onAdd={n => addProject(n, selectedProjectId)} onClose={() => setModal(null)} />}
       {modal === 'task' && <AddItemModal title="Nowe zadanie" placeholder="np. Kup materiały" onAdd={addTask} onClose={() => setModal(null)} />}
+      {modal === 'inbox-add' && <AddItemModal title="Dodaj do Inboxu" placeholder="np. Zadzwoń do dentysty" onAdd={name => addInboxTask(name).then(() => {})} onClose={() => setModal(null)} />}
       {modal === 'settings' && (
         <SettingsModal
           areas={data.areas}
