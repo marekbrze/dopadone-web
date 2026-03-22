@@ -157,17 +157,44 @@ body {
   grid-template-columns: 1fr 1fr 2fr 300px;
 }
 
-.columns.notes-visible {
-  grid-template-columns: 1fr 1fr 2fr 2fr;
+.column-tabs {
+  display: flex;
+  gap: 2px;
 }
 
-.columns.notes-visible.panel-open {
-  grid-template-columns: 1fr 1fr 2fr 2fr 300px;
+.column-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 2px 8px 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  transition: color 0.15s, border-color 0.15s;
+  width: auto;
+  height: auto;
 }
 
-.column-notes {
+.column-tab:hover {
+  color: var(--text-muted);
+  background: none;
+  border-color: var(--border);
+}
+
+.column-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+}
+
+.column-body-notes {
   padding: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .column {
@@ -2094,13 +2121,6 @@ body {
     grid-template-columns: 1fr 1fr 2fr 300px;
   }
 
-  .columns.notes-visible {
-    grid-template-columns: 1fr 1fr 2fr 2fr;
-  }
-
-  .columns.notes-visible.panel-open {
-    grid-template-columns: 1fr 1fr 2fr 2fr 300px;
-  }
 }
 
 /* ── Agenda view ─────────────────────────────────────────────── */

@@ -35,6 +35,7 @@ export default function App() {
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
   const [selectedLifterId, setSelectedLifterId] = useState<string | null>(null);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [projectTab, setProjectTab] = useState<'tasks' | 'notes'>('tasks');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
@@ -863,7 +864,7 @@ export default function App() {
       )}
 
       <main
-        className={`columns${selectedProjectId ? ' notes-visible' : ''}${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
+        className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
         style={currentView !== 'plan' ? { display: 'none' } : undefined}
       >
         {/* Column 1: Lifters */}
@@ -973,7 +974,7 @@ export default function App() {
               projects={rootProjects}
               allProjects={visibleProjects}
               selectedProjectId={selectedProjectId}
-              onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); }}
+              onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); setProjectTab('tasks'); }}
               onDelete={deleteProject}
               onArchive={archiveProject}
               onEdit={openProjectEdit}
@@ -992,7 +993,7 @@ export default function App() {
           </div>
         </section>
 
-        {/* Column 3: Tasks */}
+        {/* Column 3: Tasks / Notes (tabbed) */}
         <section
           className={`column ${expandedColumns.has('tasks') ? 'expanded' : ''}`}
           id="column-tasks"
@@ -1007,63 +1008,78 @@ export default function App() {
             onClick={() => toggleColumn('tasks')}
             onKeyDown={e => handleColumnKeydown(e, 'tasks')}
           >
-            <h2 id="column-header-tasks">Zadania</h2>
-            <button
-              onClick={e => { e.stopPropagation(); setModal('task'); }}
-              style={!selectedProjectId ? { visibility: 'hidden' } : {}}
-            >+</button>
+            {selectedProjectId ? (
+              <div className="column-tabs" onClick={e => e.stopPropagation()}>
+                <button
+                  className={`column-tab ${projectTab === 'tasks' ? 'active' : ''}`}
+                  onClick={() => setProjectTab('tasks')}
+                >Zadania</button>
+                <button
+                  className={`column-tab ${projectTab === 'notes' ? 'active' : ''}`}
+                  onClick={() => setProjectTab('notes')}
+                >Notatki</button>
+              </div>
+            ) : (
+              <h2 id="column-header-tasks">Zadania</h2>
+            )}
+            {projectTab === 'tasks' && (
+              <button
+                onClick={e => { e.stopPropagation(); setModal('task'); }}
+                style={!selectedProjectId ? { visibility: 'hidden' } : {}}
+              >+</button>
+            )}
           </div>
-          <div
-            className="column-body"
-            id="column-body-tasks"
-            role="region"
-            aria-labelledby="column-header-tasks"
-          >
-            {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
-            {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
-            {tasks.map(task => {
-              const ctx = data.contexts.find(c => c.id === task.contextId);
-              return (
-                <div
-                  key={task.id}
-                  className={`task-item ${task.done ? 'done' : ''} ${task.id === selectedTaskId ? 'selected' : ''}`}
-                  draggable
-                  onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
-                  onDragEnd={() => setDragPayload(null)}
-                  onClick={() => selectTask(task.id)}
-                >
-                  <div className="task-main">
-                    <input
-                      type="checkbox"
-                      checked={task.done}
-                      onChange={() => updateTask(task.id, { done: !task.done })}
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <span className="task-name">{task.name}</span>
-                    <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                    {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
-                    {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+          {projectTab === 'tasks' && (
+            <div
+              className="column-body"
+              id="column-body-tasks"
+              role="region"
+              aria-labelledby="column-header-tasks"
+            >
+              {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
+              {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
+              {tasks.map(task => {
+                const ctx = data.contexts.find(c => c.id === task.contextId);
+                return (
+                  <div
+                    key={task.id}
+                    className={`task-item ${task.done ? 'done' : ''} ${task.id === selectedTaskId ? 'selected' : ''}`}
+                    draggable
+                    onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
+                    onDragEnd={() => setDragPayload(null)}
+                    onClick={() => selectTask(task.id)}
+                  >
+                    <div className="task-main">
+                      <input
+                        type="checkbox"
+                        checked={task.done}
+                        onChange={() => updateTask(task.id, { done: !task.done })}
+                        onClick={e => e.stopPropagation()}
+                      />
+                      <span className="task-name">{task.name}</span>
+                      <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                      {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                      {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
+          {projectTab === 'notes' && selectedProjectId && (
+            <div className="column-body column-body-notes" role="region">
+              <ProjectNotesPanel
+                projectId={selectedProjectId}
+                notes={projectNotes}
+                onCreate={addNote}
+                onUpdate={updateNote}
+                onDelete={deleteNote}
+              />
+            </div>
+          )}
         </section>
 
-        {/* Column 4: Notes */}
-        {selectedProjectId && (
-          <section className="column column-notes" id="column-notes">
-            <ProjectNotesPanel
-              projectId={selectedProjectId}
-              notes={projectNotes}
-              onCreate={addNote}
-              onUpdate={updateNote}
-              onDelete={deleteNote}
-            />
-          </section>
-        )}
-
-        {/* Column 5: Task Detail Panel / Item Edit Panel */}
+        {/* Column 4: Task Detail Panel / Item Edit Panel */}
         {selectedTask && (
           <TaskDetailPanel
             task={selectedTask}
