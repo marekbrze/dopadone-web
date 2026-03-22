@@ -354,6 +354,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedBlock = selectedBlockId ? workBlocks.find(b => b.id === selectedBlockId) ?? null : null;
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
+  const [pendingAllDayDate, setPendingAllDayDate] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
@@ -644,7 +645,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           {visibleDates.map((d) => {
             const dayAllDayEvents = events.filter(e => isEventOnDate(e, d) && e.allDay);
             return (
-              <div key={`allday-${d}`} className="agenda-allday-cell">
+              <div key={`allday-${d}`} className="agenda-allday-cell" onClick={() => setPendingAllDayDate(d)}>
                 {dayAllDayEvents.map(event => (
                   <button
                     key={event.id}
@@ -913,6 +914,18 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           />
         ) : null;
       })()}
+
+      {/* Modal: create all-day event (click on all-day row) */}
+      {pendingAllDayDate && (
+        <EventModal
+          event={{ date: pendingAllDayDate, allDay: true }}
+          defaultDate={pendingAllDayDate}
+          defaultStartMinutes={9 * 60}
+          projects={projects}
+          onSave={data => { onAddEvent(data); setPendingAllDayDate(null); }}
+          onClose={() => setPendingAllDayDate(null)}
+        />
+      )}
 
       {/* Modal: create block or event */}
       {pendingSlot && !editingBlock && !editingEvent && (
