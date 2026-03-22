@@ -29,27 +29,29 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as AppState
-    if (!parsed.contexts) parsed.contexts = defaultData.contexts
-    if (!parsed.workBlocks) parsed.workBlocks = []
-    if (!parsed.events) parsed.events = []
-    parsed.tasks = parsed.tasks.map(t => ({
+    const parsed = JSON.parse(raw)
+    if (typeof parsed !== 'object' || parsed === null || !Array.isArray(parsed.areas) || !Array.isArray(parsed.tasks)) return null
+    const state = parsed as AppState
+    if (!state.contexts) state.contexts = defaultData.contexts
+    if (!Array.isArray(state.workBlocks)) state.workBlocks = []
+    if (!Array.isArray(state.events)) state.events = []
+    state.tasks = state.tasks.map(t => ({
       ...t,
       effort: t.effort ?? null,
       contextId: t.contextId ?? null,
       blocking: t.blocking ?? false,
     }))
     await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks, db.events, db.projectNotes], async () => {
-      await db.areas.bulkPut(parsed.areas)
-      await db.lifters.bulkPut(parsed.lifters)
-      await db.projects.bulkPut(parsed.projects)
-      await db.tasks.bulkPut(parsed.tasks)
-      await db.contexts.bulkPut(parsed.contexts)
-      await db.workBlocks.bulkPut(parsed.workBlocks)
-      await db.events.bulkPut(parsed.events)
+      await db.areas.bulkPut(state.areas)
+      await db.lifters.bulkPut(state.lifters)
+      await db.projects.bulkPut(state.projects)
+      await db.tasks.bulkPut(state.tasks)
+      await db.contexts.bulkPut(state.contexts)
+      await db.workBlocks.bulkPut(state.workBlocks)
+      await db.events.bulkPut(state.events)
     })
     localStorage.removeItem(STORAGE_KEY)
-    return parsed
+    return state
   } catch {
     return null
   }

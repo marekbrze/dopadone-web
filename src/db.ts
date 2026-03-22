@@ -2,7 +2,17 @@ import Dexie, { type EntityTable } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
 import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, ProjectNote } from './types'
 
-const getCloudUrl = () => localStorage.getItem('dopadone-cloud-url');
+const getCloudUrl = (): string | null => {
+  const raw = localStorage.getItem('dopadone-cloud-url');
+  if (!raw) return null;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:') return null;
+    return raw;
+  } catch {
+    return null;
+  }
+};
 export const isCloudSchema = () => localStorage.getItem('dopadone-schema') === 'cloud';
 
 export class DopadoneDB extends Dexie {
@@ -133,7 +143,7 @@ export class DopadoneDB extends Dexie {
     if (cloudUrl) {
       this.cloud.configure({
         databaseUrl: cloudUrl,
-        requireAuth: false,
+        requireAuth: true,
       });
     }
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
 import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote } from './types';
 import { loadData, queryAllData } from './data';
@@ -10,10 +10,10 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { ProjectDetailPanel } from './components/ProjectDetailPanel';
-import { DoingView } from './components/DoingView';
-import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
-import { InboxView } from './components/InboxView';
+const DoingView = lazy(() => import('./components/DoingView').then(m => ({ default: m.DoingView })));
+const AgendaView = lazy(() => import('./components/AgendaView').then(m => ({ default: m.AgendaView })));
+const InboxView = lazy(() => import('./components/InboxView').then(m => ({ default: m.InboxView })));
 import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
@@ -185,32 +185,58 @@ export default function App() {
     setEditingProjectId(null);
   };
 
-  const lifters = data.lifters.filter(l => l.areaId === selectedAreaId);
-
-  const visibleProjects = data.projects
-    .filter(p => {
-      if (p.archived) return false;
-      if (p.areaId !== selectedAreaId) return false;
-      if (selectedLifterId) return p.lifterId === selectedLifterId;
-      return true;
-    })
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-
-  const visibleIds = new Set(visibleProjects.map(p => p.id));
-  const rootProjects = visibleProjects.filter(p =>
-    p.parentProjectId === null || !visibleIds.has(p.parentProjectId)
+  const lifters = useMemo(
+    () => data.lifters.filter(l => l.areaId === selectedAreaId),
+    [data.lifters, selectedAreaId]
   );
 
-  const tasks = selectedProjectId
-    ? data.tasks.filter(t => t.projectId === selectedProjectId)
-    : [];
+  const visibleProjects = useMemo(
+    () => data.projects
+      .filter(p => {
+        if (p.archived) return false;
+        if (p.areaId !== selectedAreaId) return false;
+        if (selectedLifterId) return p.lifterId === selectedLifterId;
+        return true;
+      })
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
+    [data.projects, selectedAreaId, selectedLifterId]
+  );
 
-  const projectNotes = selectedProjectId
-    ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId)
-    : [];
+  const rootProjects = useMemo(() => {
+    const visibleIds = new Set(visibleProjects.map(p => p.id));
+    return visibleProjects.filter(p =>
+      p.parentProjectId === null || !visibleIds.has(p.parentProjectId)
+    );
+  }, [visibleProjects]);
 
-  const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
-  const selectedArea = data.areas.find(a => a.id === selectedAreaId);
+  const tasks = useMemo(
+    () => selectedProjectId ? data.tasks.filter(t => t.projectId === selectedProjectId) : [],
+    [data.tasks, selectedProjectId]
+  );
+
+  const projectNotes = useMemo(
+    () => selectedProjectId ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId) : [],
+    [data.projectNotes, selectedProjectId]
+  );
+
+  const selectedTask = useMemo(
+    () => tasks.find(t => t.id === selectedTaskId) ?? null,
+    [tasks, selectedTaskId]
+  );
+  const selectedArea = useMemo(
+    () => data.areas.find(a => a.id === selectedAreaId),
+    [data.areas, selectedAreaId]
+  );
+
+  const inboxTaskCount = useMemo(
+    () => data.tasks.filter(t => !t.done && t.projectId === null).length,
+    [data.tasks]
+  );
+
+  const contextsMap = useMemo(
+    () => new Map(data.contexts.map(c => [c.id, c])),
+    [data.contexts]
+  );
 
   // Area / lifter / project
   const addArea = async (name: string) => {
@@ -721,8 +747,8 @@ export default function App() {
             onClick={() => setCurrentView('inbox')}
           >
             Inbox
-            {data.tasks.filter(t => !t.done && t.projectId === null).length > 0 && (
-              <span className="inbox-badge">{data.tasks.filter(t => !t.done && t.projectId === null).length}</span>
+            {inboxTaskCount > 0 && (
+              <span className="inbox-badge">{inboxTaskCount}</span>
             )}
           </button>
           <button
@@ -758,8 +784,8 @@ export default function App() {
                 onClick={() => { setCurrentView('inbox'); setMobileNavOpen(false); }}
               >
                 Inbox
-                {data.tasks.filter(t => !t.done && t.projectId === null).length > 0 && (
-                  <span className="mobile-nav-badge">{data.tasks.filter(t => !t.done && t.projectId === null).length}</span>
+                {inboxTaskCount > 0 && (
+                  <span className="mobile-nav-badge">{inboxTaskCount}</span>
                 )}
               </button>
               <button
@@ -800,15 +826,17 @@ export default function App() {
       )}
 
       {currentView === 'inbox' && (
-        <InboxView
-          tasks={data.tasks.filter(t => t.projectId === null)}
-          projects={data.projects.filter(p => !p.archived)}
-          contexts={data.contexts}
-          onAddTask={name => addInboxTask(name).then(() => {})}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
-        />
+        <Suspense fallback={null}>
+          <InboxView
+            tasks={data.tasks.filter(t => t.projectId === null)}
+            projects={data.projects.filter(p => !p.archived)}
+            contexts={data.contexts}
+            onAddTask={name => addInboxTask(name).then(() => {})}
+            onUpdateTask={updateTask}
+            onDeleteTask={deleteTask}
+            onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
+          />
+        </Suspense>
       )}
 
       {currentView === 'today' && (
@@ -831,36 +859,40 @@ export default function App() {
       )}
 
       {currentView === 'agenda' && (
-        <AgendaView
-          areas={data.areas}
-          lifters={data.lifters}
-          projects={data.projects}
-          contexts={data.contexts}
-          tasks={data.tasks}
-          workBlocks={data.workBlocks}
-          events={data.events}
-          onAdd={addWorkBlock}
-          onUpdate={updateWorkBlock}
-          onDelete={deleteWorkBlock}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onCompleteWithNextAction={handleCompleteWithNextAction}
-          onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
-          onAddEvent={addEvent}
-          onUpdateEvent={updateEvent}
-          onDeleteEvent={deleteEvent}
-          onAddEventTask={addEventTask}
-        />
+        <Suspense fallback={null}>
+          <AgendaView
+            areas={data.areas}
+            lifters={data.lifters}
+            projects={data.projects}
+            contexts={data.contexts}
+            tasks={data.tasks}
+            workBlocks={data.workBlocks}
+            events={data.events}
+            onAdd={addWorkBlock}
+            onUpdate={updateWorkBlock}
+            onDelete={deleteWorkBlock}
+            onUpdateTask={updateTask}
+            onDeleteTask={deleteTask}
+            onCompleteWithNextAction={handleCompleteWithNextAction}
+            onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
+            onAddEvent={addEvent}
+            onUpdateEvent={updateEvent}
+            onDeleteEvent={deleteEvent}
+            onAddEventTask={addEventTask}
+          />
+        </Suspense>
       )}
 
       {currentView === 'do' && (
-        <DoingView
-          tasks={data.tasks}
-          contexts={data.contexts}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onCompleteWithNextAction={handleCompleteWithNextAction}
-        />
+        <Suspense fallback={null}>
+          <DoingView
+            tasks={data.tasks}
+            contexts={data.contexts}
+            onUpdateTask={updateTask}
+            onDeleteTask={deleteTask}
+            onCompleteWithNextAction={handleCompleteWithNextAction}
+          />
+        </Suspense>
       )}
 
       <main
@@ -1039,7 +1071,7 @@ export default function App() {
               {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
               {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
               {tasks.map(task => {
-                const ctx = data.contexts.find(c => c.id === task.contextId);
+                const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
                 return (
                   <div
                     key={task.id}

@@ -3,6 +3,14 @@ import type { ExportData, ImportPreview, ImportMode, AppState } from '../types';
 
 const AUTO_BACKUP_KEY = 'dopadone-auto-backup';
 
+function isValidExportData(v: unknown): v is ExportData {
+  return (
+    typeof v === 'object' && v !== null &&
+    'version' in v && typeof (v as Record<string, unknown>).version === 'number' &&
+    'data' in v && typeof (v as Record<string, unknown>).data === 'object' && (v as Record<string, unknown>).data !== null
+  );
+}
+
 async function encryptData(plaintext: string, password: string): Promise<string> {
   const enc = new TextEncoder();
   const keyMaterial = await crypto.subtle.importKey(
@@ -119,15 +127,21 @@ export async function parseImportFile(
   if (password && password.trim()) {
     try {
       const decrypted = await decryptData(content, password);
-      return JSON.parse(decrypted);
-    } catch {
+      const parsed = JSON.parse(decrypted);
+      if (!isValidExportData(parsed)) throw new Error('Nieprawidłowa struktura danych w pliku.');
+      return parsed;
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith('Nieprawidłowa')) throw e;
       throw new Error('Nie udało się odszyfrować pliku. Sprawdź hasło.');
     }
   }
 
   try {
-    return JSON.parse(content);
-  } catch {
+    const parsed = JSON.parse(content);
+    if (!isValidExportData(parsed)) throw new Error('Nieprawidłowa struktura danych w pliku.');
+    return parsed;
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith('Nieprawidłowa')) throw e;
     throw new Error('Nieprawidłowy format pliku. Plik może być zaszyfrowany.');
   }
 }

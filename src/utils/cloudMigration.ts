@@ -26,7 +26,17 @@ export async function completeMigrationIfPending(): Promise<void> {
   sessionStorage.removeItem(MIGRATION_KEY)
 
   try {
-    const { areas, lifters, projects, tasks, contexts } = JSON.parse(raw) as {
+    const parsed = JSON.parse(raw)
+    if (
+      typeof parsed !== 'object' || parsed === null ||
+      !Array.isArray(parsed.areas) || !Array.isArray(parsed.lifters) ||
+      !Array.isArray(parsed.projects) || !Array.isArray(parsed.tasks) ||
+      !Array.isArray(parsed.contexts)
+    ) {
+      console.error('Migration data invalid — aborting')
+      return
+    }
+    const { areas, lifters, projects, tasks, contexts } = parsed as {
       areas: Area[]; lifters: Lifter[]; projects: Project[]; tasks: Task[]; contexts: Context[]
     }
 

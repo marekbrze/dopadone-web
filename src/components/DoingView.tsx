@@ -13,7 +13,9 @@ function loadPrefs(contexts: Context[]): GroupPref[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const saved = JSON.parse(raw) as GroupPref[];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) throw new Error('Invalid prefs format');
+      const saved = parsed as GroupPref[];
       // Merge: keep saved order/hidden, append new contexts at end
       const savedIds = new Set(saved.map(p => p.contextId === null ? '__null__' : p.contextId));
       const newEntries: GroupPref[] = contexts
