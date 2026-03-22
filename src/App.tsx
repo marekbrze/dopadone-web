@@ -633,6 +633,7 @@ export default function App() {
       {currentView === 'today' && (
         <TodayView
           areas={data.areas}
+          lifters={data.lifters}
           projects={data.projects}
           tasks={data.tasks}
           contexts={data.contexts}
@@ -643,6 +644,7 @@ export default function App() {
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}
           onAddEventTask={addEventTask}
+          onAddWorkBlock={addWorkBlock}
         />
       )}
 

@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
-import type { Area, Project, Task, Context, WorkBlock, CalendarEvent } from '../types';
+import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent } from '../types';
 import { EventDetailPanel } from './EventDetailPanel';
+import { CreateSlotModal } from './CreateSlotModal';
 
 interface Props {
   areas: Area[];
+  lifters: Lifter[];
   projects: Project[];
   tasks: Task[];
   contexts: Context[];
@@ -15,6 +17,7 @@ interface Props {
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
+  onAddWorkBlock: (data: Omit<WorkBlock, 'id'>) => void;
 }
 
 function toDateString(d: Date): string {
@@ -70,24 +73,16 @@ const EVENT_COLOR = '#7c5cbf';
 
 const hours = Array.from({ length: 24 }, (_, i) => i);
 
-interface AddEventFormState {
-  title: string;
-  allDay: boolean;
-  startTime: string;
-  endTime: string;
+function snap15(minutes: number): number {
+  return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
-  const [showAddEventForm, setShowAddEventForm] = useState(false);
-  const [addEventForm, setAddEventForm] = useState<AddEventFormState>({
-    title: '',
-    allDay: false,
-    startTime: '09:00',
-    endTime: '10:00',
-  });
+  const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
+  const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -102,6 +97,20 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
       timelineRef.current.scrollTop = Math.max(0, nowMin - 120);
     }
   }, []);
+
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (dragState) {
+        const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
+        const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
+        const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
+        setPendingSlot({ startMinutes: startMin, endMinutes: finalEnd });
+        setDragState(null);
+      }
+    };
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [dragState]);
 
   const todayStr = toDateString(now);
   const todayBlocks = workBlocks
@@ -166,289 +175,266 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
     setSelectedBlockId(null);
   };
 
-  const handleAddEventSubmit = async () => {
-    const title = addEventForm.title.trim();
-    if (!title) return;
-    const eventData: Omit<CalendarEvent, 'id'> = {
-      title,
-      date: todayStr,
-      allDay: addEventForm.allDay,
-      startMinutes: addEventForm.allDay ? undefined : parseTimeStr(addEventForm.startTime),
-      endMinutes: addEventForm.allDay ? undefined : parseTimeStr(addEventForm.endTime),
-      projectId: null,
-      taskIds: [],
-    };
-    const created = await onAddEvent(eventData);
-    setSelectedEventId(created.id);
-    setSelectedBlockId(null);
-    setShowAddEventForm(false);
-    setAddEventForm({ title: '', allDay: false, startTime: '09:00', endTime: '10:00' });
+  const getMinutesFromEvent = (e: React.MouseEvent<HTMLDivElement>): number => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const y = e.clientY - rect.top;
+    return Math.max(0, Math.min(snap15(y), 24 * 60 - 15));
   };
 
   return (
-    <div className="today-view">
-      <div className="today-header">
-        <div className="today-header-left">
-          <div className="today-date-line">{dateLabel}</div>
-          <div className="today-clock">
-            <span className="today-clock-hm">{hh}:{mm}</span>
-            <span className="today-clock-sep">:</span>
-            <span className="today-clock-ss">{ss}</span>
+    <>
+      <div className="today-view">
+        <div className="today-header">
+          <div className="today-header-left">
+            <div className="today-date-line">{dateLabel}</div>
+            <div className="today-clock">
+              <span className="today-clock-hm">{hh}:{mm}</span>
+              <span className="today-clock-sep">:</span>
+              <span className="today-clock-ss">{ss}</span>
+            </div>
           </div>
+          <div className="today-header-rule" />
         </div>
-        <div className="today-header-rule" />
-      </div>
 
-      <div className="today-body">
-        {/* LEFT: day timeline */}
-        <aside className="today-agenda">
-          <div className="today-agenda-heading">
-            Harmonogram dnia
-            <button
-              className="today-add-event-btn"
-              onClick={() => setShowAddEventForm(v => !v)}
-              title="Dodaj wydarzenie"
-            >+ Wydarzenie</button>
-          </div>
-
-          {/* Add event form */}
-          {showAddEventForm && (
-            <div className="today-add-event-form">
-              <input
-                className="today-add-event-title"
-                placeholder="Nazwa wydarzenia…"
-                value={addEventForm.title}
-                onChange={e => setAddEventForm(f => ({ ...f, title: e.target.value }))}
-                onKeyDown={e => { if (e.key === 'Enter') handleAddEventSubmit(); if (e.key === 'Escape') setShowAddEventForm(false); }}
-                autoFocus
-              />
-              <div className="today-add-event-row">
-                <label className="today-add-event-check-label">
-                  <input
-                    type="checkbox"
-                    checked={addEventForm.allDay}
-                    onChange={e => setAddEventForm(f => ({ ...f, allDay: e.target.checked }))}
-                  />
-                  Cały dzień
-                </label>
-              </div>
-              {!addEventForm.allDay && (
-                <div className="today-add-event-row">
-                  <input
-                    type="time"
-                    className="today-add-event-time"
-                    value={addEventForm.startTime}
-                    onChange={e => setAddEventForm(f => ({ ...f, startTime: e.target.value }))}
-                  />
-                  <span style={{ margin: '0 4px' }}>–</span>
-                  <input
-                    type="time"
-                    className="today-add-event-time"
-                    value={addEventForm.endTime}
-                    onChange={e => setAddEventForm(f => ({ ...f, endTime: e.target.value }))}
-                  />
-                </div>
-              )}
-              <div className="today-add-event-actions">
-                <button className="today-add-event-submit" onClick={handleAddEventSubmit} disabled={!addEventForm.title.trim()}>
-                  Dodaj
-                </button>
-                <button className="today-add-event-cancel" onClick={() => setShowAddEventForm(false)}>
-                  Anuluj
-                </button>
-              </div>
+        <div className="today-body">
+          {/* LEFT: day timeline */}
+          <aside className="today-agenda">
+            <div className="today-agenda-heading">
+              Harmonogram dnia
             </div>
-          )}
 
-          {/* All-day events strip */}
-          {allDayEvents.length > 0 && (
-            <div className="today-allday-strip">
-              {allDayEvents.map(event => (
-                <button
-                  key={event.id}
-                  className={`today-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
-                  onClick={() => handleEventClick(event.id)}
-                >
-                  ◈ {event.title}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <div className="today-timeline-wrap" ref={timelineRef}>
-            <div className="today-timeline">
-              {/* Time axis */}
-              <div className="today-time-axis">
-                {hours.map(h => (
-                  <div
-                    key={h}
-                    className="agenda-hour-label"
-                    style={{ top: `${h * 60}px` }}
+            {/* All-day events strip */}
+            {allDayEvents.length > 0 && (
+              <div className="today-allday-strip">
+                {allDayEvents.map(event => (
+                  <button
+                    key={event.id}
+                    className={`today-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
+                    onClick={() => handleEventClick(event.id)}
                   >
-                    {h.toString().padStart(2, '0')}:00
-                  </div>
+                    ◈ {event.title}
+                  </button>
                 ))}
               </div>
+            )}
 
-              {/* Day column */}
-              <div className="today-day-col">
-                {/* Hour lines */}
-                {hours.map(h => (
-                  <React.Fragment key={h}>
-                    <div className="agenda-hour-line" style={{ top: `${h * 60}px` }} />
-                    <div className="agenda-half-hour-line" style={{ top: `${h * 60 + 30}px` }} />
-                  </React.Fragment>
-                ))}
-
-                {/* Current-time indicator */}
-                <div className="agenda-now-line" style={{ top: `${nowMinutes}px` }} />
-
-                {/* Work blocks */}
-                {todayBlocks.map(block => {
-                  const color = getBlockColor(block, areas);
-                  const height = Math.max(block.endMinutes - block.startMinutes, 20);
-                  const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
-                  return (
+            <div className="today-timeline-wrap" ref={timelineRef}>
+              <div className="today-timeline">
+                {/* Time axis */}
+                <div className="today-time-axis">
+                  {hours.map(h => (
                     <div
-                      key={block.id}
-                      className={`agenda-block${isSelected ? ' selected' : ''}`}
-                      style={{
-                        top: `${block.startMinutes}px`,
-                        height: `${height}px`,
-                        background: color + '33',
-                        borderLeft: `3px solid ${color}`,
-                      }}
-                      onClick={() => handleBlockClick(block.id)}
+                      key={h}
+                      className="agenda-hour-label"
+                      style={{ top: `${h * 60}px` }}
                     >
-                      <span className="agenda-block-title">{block.title}</span>
-                      <span className="agenda-block-time">
-                        {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
-                      </span>
+                      {h.toString().padStart(2, '0')}:00
                     </div>
-                  );
-                })}
+                  ))}
+                </div>
 
-                {/* Timed events */}
-                {timedEvents.map(event => {
-                  const start = event.startMinutes ?? 0;
-                  const end = event.endMinutes ?? start + 60;
-                  const height = Math.max(end - start, 20);
-                  const isSelected = selectedEventId === event.id;
-                  return (
+                {/* Day column */}
+                <div
+                  className="today-day-col"
+                  onMouseDown={e => {
+                    if ((e.target as HTMLElement).closest('.agenda-block')) return;
+                    e.preventDefault();
+                    const snapped = getMinutesFromEvent(e);
+                    setDragState({ startMinutes: snapped, currentMinutes: snapped });
+                  }}
+                  onMouseMove={e => {
+                    if (!dragState) return;
+                    const snapped = getMinutesFromEvent(e);
+                    setDragState(prev => prev ? { ...prev, currentMinutes: snapped } : null);
+                  }}
+                  onMouseUp={() => {
+                    if (!dragState) return;
+                    const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
+                    const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
+                    const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
+                    setPendingSlot({ startMinutes: startMin, endMinutes: finalEnd });
+                    setDragState(null);
+                  }}
+                >
+                  {/* Hour lines */}
+                  {hours.map(h => (
+                    <React.Fragment key={h}>
+                      <div className="agenda-hour-line" style={{ top: `${h * 60}px` }} />
+                      <div className="agenda-half-hour-line" style={{ top: `${h * 60 + 30}px` }} />
+                    </React.Fragment>
+                  ))}
+
+                  {/* Current-time indicator */}
+                  <div className="agenda-now-line" style={{ top: `${nowMinutes}px` }} />
+
+                  {/* Drag preview */}
+                  {dragState && dragState.startMinutes !== dragState.currentMinutes && (
                     <div
-                      key={event.id}
-                      className={`agenda-block agenda-event${isSelected ? ' selected' : ''}`}
+                      className="agenda-drag-preview"
                       style={{
-                        top: `${start}px`,
-                        height: `${height}px`,
-                        background: EVENT_COLOR + '22',
-                        borderLeft: `3px dashed ${EVENT_COLOR}`,
+                        top: `${Math.min(dragState.startMinutes, dragState.currentMinutes)}px`,
+                        height: `${Math.abs(dragState.currentMinutes - dragState.startMinutes)}px`,
                       }}
-                      onClick={() => handleEventClick(event.id)}
-                    >
-                      <span className="agenda-block-title">◈ {event.title}</span>
-                      <span className="agenda-block-time">
-                        {formatTime(start)}–{formatTime(end)}
-                      </span>
-                    </div>
-                  );
-                })}
+                    />
+                  )}
+
+                  {/* Work blocks */}
+                  {todayBlocks.map(block => {
+                    const color = getBlockColor(block, areas);
+                    const height = Math.max(block.endMinutes - block.startMinutes, 20);
+                    const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
+                    return (
+                      <div
+                        key={block.id}
+                        className={`agenda-block${isSelected ? ' selected' : ''}`}
+                        style={{
+                          top: `${block.startMinutes}px`,
+                          height: `${height}px`,
+                          background: color + '33',
+                          borderLeft: `3px solid ${color}`,
+                        }}
+                        onClick={() => handleBlockClick(block.id)}
+                      >
+                        <span className="agenda-block-title">{block.title}</span>
+                        <span className="agenda-block-time">
+                          {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
+                        </span>
+                      </div>
+                    );
+                  })}
+
+                  {/* Timed events */}
+                  {timedEvents.map(event => {
+                    const start = event.startMinutes ?? 0;
+                    const end = event.endMinutes ?? start + 60;
+                    const height = Math.max(end - start, 20);
+                    const isSelected = selectedEventId === event.id;
+                    return (
+                      <div
+                        key={event.id}
+                        className={`agenda-block agenda-event${isSelected ? ' selected' : ''}`}
+                        style={{
+                          top: `${start}px`,
+                          height: `${height}px`,
+                          background: EVENT_COLOR + '22',
+                          borderLeft: `3px dashed ${EVENT_COLOR}`,
+                        }}
+                        onClick={() => handleEventClick(event.id)}
+                      >
+                        <span className="agenda-block-title">◈ {event.title}</span>
+                        <span className="agenda-block-time">
+                          {formatTime(start)}–{formatTime(end)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
-          </div>
-        </aside>
+          </aside>
 
-        {/* RIGHT: active block panel OR event detail */}
-        <section className="today-active-panel">
-          {selectedEvent ? (
-            <EventDetailPanel
-              event={selectedEvent}
-              tasks={tasks}
-              projects={projects}
-              onUpdate={updates => onUpdateEvent(selectedEvent.id, updates)}
-              onDelete={async () => { await onDeleteEvent(selectedEvent.id); setSelectedEventId(null); }}
-              onAddTask={name => onAddEventTask(selectedEvent.id, name)}
-              onUpdateTask={onUpdateTask}
-            />
-          ) : displayBlock ? (
-            <>
-              <div
-                className="today-active-header"
-                style={{ borderTopColor: getBlockColor(displayBlock, areas) }}
-              >
-                <div className="today-active-meta">
-                  <span className="today-active-time">
-                    {formatTime(displayBlock.startMinutes)} – {formatTime(displayBlock.endMinutes)}
-                  </span>
-                  {displayBlock.id === currentBlock?.id && (
-                    <span className="today-active-live-dot" />
+          {/* RIGHT: active block panel OR event detail */}
+          <section className="today-active-panel">
+            {selectedEvent ? (
+              <EventDetailPanel
+                event={selectedEvent}
+                tasks={tasks}
+                projects={projects}
+                onUpdate={updates => onUpdateEvent(selectedEvent.id, updates)}
+                onDelete={async () => { await onDeleteEvent(selectedEvent.id); setSelectedEventId(null); }}
+                onAddTask={name => onAddEventTask(selectedEvent.id, name)}
+                onUpdateTask={onUpdateTask}
+              />
+            ) : displayBlock ? (
+              <>
+                <div
+                  className="today-active-header"
+                  style={{ borderTopColor: getBlockColor(displayBlock, areas) }}
+                >
+                  <div className="today-active-meta">
+                    <span className="today-active-time">
+                      {formatTime(displayBlock.startMinutes)} – {formatTime(displayBlock.endMinutes)}
+                    </span>
+                    {displayBlock.id === currentBlock?.id && (
+                      <span className="today-active-live-dot" />
+                    )}
+                  </div>
+                  <div className="today-active-title">{displayBlock.title}</div>
+                </div>
+                <div className="today-active-tasks">
+                  {blockTasks.length === 0 ? (
+                    <div className="today-active-empty">
+                      Brak zadań przypisanych do tego bloku.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="today-tasks-section-label">
+                        Zadania
+                        <span className="today-tasks-count">
+                          {blockTasks.filter(t => t.done).length}/{blockTasks.length}
+                        </span>
+                      </div>
+                      {blockTasks.map(task => (
+                        <div
+                          key={task.id}
+                          className={`today-task-item${task.done ? ' done' : ''}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={task.done}
+                            onChange={() => onUpdateTask(task.id, { done: !task.done })}
+                            id={`today-task-${task.id}`}
+                          />
+                          <label
+                            className="today-task-name"
+                            htmlFor={`today-task-${task.id}`}
+                          >
+                            {task.name}
+                          </label>
+                          <span
+                            className="today-priority-dot"
+                            style={{ background: priorityColors[task.priority] }}
+                            title={task.priority}
+                          />
+                        </div>
+                      ))}
+                    </>
                   )}
                 </div>
-                <div className="today-active-title">{displayBlock.title}</div>
-              </div>
-              <div className="today-active-tasks">
-                {blockTasks.length === 0 ? (
-                  <div className="today-active-empty">
-                    Brak zadań przypisanych do tego bloku.
+              </>
+            ) : (
+              <div className="today-active-empty-state">
+                <div className="today-active-empty-icon">◎</div>
+                <div className="today-active-empty-msg">
+                  {todayBlocks.length > 0
+                    ? 'Żaden blok nie jest teraz aktywny.'
+                    : 'Nie masz zaplanowanych bloków na dziś.'}
+                </div>
+                {nextBlock && (
+                  <div className="today-active-empty-sub">
+                    Następny: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
                   </div>
-                ) : (
-                  <>
-                    <div className="today-tasks-section-label">
-                      Zadania
-                      <span className="today-tasks-count">
-                        {blockTasks.filter(t => t.done).length}/{blockTasks.length}
-                      </span>
-                    </div>
-                    {blockTasks.map(task => (
-                      <div
-                        key={task.id}
-                        className={`today-task-item${task.done ? ' done' : ''}`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={task.done}
-                          onChange={() => onUpdateTask(task.id, { done: !task.done })}
-                          id={`today-task-${task.id}`}
-                        />
-                        <label
-                          className="today-task-name"
-                          htmlFor={`today-task-${task.id}`}
-                        >
-                          {task.name}
-                        </label>
-                        <span
-                          className="today-priority-dot"
-                          style={{ background: priorityColors[task.priority] }}
-                          title={task.priority}
-                        />
-                      </div>
-                    ))}
-                  </>
                 )}
               </div>
-            </>
-          ) : (
-            <div className="today-active-empty-state">
-              <div className="today-active-empty-icon">◎</div>
-              <div className="today-active-empty-msg">
-                {todayBlocks.length > 0
-                  ? 'Żaden blok nie jest teraz aktywny.'
-                  : 'Nie masz zaplanowanych bloków na dziś.'}
-              </div>
-              {nextBlock && (
-                <div className="today-active-empty-sub">
-                  Następny: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
+            )}
+          </section>
+        </div>
       </div>
-    </div>
-  );
-}
 
-function parseTimeStr(str: string): number {
-  const [h, m] = str.split(':').map(Number);
-  return (h ?? 0) * 60 + (m ?? 0);
+      {pendingSlot && (
+        <CreateSlotModal
+          defaultDate={todayStr}
+          defaultStartMinutes={pendingSlot.startMinutes}
+          defaultEndMinutes={pendingSlot.endMinutes}
+          areas={areas}
+          lifters={lifters}
+          projects={projects}
+          contexts={contexts}
+          onSaveBlock={data => { onAddWorkBlock(data); setPendingSlot(null); }}
+          onSaveEvent={async data => { const ev = await onAddEvent(data); setSelectedEventId(ev.id); setPendingSlot(null); }}
+          onClose={() => setPendingSlot(null)}
+        />
+      )}
+    </>
+  );
 }
