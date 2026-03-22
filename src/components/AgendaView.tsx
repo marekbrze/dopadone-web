@@ -364,6 +364,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     currentMinutes: number;
     duration: number;
     startClientY: number;
+    hasMoved: boolean;
   } | null>(null);
   const dragMovedRef = useRef(false);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
@@ -535,6 +536,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         currentMinutes: block.startMinutes,
         duration: block.endMinutes - block.startMinutes,
         startClientY: e.clientY,
+        hasMoved: false,
       });
       return;
     }
@@ -547,10 +549,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     if (blockDragState) {
       const minutes = getMinutesFromEvent(e);
       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
-      if (Math.abs(e.clientY - blockDragState.startClientY) > 8) {
-        dragMovedRef.current = true;
-      }
-      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart, targetDate: date } : null);
+      const moved = blockDragState.hasMoved || Math.abs(e.clientY - blockDragState.startClientY) > 8;
+      if (moved) dragMovedRef.current = true;
+      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart, targetDate: date, hasMoved: moved } : null);
       return;
     }
     if (!dragState || dragState.date !== date) return;
@@ -775,7 +776,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 {/* Work blocks */}
                 {dayBlocks.map(block => {
                   const color = getBlockColor(block, areas);
-                  const isDragging = blockDragState?.blockId === block.id;
+                  const isDragging = blockDragState?.blockId === block.id && blockDragState!.hasMoved;
                   const isDraggingToThisCol = isDragging && blockDragState!.targetDate === d;
                   const isDraggingAway = isDragging && blockDragState!.targetDate !== d;
                   const top = isDraggingToThisCol ? blockDragState!.currentMinutes : block.startMinutes;
@@ -809,7 +810,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 })}
 
                 {/* Dragged block preview when moved from another day */}
-                {blockDragState?.targetDate === d && blockDragState.originalDate !== d && (() => {
+                {blockDragState?.targetDate === d && blockDragState.originalDate !== d && blockDragState.hasMoved && (() => {
                   const block = workBlocks.find(b => b.id === blockDragState.blockId);
                   if (!block) return null;
                   const color = getBlockColor(block, areas);

@@ -89,6 +89,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     currentMinutes: number;
     duration: number;
     startClientY: number;
+    hasMoved: boolean;
   } | null>(null);
   const dragMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
@@ -276,6 +277,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         currentMinutes: block.startMinutes,
                         duration: block.endMinutes - block.startMinutes,
                         startClientY: e.clientY,
+                        hasMoved: false,
                       });
                       return;
                     }
@@ -287,10 +289,9 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     if (blockDragState) {
                       const minutes = getMinutesFromEvent(e);
                       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
-                      if (Math.abs(e.clientY - blockDragState.startClientY) > 8) {
-                        dragMovedRef.current = true;
-                      }
-                      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart } : null);
+                      const moved = blockDragState.hasMoved || Math.abs(e.clientY - blockDragState.startClientY) > 8;
+                      if (moved) dragMovedRef.current = true;
+                      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart, hasMoved: moved } : null);
                       return;
                     }
                     if (!dragState) return;
@@ -332,7 +333,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                   {/* Work blocks */}
                   {todayBlocks.map(block => {
                     const color = getBlockColor(block, areas);
-                    const isDragging = blockDragState?.blockId === block.id;
+                    const isDragging = blockDragState?.blockId === block.id && blockDragState!.hasMoved;
                     const top = isDragging ? blockDragState!.currentMinutes : block.startMinutes;
                     const height = Math.max(block.endMinutes - block.startMinutes, 20);
                     const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
