@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import type { Area, Project, Task, Context, WorkBlock } from '../types';
 
 interface Props {
@@ -53,13 +54,24 @@ const priorityColors: Record<Task['priority'], string> = {
   high: '#a33a2a',
 };
 
+const hours = Array.from({ length: 24 }, (_, i) => i);
+
 export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlocks, onUpdateTask }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(id);
+  }, []);
+
+  // Scroll timeline to current hour on mount
+  useEffect(() => {
+    if (timelineRef.current) {
+      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+      timelineRef.current.scrollTop = Math.max(0, nowMin - 120);
+    }
   }, []);
 
   const todayStr = toDateString(now);
@@ -120,49 +132,63 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
       </div>
 
       <div className="today-body">
-        {/* LEFT: agenda timeline */}
+        {/* LEFT: day timeline */}
         <aside className="today-agenda">
           <div className="today-agenda-heading">Harmonogram dnia</div>
-          <div className="today-block-list">
-            {todayBlocks.length === 0 ? (
-              <p className="today-no-blocks-hint">Brak bloków zaplanowanych na dziś.</p>
-            ) : (
-              todayBlocks.map(block => {
-                const isCurrent = block.id === currentBlock?.id;
-                const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
-                const color = getBlockColor(block, areas);
-                const progress = isCurrent
-                  ? Math.round(((nowMinutes - block.startMinutes) / (block.endMinutes - block.startMinutes)) * 100)
-                  : 0;
-
-                return (
+          <div className="today-timeline-wrap" ref={timelineRef}>
+            <div className="today-timeline">
+              {/* Time axis */}
+              <div className="today-time-axis">
+                {hours.map(h => (
                   <div
-                    key={block.id}
-                    className={`today-block-row${isCurrent ? ' current' : ''}${isSelected ? ' selected' : ''}`}
-                    style={{ borderLeftColor: (isCurrent || isSelected) ? color : 'transparent' }}
-                    onClick={() => handleBlockClick(block.id)}
+                    key={h}
+                    className="agenda-hour-label"
+                    style={{ top: `${h * 60}px` }}
                   >
-                    {isCurrent && (
-                      <div
-                        className="today-block-progress"
-                        style={{ width: `${progress}%`, background: color }}
-                      />
-                    )}
-                    <div className="today-block-row-inner">
-                      <div className="today-block-row-title">{block.title}</div>
-                      <div className="today-block-row-time">
-                        {formatTime(block.startMinutes)} – {formatTime(block.endMinutes)}
-                      </div>
-                      {isCurrent && (
-                        <span className="today-block-now-badge" style={{ background: color }}>
-                          teraz
-                        </span>
-                      )}
-                    </div>
+                    {h.toString().padStart(2, '0')}:00
                   </div>
-                );
-              })
-            )}
+                ))}
+              </div>
+
+              {/* Day column */}
+              <div className="today-day-col">
+                {/* Hour lines */}
+                {hours.map(h => (
+                  <React.Fragment key={h}>
+                    <div className="agenda-hour-line" style={{ top: `${h * 60}px` }} />
+                    <div className="agenda-half-hour-line" style={{ top: `${h * 60 + 30}px` }} />
+                  </React.Fragment>
+                ))}
+
+                {/* Current-time indicator */}
+                <div className="agenda-now-line" style={{ top: `${nowMinutes}px` }} />
+
+                {/* Work blocks */}
+                {todayBlocks.map(block => {
+                  const color = getBlockColor(block, areas);
+                  const height = Math.max(block.endMinutes - block.startMinutes, 20);
+                  const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
+                  return (
+                    <div
+                      key={block.id}
+                      className={`agenda-block${isSelected ? ' selected' : ''}`}
+                      style={{
+                        top: `${block.startMinutes}px`,
+                        height: `${height}px`,
+                        background: color + '33',
+                        borderLeft: `3px solid ${color}`,
+                      }}
+                      onClick={() => handleBlockClick(block.id)}
+                    >
+                      <span className="agenda-block-title">{block.title}</span>
+                      <span className="agenda-block-time">
+                        {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </aside>
 

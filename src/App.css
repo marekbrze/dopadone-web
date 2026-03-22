@@ -2274,10 +2274,10 @@ body {
   overflow: hidden;
 }
 
-/* Left panel: agenda */
+/* Left panel: day timeline */
 
 .today-agenda {
-  width: 260px;
+  width: 220px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   background: var(--surface);
@@ -2297,91 +2297,32 @@ body {
   flex-shrink: 0;
 }
 
-.today-block-list {
+.today-timeline-wrap {
   flex: 1;
   overflow-y: auto;
-  padding: 6px 0;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
 
-.today-no-blocks-hint {
-  padding: 20px;
-  font-size: 13px;
-  color: var(--text-faint);
-  font-style: italic;
-}
-
-.today-block-row {
-  position: relative;
+.today-timeline {
   display: flex;
-  align-items: stretch;
-  border-left: 3px solid transparent;
-  cursor: pointer;
-  transition: background 0.1s;
-  overflow: hidden;
+  min-height: 1440px;
+  position: relative;
 }
 
-.today-block-row:hover {
-  background: rgba(92, 74, 56, 0.04);
+.today-time-axis {
+  width: 44px;
+  flex-shrink: 0;
+  position: relative;
+  border-right: 1px solid var(--border-light);
 }
 
-.today-block-row.selected {
-  background: var(--surface2);
-}
-
-.today-block-row.current {
-  background: rgba(92, 74, 56, 0.05);
-}
-
-.today-block-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 2px;
-  opacity: 0.45;
-  transition: width 60s linear;
-}
-
-.today-block-row-inner {
+.today-day-col {
   flex: 1;
-  padding: 10px 16px;
-  min-width: 0;
-}
-
-.today-block-row-title {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.35;
-}
-
-.today-block-row.current .today-block-row-title {
-  font-weight: 600;
-}
-
-.today-block-row-time {
-  font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 2px;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.01em;
-}
-
-.today-block-now-badge {
-  display: inline-block;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #faf7f0;
-  border-radius: 2px;
-  padding: 2px 5px;
-  margin-top: 5px;
-  opacity: 0.9;
+  position: relative;
+  min-height: 1440px;
+  cursor: pointer;
 }
 
 /* Right panel: active block */
