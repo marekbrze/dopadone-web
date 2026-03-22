@@ -2224,6 +2224,35 @@ body {
   z-index: 2;
 }
 
+.agenda-drag-preview.event-mode {
+  background: rgba(124, 92, 191, 0.2);
+  border-color: rgba(124, 92, 191, 0.6);
+}
+
+/* Create mode toggle */
+.agenda-create-mode-toggle {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-left: 8px;
+}
+.agenda-toggle-btn-event.active {
+  background: #7c5cbf !important;
+  color: #fff !important;
+  border-color: #7c5cbf !important;
+}
+
+.event-modal-check-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text);
+  cursor: pointer;
+  font-weight: normal;
+}
+
 /* Modal additions for agenda */
 
 .agenda-time-row {

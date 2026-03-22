@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { EventDetailPanel } from './EventDetailPanel';
+import { EventModal } from './EventModal';
 
 interface Props {
   areas: Area[];
@@ -341,16 +342,19 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent: _onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
+  const [createMode, setCreateMode] = useState<'block' | 'event'>('block');
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedBlock = selectedBlockId ? workBlocks.find(b => b.id === selectedBlockId) ?? null : null;
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
+  const [pendingEventSlot, setPendingEventSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
@@ -448,13 +452,17 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
         const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
         const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
-        setPendingSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
+        if (createMode === 'event') {
+          setPendingEventSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
+        } else {
+          setPendingSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
+        }
         setDragState(null);
       }
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [dragState]);
+  }, [dragState, createMode]);
 
   const visibleDates = viewMode === 'week' ? getWeekDates(anchorDate) : [anchorDate];
 
@@ -505,7 +513,11 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
     const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
     const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
-    setPendingSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
+    if (createMode === 'event') {
+      setPendingEventSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
+    } else {
+      setPendingSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
+    }
     setDragState(null);
   };
 
@@ -523,6 +535,24 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     if (editingBlock) {
       onDelete(editingBlock.id);
       setEditingBlock(null);
+    }
+  };
+
+  const handleEventSave = async (data: Omit<CalendarEvent, 'id'>) => {
+    if (editingEvent) {
+      await onUpdateEvent(editingEvent.id, data);
+      setEditingEvent(null);
+    } else {
+      await onAddEvent(data);
+      setPendingEventSlot(null);
+    }
+  };
+
+  const handleEventDelete = async () => {
+    if (editingEvent) {
+      await onDeleteEvent(editingEvent.id);
+      setEditingEvent(null);
+      setSelectedEventId(null);
     }
   };
 
@@ -590,6 +620,16 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             className={`agenda-toggle-btn ${viewMode === 'day' ? 'active' : ''}`}
             onClick={() => setViewMode('day')}
           >Dzień</button>
+        </div>
+        <div className="agenda-create-mode-toggle">
+          <button
+            className={`agenda-toggle-btn ${createMode === 'block' ? 'active' : ''}`}
+            onClick={() => setCreateMode('block')}
+          >Blok</button>
+          <button
+            className={`agenda-toggle-btn agenda-toggle-btn-event ${createMode === 'event' ? 'active' : ''}`}
+            onClick={() => setCreateMode('event')}
+          >Wydarzenie</button>
         </div>
       </div>
 
@@ -676,7 +716,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 {/* Drag preview */}
                 {dragState?.date === d && dragState.startMinutes !== dragState.currentMinutes && (
                   <div
-                    className="agenda-drag-preview"
+                    className={`agenda-drag-preview${createMode === 'event' ? ' event-mode' : ''}`}
                     style={{
                       top: `${Math.min(dragState.startMinutes, dragState.currentMinutes)}px`,
                       height: `${Math.abs(dragState.currentMinutes - dragState.startMinutes)}px`,
@@ -849,8 +889,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         return event ? (
           <div className="agenda-block-panel">
             <div className="agenda-block-panel-header">
-              <span className="agenda-block-panel-title">◈ Wydarzenie</span>
+              <span className="agenda-block-panel-title">◈ {event.title}</span>
               <div className="agenda-block-panel-actions">
+                <button onClick={() => setEditingEvent(event)}>Edytuj</button>
                 <button onClick={() => setSelectedEventId(null)}>✕</button>
               </div>
             </div>
@@ -899,7 +940,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         />
       )}
 
-      {/* Modal: edit */}
+      {/* Modal: edit block */}
       {editingBlock && (
         <WorkBlockModal
           block={editingBlock}
@@ -912,6 +953,33 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditingBlock(null)}
+        />
+      )}
+
+      {/* Modal: create event */}
+      {pendingEventSlot && !editingEvent && (
+        <EventModal
+          event={null}
+          defaultDate={pendingEventSlot.date}
+          defaultStartMinutes={pendingEventSlot.startMinutes}
+          defaultEndMinutes={pendingEventSlot.endMinutes}
+          projects={projects}
+          onSave={handleEventSave}
+          onClose={() => setPendingEventSlot(null)}
+        />
+      )}
+
+      {/* Modal: edit event */}
+      {editingEvent && (
+        <EventModal
+          event={editingEvent}
+          defaultDate={editingEvent.date}
+          defaultStartMinutes={editingEvent.startMinutes ?? 9 * 60}
+          defaultEndMinutes={editingEvent.endMinutes}
+          projects={projects}
+          onSave={handleEventSave}
+          onDelete={handleEventDelete}
+          onClose={() => setEditingEvent(null)}
         />
       )}
     </div>
