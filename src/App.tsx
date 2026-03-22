@@ -146,6 +146,63 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // All hooks must be called before any early returns (Rules of Hooks)
+  const lifters = useMemo(
+    () => data ? data.lifters.filter(l => l.areaId === selectedAreaId) : [],
+    [data, selectedAreaId]
+  );
+
+  const visibleProjects = useMemo(
+    () => data
+      ? data.projects
+          .filter(p => {
+            if (p.archived) return false;
+            if (p.areaId !== selectedAreaId) return false;
+            if (selectedLifterId) return p.lifterId === selectedLifterId;
+            return true;
+          })
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      : [],
+    [data, selectedAreaId, selectedLifterId]
+  );
+
+  const rootProjects = useMemo(() => {
+    const visibleIds = new Set(visibleProjects.map(p => p.id));
+    return visibleProjects.filter(p =>
+      p.parentProjectId === null || !visibleIds.has(p.parentProjectId)
+    );
+  }, [visibleProjects]);
+
+  const tasks = useMemo(
+    () => (data && selectedProjectId) ? data.tasks.filter(t => t.projectId === selectedProjectId) : [],
+    [data, selectedProjectId]
+  );
+
+  const projectNotes = useMemo(
+    () => (data && selectedProjectId) ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId) : [],
+    [data, selectedProjectId]
+  );
+
+  const selectedTask = useMemo(
+    () => tasks.find(t => t.id === selectedTaskId) ?? null,
+    [tasks, selectedTaskId]
+  );
+
+  const selectedArea = useMemo(
+    () => data ? data.areas.find(a => a.id === selectedAreaId) : undefined,
+    [data, selectedAreaId]
+  );
+
+  const inboxTaskCount = useMemo(
+    () => data ? data.tasks.filter(t => !t.done && t.projectId === null).length : 0,
+    [data]
+  );
+
+  const contextsMap = useMemo(
+    () => data ? new Map(data.contexts.map(c => [c.id, c])) : new Map(),
+    [data]
+  );
+
   if (!data) {
     return (
       <div className="app" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
@@ -184,59 +241,6 @@ export default function App() {
     setEditingLifterId(null);
     setEditingProjectId(null);
   };
-
-  const lifters = useMemo(
-    () => data.lifters.filter(l => l.areaId === selectedAreaId),
-    [data.lifters, selectedAreaId]
-  );
-
-  const visibleProjects = useMemo(
-    () => data.projects
-      .filter(p => {
-        if (p.archived) return false;
-        if (p.areaId !== selectedAreaId) return false;
-        if (selectedLifterId) return p.lifterId === selectedLifterId;
-        return true;
-      })
-      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0)),
-    [data.projects, selectedAreaId, selectedLifterId]
-  );
-
-  const rootProjects = useMemo(() => {
-    const visibleIds = new Set(visibleProjects.map(p => p.id));
-    return visibleProjects.filter(p =>
-      p.parentProjectId === null || !visibleIds.has(p.parentProjectId)
-    );
-  }, [visibleProjects]);
-
-  const tasks = useMemo(
-    () => selectedProjectId ? data.tasks.filter(t => t.projectId === selectedProjectId) : [],
-    [data.tasks, selectedProjectId]
-  );
-
-  const projectNotes = useMemo(
-    () => selectedProjectId ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId) : [],
-    [data.projectNotes, selectedProjectId]
-  );
-
-  const selectedTask = useMemo(
-    () => tasks.find(t => t.id === selectedTaskId) ?? null,
-    [tasks, selectedTaskId]
-  );
-  const selectedArea = useMemo(
-    () => data.areas.find(a => a.id === selectedAreaId),
-    [data.areas, selectedAreaId]
-  );
-
-  const inboxTaskCount = useMemo(
-    () => data.tasks.filter(t => !t.done && t.projectId === null).length,
-    [data.tasks]
-  );
-
-  const contextsMap = useMemo(
-    () => new Map(data.contexts.map(c => [c.id, c])),
-    [data.contexts]
-  );
 
   // Area / lifter / project
   const addArea = async (name: string) => {
