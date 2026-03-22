@@ -327,6 +327,31 @@ export function SettingsModal({
                   );
                 })}
                 {areas.length === 0 && <p className="empty-hint">Brak obszarów</p>}
+                <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid var(--border-light)' }}>
+                  <p style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+                    Konfiguracja
+                  </p>
+                  <button
+                    className="cancel"
+                    style={{ fontSize: 12, padding: '6px 12px', border: '1px solid var(--border)', borderRadius: 'var(--radius)', cursor: 'pointer', background: 'transparent', color: 'var(--text-muted)', fontFamily: 'inherit' }}
+                    onClick={() => {
+                      if (!window.confirm('Spowoduje to usunięcie wszystkich danych i ponowne uruchomienie kreatora konfiguracji. Kontynuować?')) return;
+                      db.areas.clear();
+                      db.lifters.clear();
+                      db.projects.clear();
+                      db.tasks.clear();
+                      db.contexts.clear();
+                      db.workBlocks.clear();
+                      db.events.clear();
+                      db.projectNotes.clear();
+                      localStorage.removeItem('dopadone-onboarding-complete');
+                      localStorage.removeItem('dopadone-tour-complete');
+                      window.location.reload();
+                    }}
+                  >
+                    Powtórz onboarding
+                  </button>
+                </div>
               </div>
             )}
 

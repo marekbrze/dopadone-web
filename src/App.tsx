@@ -1,7 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote } from './types';
-import { loadData, queryAllData } from './data';
+import { loadData, queryAllData, isNewUser, seedFromOnboarding } from './data';
+import { OnboardingWizard, SpotlightTour } from './components/OnboardingWizard';
+import type { OnboardingResult } from './components/OnboardingWizard';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
 import { ProjectTree } from './components/ProjectTree';
@@ -49,6 +51,23 @@ export default function App() {
   const [dropTargetRootZone, setDropTargetRootZone] = useState(false);
   const [dropGapTarget, setDropGapTarget] = useState<{ parentProjectId: string | null; insertAfterProjectId: string | null } | null>(null);
   const prevAreasCount = useRef(0);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showTour, setShowTour] = useState(false);
+  const [dataInitialized, setDataInitialized] = useState(false);
+
+  const applyInitialData = useCallback((d: AppState) => {
+    setData(d);
+    const firstArea = d.areas[0];
+    const areaId = firstArea?.id ?? '';
+    setSelectedAreaId(areaId);
+    const firstLifter = d.lifters.find(l => l.areaId === areaId);
+    const lifterId = firstLifter?.id ?? null;
+    setSelectedLifterId(lifterId);
+    const firstProject = d.projects.find(p =>
+      p.areaId === areaId && p.lifterId === lifterId && p.parentProjectId === null
+    );
+    setSelectedProjectId(firstProject?.id ?? null);
+  }, []);
 
   const toggleColumn = (id: string) => {
     setExpandedColumns(prev => {
@@ -70,50 +89,85 @@ export default function App() {
   };
 
   useEffect(() => {
-    const applyInitialData = (d: AppState) => {
-      setData(d);
-      const firstArea = d.areas[0];
-      const areaId = firstArea?.id ?? '';
-      setSelectedAreaId(areaId);
-      const firstLifter = d.lifters.find(l => l.areaId === areaId);
-      const lifterId = firstLifter?.id ?? null;
-      setSelectedLifterId(lifterId);
-      const firstProject = d.projects.find(p =>
-        p.areaId === areaId && p.lifterId === lifterId && p.parentProjectId === null
-      );
-      setSelectedProjectId(firstProject?.id ?? null);
-    };
-
-    let subscription: { unsubscribe: () => void } | null = null;
-
     completeMigrationIfPending()
-      .then(() => loadData())
-      .then(d => {
-        prevAreasCount.current = d.areas.length;
-        applyInitialData(d);
-
-        // Subscribe to live updates (e.g. from Dexie Cloud sync)
-        subscription = liveQuery(() => queryAllData()).subscribe({
-          next: (updated) => {
-            const wasEmpty = prevAreasCount.current === 0 && updated.areas.length > 0;
-            prevAreasCount.current = updated.areas.length;
-            if (wasEmpty) {
-              // Cloud sync brought data into empty db — auto-select
-              applyInitialData(updated);
-            } else {
-              setData(updated);
-            }
-          },
-          error: (err) => console.error('liveQuery error:', err),
+      .then(() => isNewUser())
+      .then(newUser => {
+        if (newUser) {
+          setShowOnboarding(true);
+          return;
+        }
+        return loadData().then(d => {
+          prevAreasCount.current = d.areas.length;
+          applyInitialData(d);
+          setDataInitialized(true);
         });
       })
       .catch(err => {
         console.error('Failed to load data:', err);
         applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [], projectNotes: [] });
+        setDataInitialized(true);
       });
+  }, [applyInitialData]);
 
-    return () => subscription?.unsubscribe();
-  }, []);
+  // Subscribe to live updates (e.g. from Dexie Cloud sync) — starts after data is ready
+  useEffect(() => {
+    if (!dataInitialized) return;
+    const subscription = liveQuery(() => queryAllData()).subscribe({
+      next: (updated) => {
+        const wasEmpty = prevAreasCount.current === 0 && updated.areas.length > 0;
+        prevAreasCount.current = updated.areas.length;
+        if (wasEmpty) {
+          applyInitialData(updated);
+        } else {
+          setData(updated);
+        }
+      },
+      error: (err) => console.error('liveQuery error:', err),
+    });
+    return () => subscription.unsubscribe();
+  }, [dataInitialized, applyInitialData]);
+
+  const handleOnboardingComplete = useCallback(async (result: OnboardingResult) => {
+    try {
+      await seedFromOnboarding(result.areas, result.contexts);
+      if (result.firstProject?.name) {
+        const areaRec = await db.areas.where('name').equals(result.firstProject.areaName).first();
+        if (areaRec) {
+          await db.projects.add({
+            id: crypto.randomUUID(),
+            name: result.firstProject.name,
+            areaId: areaRec.id,
+            lifterId: null,
+            parentProjectId: null,
+            order: 0,
+          });
+        }
+      }
+      const d = await queryAllData();
+      prevAreasCount.current = d.areas.length;
+      applyInitialData(d);
+    } catch (err) {
+      console.error('Onboarding seeding failed:', err);
+      localStorage.setItem('dopadone-onboarding-complete', 'true');
+      const d = await loadData();
+      prevAreasCount.current = d.areas.length;
+      applyInitialData(d);
+    }
+    setShowOnboarding(false);
+    setDataInitialized(true);
+    if (localStorage.getItem('dopadone-tour-complete') !== 'true') {
+      setShowTour(true);
+    }
+  }, [applyInitialData]);
+
+  const handleOnboardingSkip = useCallback(async () => {
+    localStorage.setItem('dopadone-onboarding-complete', 'true');
+    const d = await loadData();
+    prevAreasCount.current = d.areas.length;
+    applyInitialData(d);
+    setShowOnboarding(false);
+    setDataInitialized(true);
+  }, [applyInitialData]);
 
   useEffect(() => {
     const BACKUP_INTERVAL = 5 * 60 * 1000;
@@ -202,6 +256,15 @@ export default function App() {
     () => data ? new Map(data.contexts.map(c => [c.id, c])) : new Map(),
     [data]
   );
+
+  if (showOnboarding) {
+    return (
+      <OnboardingWizard
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+      />
+    );
+  }
 
   if (!data) {
     return (
@@ -749,6 +812,7 @@ export default function App() {
           <button
             className={`view-tab inbox-tab ${currentView === 'inbox' ? 'active' : ''}`}
             onClick={() => setCurrentView('inbox')}
+            data-tour="inbox"
           >
             Inbox
             {inboxTaskCount > 0 && (
@@ -758,6 +822,7 @@ export default function App() {
           <button
             className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
             onClick={() => setCurrentView('today')}
+            data-tour="today"
           >Dziś</button>
           <button
             className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
@@ -766,6 +831,7 @@ export default function App() {
           <button
             className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
             onClick={() => setCurrentView('plan')}
+            data-tour="plan"
           >Planowanie</button>
           <button
             className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
@@ -1167,6 +1233,14 @@ export default function App() {
           onDeleteContext={deleteContext}
           onRestoreProject={restoreProject}
           onClose={() => setModal(null)}
+        />
+      )}
+      {showTour && (
+        <SpotlightTour
+          onDone={() => {
+            localStorage.setItem('dopadone-tour-complete', 'true');
+            setShowTour(false);
+          }}
         />
       )}
     </div>

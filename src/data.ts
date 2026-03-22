@@ -73,6 +73,35 @@ export async function queryAllData(): Promise<AppState> {
   return { areas, lifters, projects, tasks: migratedTasks, contexts, workBlocks, events, projectNotes }
 }
 
+export async function isNewUser(): Promise<boolean> {
+  if (isCloudSchema()) return false;
+  if (localStorage.getItem('dopadone-onboarding-complete') === 'true') return false;
+  const count = await db.areas.count();
+  return count === 0;
+}
+
+export async function seedFromOnboarding(
+  areas: Array<{ name: string; color: string }>,
+  contexts: Array<{ name: string; icon: string }>,
+): Promise<void> {
+  const areaRecords = areas.map((a, i) => ({
+    id: crypto.randomUUID(),
+    name: a.name,
+    color: a.color,
+    order: i,
+  }));
+  const contextRecords = contexts.map(c => ({
+    id: crypto.randomUUID(),
+    name: c.name,
+    icon: c.icon,
+  }));
+  await db.transaction('rw', [db.areas, db.contexts], async () => {
+    await db.areas.bulkAdd(areaRecords);
+    await db.contexts.bulkAdd(contextRecords);
+  });
+  localStorage.setItem('dopadone-onboarding-complete', 'true');
+}
+
 export async function loadData(): Promise<AppState> {
   const count = await db.areas.count()
   if (count === 0) {
