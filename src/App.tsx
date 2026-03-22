@@ -40,6 +40,7 @@ export default function App() {
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox'>('today');
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
@@ -612,6 +613,10 @@ export default function App() {
             onClick={() => setCurrentView('today')}
           >Dziś</button>
           <button
+            className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
+            onClick={() => setCurrentView('agenda')}
+          >Agenda</button>
+          <button
             className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
             onClick={() => setCurrentView('plan')}
           >Planowanie</button>
@@ -619,16 +624,50 @@ export default function App() {
             className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
             onClick={() => setCurrentView('do')}
           >Robienie</button>
-          <button
-            className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
-            onClick={() => setCurrentView('agenda')}
-          >Agenda</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
+        <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu">
+          <span /><span /><span />
+        </button>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia">
           ⚙ Ustawienia
         </button>
       </header>
+
+      {mobileNavOpen && (
+        <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}>
+          <div className="mobile-nav-panel" onClick={e => e.stopPropagation()}>
+            <button className="mobile-nav-close" onClick={() => setMobileNavOpen(false)}>✕</button>
+            <nav className="mobile-nav-items">
+              <button
+                className={`mobile-nav-item ${currentView === 'inbox' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('inbox'); setMobileNavOpen(false); }}
+              >
+                Inbox
+                {data.tasks.filter(t => !t.done && t.projectId === null).length > 0 && (
+                  <span className="mobile-nav-badge">{data.tasks.filter(t => !t.done && t.projectId === null).length}</span>
+                )}
+              </button>
+              <button
+                className={`mobile-nav-item ${currentView === 'today' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('today'); setMobileNavOpen(false); }}
+              >Dziś</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'agenda' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('agenda'); setMobileNavOpen(false); }}
+              >Agenda</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'plan' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('plan'); setMobileNavOpen(false); }}
+              >Planowanie</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'do' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('do'); setMobileNavOpen(false); }}
+              >Robienie</button>
+            </nav>
+          </div>
+        </div>
+      )}
 
       {currentView === 'plan' && (
         <nav className="local-nav">

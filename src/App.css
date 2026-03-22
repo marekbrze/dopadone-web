@@ -1594,6 +1594,155 @@ body {
   }
 }
 
+/* ── Hamburger button (mobile only) ──────────────────────────────── */
+
+.hamburger-btn {
+  display: none;
+}
+
+/* ── Mobile nav overlay ───────────────────────────────────────────── */
+
+.mobile-nav-overlay {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .view-tabs {
+    display: none;
+  }
+
+  .quick-add-btn {
+    display: none;
+  }
+
+  .hamburger-btn {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px 6px;
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .hamburger-btn span {
+    display: block;
+    width: 20px;
+    height: 1.5px;
+    background: var(--text-muted);
+    border-radius: 1px;
+    transition: background 0.2s;
+  }
+
+  .hamburger-btn:hover span {
+    background: var(--text);
+  }
+
+  .mobile-nav-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    animation: mobileOverlayIn 0.18s ease;
+  }
+
+  .mobile-nav-panel {
+    position: absolute;
+    inset: 0;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    padding: 20px 32px 48px;
+    animation: mobileNavPanelIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mobile-nav-close {
+    align-self: flex-end;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: var(--text-faint);
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+    margin-bottom: 24px;
+    transition: color 0.15s;
+  }
+
+  .mobile-nav-close:hover {
+    color: var(--text);
+  }
+
+  .mobile-nav-items {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .mobile-nav-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--border-light);
+    color: var(--text-faint);
+    cursor: pointer;
+    font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+    font-size: 34px;
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    padding: 20px 0;
+    text-align: left;
+    transition: color 0.15s, padding-left 0.15s;
+    width: 100%;
+  }
+
+  .mobile-nav-items .mobile-nav-item:first-child {
+    border-top: 1px solid var(--border-light);
+  }
+
+  .mobile-nav-item.active {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .mobile-nav-item:hover {
+    color: var(--text);
+    padding-left: 8px;
+  }
+
+  .mobile-nav-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    background: var(--accent);
+    color: var(--surface);
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0;
+    line-height: 1;
+  }
+
+  @keyframes mobileOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes mobileNavPanelIn {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}
+
 /* ── Inbox badge & quick-add button ─────────────────────────────── */
 
 .inbox-tab {
