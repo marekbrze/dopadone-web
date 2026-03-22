@@ -2376,7 +2376,7 @@ body {
   border-radius: 2px;
   padding: 5px 8px;
   overflow: hidden;
-  cursor: pointer;
+  cursor: grab;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -2386,6 +2386,19 @@ body {
 .agenda-block:hover {
   filter: brightness(0.92);
   box-shadow: 0 2px 6px rgba(28, 23, 18, 0.12);
+}
+
+.agenda-block.dragging {
+  cursor: grabbing;
+  opacity: 0.85;
+  pointer-events: none;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(28, 23, 18, 0.2);
+}
+
+.agenda-block.drag-ghost {
+  opacity: 0.3;
+  pointer-events: none;
 }
 
 .agenda-block-title {

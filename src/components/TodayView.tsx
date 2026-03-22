@@ -18,6 +18,7 @@ interface Props {
   onDeleteEvent: (id: string) => Promise<void>;
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
   onAddWorkBlock: (data: Omit<WorkBlock, 'id'>) => void;
+  onUpdateWorkBlock: (id: string, updates: Partial<WorkBlock>) => void;
 }
 
 function toDateString(d: Date): string {
@@ -77,11 +78,18 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
+  const [blockDragState, setBlockDragState] = useState<{
+    blockId: string;
+    offsetMinutes: number;
+    currentMinutes: number;
+    duration: number;
+  } | null>(null);
+  const dragMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -100,6 +108,15 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
+      if (blockDragState) {
+        onUpdateWorkBlock(blockDragState.blockId, {
+          startMinutes: blockDragState.currentMinutes,
+          endMinutes: blockDragState.currentMinutes + blockDragState.duration,
+        });
+        setBlockDragState(null);
+        dragMovedRef.current = false;
+        return;
+      }
       if (dragState) {
         const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
         const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
@@ -110,7 +127,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [dragState]);
+  }, [dragState, blockDragState]);
 
   const todayStr = toDateString(now);
   const todayBlocks = workBlocks
@@ -241,17 +258,41 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 <div
                   className="today-day-col"
                   onMouseDown={e => {
-                    if ((e.target as HTMLElement).closest('.agenda-block')) return;
+                    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('.agenda-block');
+                    if (blockEl) {
+                      const blockId = blockEl.dataset.blockId;
+                      if (!blockId) return;
+                      const block = workBlocks.find(b => b.id === blockId);
+                      if (!block) return;
+                      e.preventDefault();
+                      const minutes = getMinutesFromEvent(e);
+                      const offset = Math.max(0, minutes - block.startMinutes);
+                      setBlockDragState({
+                        blockId,
+                        offsetMinutes: offset,
+                        currentMinutes: block.startMinutes,
+                        duration: block.endMinutes - block.startMinutes,
+                      });
+                      return;
+                    }
                     e.preventDefault();
                     const snapped = getMinutesFromEvent(e);
                     setDragState({ startMinutes: snapped, currentMinutes: snapped });
                   }}
                   onMouseMove={e => {
+                    if (blockDragState) {
+                      const minutes = getMinutesFromEvent(e);
+                      const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
+                      dragMovedRef.current = true;
+                      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart } : null);
+                      return;
+                    }
                     if (!dragState) return;
                     const snapped = getMinutesFromEvent(e);
                     setDragState(prev => prev ? { ...prev, currentMinutes: snapped } : null);
                   }}
                   onMouseUp={() => {
+                    if (blockDragState) return; // handled by global mouseup
                     if (!dragState) return;
                     const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
                     const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
@@ -285,23 +326,31 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                   {/* Work blocks */}
                   {todayBlocks.map(block => {
                     const color = getBlockColor(block, areas);
+                    const isDragging = blockDragState?.blockId === block.id;
+                    const top = isDragging ? blockDragState!.currentMinutes : block.startMinutes;
                     const height = Math.max(block.endMinutes - block.startMinutes, 20);
                     const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
                     return (
                       <div
                         key={block.id}
-                        className={`agenda-block${isSelected ? ' selected' : ''}`}
+                        data-block-id={block.id}
+                        className={`agenda-block${isSelected ? ' selected' : ''}${isDragging ? ' dragging' : ''}`}
                         style={{
-                          top: `${block.startMinutes}px`,
+                          top: `${top}px`,
                           height: `${height}px`,
                           background: color + '33',
                           borderLeft: `3px solid ${color}`,
                         }}
-                        onClick={() => handleBlockClick(block.id)}
+                        onClick={() => {
+                          if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+                          handleBlockClick(block.id);
+                        }}
                       >
                         <span className="agenda-block-title">{block.title}</span>
                         <span className="agenda-block-time">
-                          {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
+                          {isDragging
+                            ? `${formatTime(blockDragState!.currentMinutes)}–${formatTime(blockDragState!.currentMinutes + blockDragState!.duration)}`
+                            : `${formatTime(block.startMinutes)}–${formatTime(block.endMinutes)}`}
                         </span>
                       </div>
                     );

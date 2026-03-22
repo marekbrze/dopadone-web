@@ -356,6 +356,15 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
   const [pendingAllDayDate, setPendingAllDayDate] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
+  const [blockDragState, setBlockDragState] = useState<{
+    blockId: string;
+    originalDate: string;
+    targetDate: string;
+    offsetMinutes: number;
+    currentMinutes: number;
+    duration: number;
+  } | null>(null);
+  const dragMovedRef = useRef(false);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
   const [dropTargetActive, setDropTargetActive] = useState(false);
@@ -387,6 +396,18 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       setSelectedEventId(null);
     }
   }, [events, selectedEventId]);
+
+  // Cancel block drag on global mouseup (e.g. released outside columns)
+  useEffect(() => {
+    const up = () => {
+      if (blockDragState) {
+        setBlockDragState(null);
+        dragMovedRef.current = false;
+      }
+    };
+    window.addEventListener('mouseup', up);
+    return () => window.removeEventListener('mouseup', up);
+  }, [blockDragState]);
 
   const isManual = selectedBlock ? isManualBlock(selectedBlock) : false;
 
@@ -496,19 +517,54 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   };
 
   const handleMouseDown = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('.agenda-block')) return;
+    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('.agenda-block');
+    if (blockEl) {
+      const blockId = blockEl.dataset.blockId;
+      if (!blockId) return;
+      const block = workBlocks.find(b => b.id === blockId);
+      if (!block) return;
+      e.preventDefault();
+      const minutes = getMinutesFromEvent(e);
+      const offset = Math.max(0, minutes - block.startMinutes);
+      setBlockDragState({
+        blockId,
+        originalDate: block.date,
+        targetDate: date,
+        offsetMinutes: offset,
+        currentMinutes: block.startMinutes,
+        duration: block.endMinutes - block.startMinutes,
+      });
+      return;
+    }
     e.preventDefault();
     const snapped = getMinutesFromEvent(e);
     setDragState({ date, startMinutes: snapped, currentMinutes: snapped });
   };
 
   const handleMouseMove = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (blockDragState) {
+      const minutes = getMinutesFromEvent(e);
+      const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
+      dragMovedRef.current = true;
+      setBlockDragState(prev => prev ? { ...prev, currentMinutes: newStart, targetDate: date } : null);
+      return;
+    }
     if (!dragState || dragState.date !== date) return;
     const snapped = getMinutesFromEvent(e);
     setDragState(prev => prev ? { ...prev, currentMinutes: snapped } : null);
   };
 
   const finishDrag = (date: string) => {
+    if (blockDragState) {
+      onUpdate(blockDragState.blockId, {
+        startMinutes: blockDragState.currentMinutes,
+        endMinutes: blockDragState.currentMinutes + blockDragState.duration,
+        date: blockDragState.targetDate,
+      });
+      setBlockDragState(null);
+      dragMovedRef.current = false;
+      return;
+    }
     if (!dragState || dragState.date !== date) return;
     const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
     const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
@@ -713,30 +769,63 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 {/* Work blocks */}
                 {dayBlocks.map(block => {
                   const color = getBlockColor(block, areas);
+                  const isDragging = blockDragState?.blockId === block.id;
+                  const isDraggingToThisCol = isDragging && blockDragState!.targetDate === d;
+                  const isDraggingAway = isDragging && blockDragState!.targetDate !== d;
+                  const top = isDraggingToThisCol ? blockDragState!.currentMinutes : block.startMinutes;
                   const height = Math.max(block.endMinutes - block.startMinutes, 20);
                   return (
                     <div
                       key={block.id}
-                      className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}`}
+                      data-block-id={block.id}
+                      className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}${isDraggingToThisCol ? ' dragging' : ''}${isDraggingAway ? ' drag-ghost' : ''}`}
                       style={{
-                        top: `${block.startMinutes}px`,
+                        top: `${top}px`,
                         height: `${height}px`,
                         background: color + '33',
                         borderLeft: `3px solid ${color}`,
                       }}
                       onClick={e => {
                         e.stopPropagation();
+                        if (dragMovedRef.current) { dragMovedRef.current = false; return; }
                         setSelectedBlockId(block.id);
                         setSelectedEventId(null);
                       }}
                     >
                       <span className="agenda-block-title">{block.title}</span>
                       <span className="agenda-block-time">
-                        {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
+                        {isDraggingToThisCol
+                          ? `${formatTime(blockDragState!.currentMinutes)}–${formatTime(blockDragState!.currentMinutes + blockDragState!.duration)}`
+                          : `${formatTime(block.startMinutes)}–${formatTime(block.endMinutes)}`}
                       </span>
                     </div>
                   );
                 })}
+
+                {/* Dragged block preview when moved from another day */}
+                {blockDragState?.targetDate === d && blockDragState.originalDate !== d && (() => {
+                  const block = workBlocks.find(b => b.id === blockDragState.blockId);
+                  if (!block) return null;
+                  const color = getBlockColor(block, areas);
+                  const height = Math.max(blockDragState.duration, 20);
+                  return (
+                    <div
+                      key="block-drag-preview"
+                      className="agenda-block dragging"
+                      style={{
+                        top: `${blockDragState.currentMinutes}px`,
+                        height: `${height}px`,
+                        background: color + '33',
+                        borderLeft: `3px solid ${color}`,
+                      }}
+                    >
+                      <span className="agenda-block-title">{block.title}</span>
+                      <span className="agenda-block-time">
+                        {formatTime(blockDragState.currentMinutes)}–{formatTime(blockDragState.currentMinutes + blockDragState.duration)}
+                      </span>
+                    </div>
+                  );
+                })()}
 
                 {/* Timed events */}
                 {dayTimedEvents.map(event => {

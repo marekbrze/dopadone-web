@@ -796,6 +796,7 @@ export default function App() {
           onDeleteEvent={deleteEvent}
           onAddEventTask={addEventTask}
           onAddWorkBlock={addWorkBlock}
+          onUpdateWorkBlock={updateWorkBlock}
         />
       )}
 
