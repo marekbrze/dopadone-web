@@ -12,6 +12,7 @@ import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { ProjectDetailPanel } from './components/ProjectDetailPanel';
 import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
+import { TodayView } from './components/TodayView';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
@@ -37,7 +38,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
-  const [currentView, setCurrentView] = useState<'plan' | 'do' | 'agenda'>('plan');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda'>('today');
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
@@ -498,6 +499,10 @@ export default function App() {
         <div className="logo">Dopadone</div>
         <div className="view-tabs">
           <button
+            className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
+            onClick={() => setCurrentView('today')}
+          >Dziś</button>
+          <button
             className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
             onClick={() => setCurrentView('plan')}
           >Planowanie</button>
@@ -529,6 +534,17 @@ export default function App() {
           ))}
           <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
         </nav>
+      )}
+
+      {currentView === 'today' && (
+        <TodayView
+          areas={data.areas}
+          projects={data.projects}
+          tasks={data.tasks}
+          contexts={data.contexts}
+          workBlocks={data.workBlocks}
+          onUpdateTask={updateTask}
+        />
       )}
 
       {currentView === 'agenda' && (
