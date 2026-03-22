@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
-import type { Area, Lifter, Project, Task, Context, WorkBlock } from './types'
+import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent } from './types'
 
 const getCloudUrl = () => localStorage.getItem('dopadone-cloud-url');
 export const isCloudSchema = () => localStorage.getItem('dopadone-schema') === 'cloud';
@@ -12,6 +12,7 @@ export class DopadoneDB extends Dexie {
   tasks!: EntityTable<Task, 'id'>
   contexts!: EntityTable<Context, 'id'>
   workBlocks!: EntityTable<WorkBlock, 'id'>
+  events!: EntityTable<CalendarEvent, 'id'>
 
   constructor() {
     const cloudUrl = getCloudUrl();
@@ -20,6 +21,15 @@ export class DopadoneDB extends Dexie {
 
     if (cloud) {
       // @id: Dexie Cloud generates IDs — required for cross-device sync
+      this.version(2).stores({
+        areas:      '@id, name',
+        lifters:    '@id, areaId',
+        projects:   '@id, areaId, lifterId, parentProjectId',
+        tasks:      '@id, projectId, contextId, done',
+        contexts:   '@id, name',
+        workBlocks: '@id, date',
+        events:     '@id, date',
+      });
       this.version(1).stores({
         areas:      '@id, name',
         lifters:    '@id, areaId',
@@ -30,6 +40,15 @@ export class DopadoneDB extends Dexie {
       });
     } else {
       // Legacy schema for existing local databases
+      this.version(4).stores({
+        areas:      'id, name',
+        lifters:    'id, areaId',
+        projects:   'id, areaId, lifterId, parentProjectId',
+        tasks:      'id, projectId, contextId, done',
+        contexts:   'id, name',
+        workBlocks: 'id, date',
+        events:     'id, date',
+      });
       this.version(3).stores({
         areas:      'id, name',
         lifters:    'id, areaId',

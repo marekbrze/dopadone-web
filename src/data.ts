@@ -21,6 +21,7 @@ export const defaultData: AppState = {
   ],
   tasks: [],
   workBlocks: [],
+  events: [],
 }
 
 async function migrateFromLocalStorage(): Promise<AppState | null> {
@@ -30,19 +31,21 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
     const parsed = JSON.parse(raw) as AppState
     if (!parsed.contexts) parsed.contexts = defaultData.contexts
     if (!parsed.workBlocks) parsed.workBlocks = []
+    if (!parsed.events) parsed.events = []
     parsed.tasks = parsed.tasks.map(t => ({
       ...t,
       effort: t.effort ?? null,
       contextId: t.contextId ?? null,
       blocking: t.blocking ?? false,
     }))
-    await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks], async () => {
+    await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks, db.events], async () => {
       await db.areas.bulkPut(parsed.areas)
       await db.lifters.bulkPut(parsed.lifters)
       await db.projects.bulkPut(parsed.projects)
       await db.tasks.bulkPut(parsed.tasks)
       await db.contexts.bulkPut(parsed.contexts)
       await db.workBlocks.bulkPut(parsed.workBlocks)
+      await db.events.bulkPut(parsed.events)
     })
     localStorage.removeItem(STORAGE_KEY)
     return parsed
@@ -52,24 +55,25 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
 }
 
 export async function queryAllData(): Promise<AppState> {
-  const [areasRaw, lifters, projects, tasks, contexts, workBlocks] = await Promise.all([
+  const [areasRaw, lifters, projects, tasks, contexts, workBlocks, events] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
     db.workBlocks.toArray(),
+    db.events.toArray(),
   ])
   const areas = [...areasRaw].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity))
   const migratedTasks = tasks.map(t => ({ ...t, blocking: t.blocking ?? false }))
-  return { areas, lifters, projects, tasks: migratedTasks, contexts, workBlocks }
+  return { areas, lifters, projects, tasks: migratedTasks, contexts, workBlocks, events }
 }
 
 export async function loadData(): Promise<AppState> {
   const count = await db.areas.count()
   if (count === 0) {
     // Cloud mode: don't seed defaults — data comes from sync
-    if (isCloudSchema()) return { areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [] }
+    if (isCloudSchema()) return { areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [] }
     const migrated = await migrateFromLocalStorage()
     if (migrated) return migrated
     // Fresh local install: seed with defaults

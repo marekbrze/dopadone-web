@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
-import type { Area, Project, Task, Context, WorkBlock } from '../types';
+import type { Area, Project, Task, Context, WorkBlock, CalendarEvent } from '../types';
+import { EventDetailPanel } from './EventDetailPanel';
 
 interface Props {
   areas: Area[];
@@ -8,7 +9,12 @@ interface Props {
   tasks: Task[];
   contexts: Context[];
   workBlocks: WorkBlock[];
+  events: CalendarEvent[];
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
+  onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
+  onDeleteEvent: (id: string) => Promise<void>;
+  onAddEventTask: (eventId: string, name: string) => Promise<void>;
 }
 
 function toDateString(d: Date): string {
@@ -48,17 +54,40 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
+function isEventOnDate(event: CalendarEvent, dateStr: string): boolean {
+  if (event.date === dateStr) return true;
+  if (event.endDate && event.date <= dateStr && dateStr <= event.endDate) return true;
+  return false;
+}
+
 const priorityColors: Record<Task['priority'], string> = {
   low: '#5a7a5e',
   medium: '#a07830',
   high: '#a33a2a',
 };
 
+const EVENT_COLOR = '#7c5cbf';
+
 const hours = Array.from({ length: 24 }, (_, i) => i);
 
-export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlocks, onUpdateTask }: Props) {
+interface AddEventFormState {
+  title: string;
+  allDay: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [showAddEventForm, setShowAddEventForm] = useState(false);
+  const [addEventForm, setAddEventForm] = useState<AddEventFormState>({
+    title: '',
+    allDay: false,
+    startTime: '09:00',
+    endTime: '10:00',
+  });
   const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -79,6 +108,12 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
     .filter(b => b.date === todayStr)
     .sort((a, b) => a.startMinutes - b.startMinutes);
 
+  const todayEvents = events.filter(e => isEventOnDate(e, todayStr));
+  const allDayEvents = todayEvents.filter(e => e.allDay);
+  const timedEvents = todayEvents
+    .filter(e => !e.allDay)
+    .sort((a, b) => (a.startMinutes ?? 0) - (b.startMinutes ?? 0));
+
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const currentBlock = todayBlocks.find(
     b => b.startMinutes <= nowMinutes && nowMinutes < b.endMinutes
@@ -90,9 +125,17 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
     }
   }, [workBlocks]);
 
+  useEffect(() => {
+    if (selectedEventId && !todayEvents.find(e => e.id === selectedEventId)) {
+      setSelectedEventId(null);
+    }
+  }, [events]);
+
   const displayBlock = selectedBlockId
     ? (todayBlocks.find(b => b.id === selectedBlockId) ?? currentBlock)
     : currentBlock;
+
+  const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) ?? null : null;
 
   const blockTasks = displayBlock
     ? getMatchingTasks(displayBlock, tasks, projects)
@@ -115,6 +158,31 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
 
   const handleBlockClick = (blockId: string) => {
     setSelectedBlockId(prev => prev === blockId ? null : blockId);
+    setSelectedEventId(null);
+  };
+
+  const handleEventClick = (eventId: string) => {
+    setSelectedEventId(prev => prev === eventId ? null : eventId);
+    setSelectedBlockId(null);
+  };
+
+  const handleAddEventSubmit = async () => {
+    const title = addEventForm.title.trim();
+    if (!title) return;
+    const eventData: Omit<CalendarEvent, 'id'> = {
+      title,
+      date: todayStr,
+      allDay: addEventForm.allDay,
+      startMinutes: addEventForm.allDay ? undefined : parseTimeStr(addEventForm.startTime),
+      endMinutes: addEventForm.allDay ? undefined : parseTimeStr(addEventForm.endTime),
+      projectId: null,
+      taskIds: [],
+    };
+    const created = await onAddEvent(eventData);
+    setSelectedEventId(created.id);
+    setSelectedBlockId(null);
+    setShowAddEventForm(false);
+    setAddEventForm({ title: '', allDay: false, startTime: '09:00', endTime: '10:00' });
   };
 
   return (
@@ -134,7 +202,79 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
       <div className="today-body">
         {/* LEFT: day timeline */}
         <aside className="today-agenda">
-          <div className="today-agenda-heading">Harmonogram dnia</div>
+          <div className="today-agenda-heading">
+            Harmonogram dnia
+            <button
+              className="today-add-event-btn"
+              onClick={() => setShowAddEventForm(v => !v)}
+              title="Dodaj wydarzenie"
+            >+ Wydarzenie</button>
+          </div>
+
+          {/* Add event form */}
+          {showAddEventForm && (
+            <div className="today-add-event-form">
+              <input
+                className="today-add-event-title"
+                placeholder="Nazwa wydarzenia…"
+                value={addEventForm.title}
+                onChange={e => setAddEventForm(f => ({ ...f, title: e.target.value }))}
+                onKeyDown={e => { if (e.key === 'Enter') handleAddEventSubmit(); if (e.key === 'Escape') setShowAddEventForm(false); }}
+                autoFocus
+              />
+              <div className="today-add-event-row">
+                <label className="today-add-event-check-label">
+                  <input
+                    type="checkbox"
+                    checked={addEventForm.allDay}
+                    onChange={e => setAddEventForm(f => ({ ...f, allDay: e.target.checked }))}
+                  />
+                  Cały dzień
+                </label>
+              </div>
+              {!addEventForm.allDay && (
+                <div className="today-add-event-row">
+                  <input
+                    type="time"
+                    className="today-add-event-time"
+                    value={addEventForm.startTime}
+                    onChange={e => setAddEventForm(f => ({ ...f, startTime: e.target.value }))}
+                  />
+                  <span style={{ margin: '0 4px' }}>–</span>
+                  <input
+                    type="time"
+                    className="today-add-event-time"
+                    value={addEventForm.endTime}
+                    onChange={e => setAddEventForm(f => ({ ...f, endTime: e.target.value }))}
+                  />
+                </div>
+              )}
+              <div className="today-add-event-actions">
+                <button className="today-add-event-submit" onClick={handleAddEventSubmit} disabled={!addEventForm.title.trim()}>
+                  Dodaj
+                </button>
+                <button className="today-add-event-cancel" onClick={() => setShowAddEventForm(false)}>
+                  Anuluj
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* All-day events strip */}
+          {allDayEvents.length > 0 && (
+            <div className="today-allday-strip">
+              {allDayEvents.map(event => (
+                <button
+                  key={event.id}
+                  className={`today-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
+                  onClick={() => handleEventClick(event.id)}
+                >
+                  ◈ {event.title}
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="today-timeline-wrap" ref={timelineRef}>
             <div className="today-timeline">
               {/* Time axis */}
@@ -187,14 +327,50 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
                     </div>
                   );
                 })}
+
+                {/* Timed events */}
+                {timedEvents.map(event => {
+                  const start = event.startMinutes ?? 0;
+                  const end = event.endMinutes ?? start + 60;
+                  const height = Math.max(end - start, 20);
+                  const isSelected = selectedEventId === event.id;
+                  return (
+                    <div
+                      key={event.id}
+                      className={`agenda-block agenda-event${isSelected ? ' selected' : ''}`}
+                      style={{
+                        top: `${start}px`,
+                        height: `${height}px`,
+                        background: EVENT_COLOR + '22',
+                        borderLeft: `3px dashed ${EVENT_COLOR}`,
+                      }}
+                      onClick={() => handleEventClick(event.id)}
+                    >
+                      <span className="agenda-block-title">◈ {event.title}</span>
+                      <span className="agenda-block-time">
+                        {formatTime(start)}–{formatTime(end)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>
         </aside>
 
-        {/* RIGHT: active block panel */}
+        {/* RIGHT: active block panel OR event detail */}
         <section className="today-active-panel">
-          {displayBlock ? (
+          {selectedEvent ? (
+            <EventDetailPanel
+              event={selectedEvent}
+              tasks={tasks}
+              projects={projects}
+              onUpdate={updates => onUpdateEvent(selectedEvent.id, updates)}
+              onDelete={async () => { await onDeleteEvent(selectedEvent.id); setSelectedEventId(null); }}
+              onAddTask={name => onAddEventTask(selectedEvent.id, name)}
+              onUpdateTask={onUpdateTask}
+            />
+          ) : displayBlock ? (
             <>
               <div
                 className="today-active-header"
@@ -270,4 +446,9 @@ export function TodayView({ areas, projects, tasks, contexts: _contexts, workBlo
       </div>
     </div>
   );
+}
+
+function parseTimeStr(str: string): number {
+  const [h, m] = str.split(':').map(Number);
+  return (h ?? 0) * 60 + (m ?? 0);
 }

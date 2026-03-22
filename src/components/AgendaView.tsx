@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Project, Context, WorkBlock, Task } from '../types';
+import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
+import { EventDetailPanel } from './EventDetailPanel';
 
 interface Props {
   areas: Area[];
@@ -9,6 +10,7 @@ interface Props {
   contexts: Context[];
   tasks: Task[];
   workBlocks: WorkBlock[];
+  events: CalendarEvent[];
   onAdd: (block: Omit<WorkBlock, 'id'>) => void;
   onUpdate: (id: string, updates: Partial<WorkBlock>) => void;
   onDelete: (id: string) => void;
@@ -16,6 +18,10 @@ interface Props {
   onDeleteTask: (id: string) => void;
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
   onAddInboxTask: (name: string) => Promise<string>;
+  onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
+  onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
+  onDeleteEvent: (id: string) => Promise<void>;
+  onAddEventTask: (eventId: string, name: string) => Promise<void>;
 }
 
 function toDateString(d: Date): string {
@@ -59,6 +65,14 @@ function getBlockColor(block: WorkBlock, areas: Area[]): string {
 }
 
 const DAY_LABELS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'];
+
+const EVENT_COLOR = '#7c5cbf';
+
+function isEventOnDate(event: CalendarEvent, dateStr: string): boolean {
+  if (event.date === dateStr) return true;
+  if (event.endDate && event.date <= dateStr && dateStr <= event.endDate) return true;
+  return false;
+}
 
 // ── WorkBlockModal ───────────────────────────────────────────────────────────
 
@@ -327,12 +341,13 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, onAdd, onUpdate, onDelete, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent: _onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedBlock = selectedBlockId ? workBlocks.find(b => b.id === selectedBlockId) ?? null : null;
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
@@ -361,6 +376,13 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       setSelectedTaskId(null);
     }
   }, [tasks, selectedTaskId]);
+
+  // Clear selected event if it no longer exists
+  useEffect(() => {
+    if (selectedEventId && !events.find(e => e.id === selectedEventId)) {
+      setSelectedEventId(null);
+    }
+  }, [events, selectedEventId]);
 
   const isManual = selectedBlock ? isManualBlock(selectedBlock) : false;
 
@@ -592,6 +614,25 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             );
           })}
 
+          {/* All-day events row */}
+          <div className="agenda-allday-corner" />
+          {visibleDates.map((d) => {
+            const dayAllDayEvents = events.filter(e => isEventOnDate(e, d) && e.allDay);
+            return (
+              <div key={`allday-${d}`} className="agenda-allday-cell">
+                {dayAllDayEvents.map(event => (
+                  <button
+                    key={event.id}
+                    className={`agenda-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
+                    onClick={e => { e.stopPropagation(); setSelectedEventId(event.id); setSelectedBlockId(null); setSelectedTaskId(null); }}
+                  >
+                    ◈ {event.title}
+                  </button>
+                ))}
+              </div>
+            );
+          })}
+
           {/* Time axis */}
           <div className="agenda-time-axis">
             {hours.map(h => (
@@ -604,6 +645,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           {/* Day columns */}
           {visibleDates.map((d) => {
             const dayBlocks = workBlocks.filter(b => b.date === d);
+            const dayTimedEvents = events.filter(e => isEventOnDate(e, d) && !e.allDay);
             return (
               <div
                 key={d}
@@ -659,11 +701,42 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                       onClick={e => {
                         e.stopPropagation();
                         setSelectedBlockId(block.id);
+                        setSelectedEventId(null);
                       }}
                     >
                       <span className="agenda-block-title">{block.title}</span>
                       <span className="agenda-block-time">
                         {formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                {/* Timed events */}
+                {dayTimedEvents.map(event => {
+                  const start = event.startMinutes ?? 0;
+                  const end = event.endMinutes ?? start + 60;
+                  const height = Math.max(end - start, 20);
+                  return (
+                    <div
+                      key={event.id}
+                      className={`agenda-block agenda-event${selectedEventId === event.id ? ' selected' : ''}`}
+                      style={{
+                        top: `${start}px`,
+                        height: `${height}px`,
+                        background: EVENT_COLOR + '22',
+                        borderLeft: `3px dashed ${EVENT_COLOR}`,
+                      }}
+                      onClick={e => {
+                        e.stopPropagation();
+                        setSelectedEventId(event.id);
+                        setSelectedBlockId(null);
+                        setSelectedTaskId(null);
+                      }}
+                    >
+                      <span className="agenda-block-title">◈ {event.title}</span>
+                      <span className="agenda-block-time">
+                        {formatTime(start)}–{formatTime(end)}
                       </span>
                     </div>
                   );
@@ -770,6 +843,31 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           </div>
         </div>
       )}
+
+      {selectedEventId && (() => {
+        const event = events.find(e => e.id === selectedEventId);
+        return event ? (
+          <div className="agenda-block-panel">
+            <div className="agenda-block-panel-header">
+              <span className="agenda-block-panel-title">◈ Wydarzenie</span>
+              <div className="agenda-block-panel-actions">
+                <button onClick={() => setSelectedEventId(null)}>✕</button>
+              </div>
+            </div>
+            <div className="agenda-block-panel-body" style={{ padding: 0 }}>
+              <EventDetailPanel
+                event={event}
+                tasks={tasks}
+                projects={projects}
+                onUpdate={updates => onUpdateEvent(event.id, updates)}
+                onDelete={async () => { await onDeleteEvent(event.id); setSelectedEventId(null); }}
+                onAddTask={name => onAddEventTask(event.id, name)}
+                onUpdateTask={onUpdateTask}
+              />
+            </div>
+          </div>
+        ) : null;
+      })()}
 
       {selectedTaskId && (() => {
         const task = tasks.find(t => t.id === selectedTaskId);

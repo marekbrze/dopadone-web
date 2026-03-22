@@ -81,16 +81,17 @@ export async function exportAllData(
   db: DopadoneDB,
   password?: string
 ): Promise<Blob> {
-  const [areas, lifters, projects, tasks, contexts, workBlocks] = await Promise.all([
+  const [areas, lifters, projects, tasks, contexts, workBlocks, events] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
     db.workBlocks.toArray(),
+    db.events.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events };
   const exportData: ExportData = {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -134,7 +135,7 @@ export async function previewImport(
   db: DopadoneDB,
   data: ExportData
 ): Promise<ImportPreview> {
-  const [existingAreas, existingLifters, existingProjects, existingTasks, existingContexts, existingWorkBlocks] =
+  const [existingAreas, existingLifters, existingProjects, existingTasks, existingContexts, existingWorkBlocks, existingEvents] =
     await Promise.all([
       db.areas.toArray(),
       db.lifters.toArray(),
@@ -142,6 +143,7 @@ export async function previewImport(
       db.tasks.toArray(),
       db.contexts.toArray(),
       db.workBlocks.toArray(),
+      db.events.toArray(),
     ]);
 
   const countChanges = <T extends { id: string }>(existing: T[], incoming: T[]) => {
@@ -159,6 +161,7 @@ export async function previewImport(
   };
 
   const incomingWorkBlocks = data.data.workBlocks ?? [];
+  const incomingEvents = data.data.events ?? [];
 
   return {
     areas: countChanges(existingAreas, data.data.areas),
@@ -167,6 +170,7 @@ export async function previewImport(
     tasks: countChanges(existingTasks, data.data.tasks),
     contexts: countChanges(existingContexts, data.data.contexts),
     workBlocks: countChanges(existingWorkBlocks, incomingWorkBlocks),
+    events: countChanges(existingEvents, incomingEvents),
   };
 }
 
@@ -176,7 +180,8 @@ export async function executeImport(
   mode: ImportMode
 ): Promise<void> {
   const workBlocks = data.data.workBlocks ?? [];
-  await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks], async () => {
+  const events = data.data.events ?? [];
+  await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks, db.contexts, db.workBlocks, db.events], async () => {
     if (mode === 'replace') {
       await Promise.all([
         db.areas.clear(),
@@ -185,6 +190,7 @@ export async function executeImport(
         db.tasks.clear(),
         db.contexts.clear(),
         db.workBlocks.clear(),
+        db.events.clear(),
       ]);
     }
 
@@ -195,21 +201,23 @@ export async function executeImport(
       db.tasks.bulkPut(data.data.tasks),
       db.contexts.bulkPut(data.data.contexts),
       db.workBlocks.bulkPut(workBlocks),
+      db.events.bulkPut(events),
     ]);
   });
 }
 
 export async function saveAutoBackup(db: DopadoneDB): Promise<void> {
-  const [areas, lifters, projects, tasks, contexts, workBlocks] = await Promise.all([
+  const [areas, lifters, projects, tasks, contexts, workBlocks, events] = await Promise.all([
     db.areas.toArray(),
     db.lifters.toArray(),
     db.projects.toArray(),
     db.tasks.toArray(),
     db.contexts.toArray(),
     db.workBlocks.toArray(),
+    db.events.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events };
   const exportData: ExportData = {
     version: 2,
     exportedAt: new Date().toISOString(),

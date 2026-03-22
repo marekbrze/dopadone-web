@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { liveQuery } from 'dexie';
-import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, DragPayload } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload } from './types';
 import { loadData, queryAllData } from './data';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
@@ -105,7 +105,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Failed to load data:', err);
-        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [] });
+        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [] });
       });
 
     return () => subscription?.unsubscribe();
@@ -503,6 +503,54 @@ export default function App() {
     setData(d => d ? ({ ...d, workBlocks: d.workBlocks.filter(wb => wb.id !== id) }) : d);
   };
 
+  // Events
+  const addEvent = async (eventData: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> => {
+    let event: CalendarEvent;
+    if (isCloudSchema()) {
+      const id = await db.events.add(eventData as CalendarEvent) as string;
+      event = { ...eventData, id };
+    } else {
+      event = { ...eventData, id: newId() };
+      await db.events.put(event);
+    }
+    setData(d => d ? ({ ...d, events: [...d.events, event] }) : d);
+    return event;
+  };
+
+  const updateEvent = async (id: string, updates: Partial<CalendarEvent>) => {
+    await db.events.update(id, updates);
+    setData(d => d ? ({ ...d, events: d.events.map(e => e.id === id ? { ...e, ...updates } : e) }) : d);
+  };
+
+  const deleteEvent = async (id: string) => {
+    await db.events.delete(id);
+    setData(d => d ? ({ ...d, events: d.events.filter(e => e.id !== id) }) : d);
+  };
+
+  const addEventTask = async (eventId: string, name: string) => {
+    const event = data.events.find(e => e.id === eventId);
+    if (!event) return;
+    let task: Task;
+    const projectId = event.projectId;
+    if (isCloudSchema()) {
+      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
+      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+    } else {
+      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      await db.tasks.put(task);
+    }
+    const updatedTaskIds = [...event.taskIds, task.id];
+    await db.events.update(eventId, { taskIds: updatedTaskIds });
+    setData(d => {
+      if (!d) return d;
+      return {
+        ...d,
+        tasks: [...d.tasks, task],
+        events: d.events.map(e => e.id === eventId ? { ...e, taskIds: updatedTaskIds } : e),
+      };
+    });
+  };
+
   const deleteContext = async (id: string) => {
     await db.transaction('rw', [db.contexts, db.tasks], async () => {
       await db.contexts.delete(id);
@@ -589,7 +637,12 @@ export default function App() {
           tasks={data.tasks}
           contexts={data.contexts}
           workBlocks={data.workBlocks}
+          events={data.events}
           onUpdateTask={updateTask}
+          onAddEvent={addEvent}
+          onUpdateEvent={updateEvent}
+          onDeleteEvent={deleteEvent}
+          onAddEventTask={addEventTask}
         />
       )}
 
@@ -601,6 +654,7 @@ export default function App() {
           contexts={data.contexts}
           tasks={data.tasks}
           workBlocks={data.workBlocks}
+          events={data.events}
           onAdd={addWorkBlock}
           onUpdate={updateWorkBlock}
           onDelete={deleteWorkBlock}
@@ -608,6 +662,10 @@ export default function App() {
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
           onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
+          onAddEvent={addEvent}
+          onUpdateEvent={updateEvent}
+          onDeleteEvent={deleteEvent}
+          onAddEventTask={addEventTask}
         />
       )}
 

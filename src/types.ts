@@ -60,6 +60,18 @@ export interface WorkBlock {
   color?: string;
 }
 
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string;              // "YYYY-MM-DD" start date
+  endDate?: string | null;   // "YYYY-MM-DD" for multi-day (null/undefined = same day)
+  allDay: boolean;
+  startMinutes?: number;     // undefined when allDay
+  endMinutes?: number;       // undefined when allDay
+  projectId: string | null;  // null → tasks go to inbox
+  taskIds: string[];         // action point task IDs
+}
+
 export interface AppState {
   areas: Area[];
   lifters: Lifter[];
@@ -67,6 +79,7 @@ export interface AppState {
   tasks: Task[];
   contexts: Context[];
   workBlocks: WorkBlock[];
+  events: CalendarEvent[];
 }
 
 export interface ExportData {
@@ -85,4 +98,5 @@ export interface ImportPreview {
   tasks: { added: number; updated: number };
   contexts: { added: number; updated: number };
   workBlocks: { added: number; updated: number };
+  events: { added: number; updated: number };
 }
