@@ -3,6 +3,7 @@ import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent } f
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { EventModal } from './EventModal';
+import { CreateSlotModal } from './CreateSlotModal';
 
 interface Props {
   areas: Area[];
@@ -346,7 +347,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
-  const [createMode, setCreateMode] = useState<'block' | 'event'>('block');
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -354,7 +354,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const selectedBlock = selectedBlockId ? workBlocks.find(b => b.id === selectedBlockId) ?? null : null;
   const [pendingSlot, setPendingSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
-  const [pendingEventSlot, setPendingEventSlot] = useState<{ date: string; startMinutes: number; endMinutes: number } | null>(null);
   const [dragState, setDragState] = useState<{ date: string; startMinutes: number; currentMinutes: number } | null>(null);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
@@ -452,17 +451,13 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
         const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
         const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
-        if (createMode === 'event') {
-          setPendingEventSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
-        } else {
-          setPendingSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
-        }
+        setPendingSlot({ date: dragState.date, startMinutes: startMin, endMinutes: finalEnd });
         setDragState(null);
       }
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [dragState, createMode]);
+  }, [dragState]);
 
   const visibleDates = viewMode === 'week' ? getWeekDates(anchorDate) : [anchorDate];
 
@@ -513,11 +508,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     const startMin = Math.min(dragState.startMinutes, dragState.currentMinutes);
     const endMin = Math.max(dragState.startMinutes, dragState.currentMinutes);
     const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
-    if (createMode === 'event') {
-      setPendingEventSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
-    } else {
-      setPendingSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
-    }
+    setPendingSlot({ date, startMinutes: startMin, endMinutes: finalEnd });
     setDragState(null);
   };
 
@@ -544,7 +535,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       setEditingEvent(null);
     } else {
       await onAddEvent(data);
-      setPendingEventSlot(null);
+      setPendingSlot(null);
     }
   };
 
@@ -620,16 +611,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             className={`agenda-toggle-btn ${viewMode === 'day' ? 'active' : ''}`}
             onClick={() => setViewMode('day')}
           >Dzień</button>
-        </div>
-        <div className="agenda-create-mode-toggle">
-          <button
-            className={`agenda-toggle-btn ${createMode === 'block' ? 'active' : ''}`}
-            onClick={() => setCreateMode('block')}
-          >Blok</button>
-          <button
-            className={`agenda-toggle-btn agenda-toggle-btn-event ${createMode === 'event' ? 'active' : ''}`}
-            onClick={() => setCreateMode('event')}
-          >Wydarzenie</button>
         </div>
       </div>
 
@@ -716,7 +697,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 {/* Drag preview */}
                 {dragState?.date === d && dragState.startMinutes !== dragState.currentMinutes && (
                   <div
-                    className={`agenda-drag-preview${createMode === 'event' ? ' event-mode' : ''}`}
+                    className="agenda-drag-preview"
                     style={{
                       top: `${Math.min(dragState.startMinutes, dragState.currentMinutes)}px`,
                       height: `${Math.abs(dragState.currentMinutes - dragState.startMinutes)}px`,
@@ -924,10 +905,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         ) : null;
       })()}
 
-      {/* Modal: create */}
-      {pendingSlot && !editingBlock && (
-        <WorkBlockModal
-          block={null}
+      {/* Modal: create block or event */}
+      {pendingSlot && !editingBlock && !editingEvent && (
+        <CreateSlotModal
           defaultDate={pendingSlot.date}
           defaultStartMinutes={pendingSlot.startMinutes}
           defaultEndMinutes={pendingSlot.endMinutes}
@@ -935,7 +915,8 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           lifters={lifters}
           projects={projects}
           contexts={contexts}
-          onSave={handleSave}
+          onSaveBlock={handleSave}
+          onSaveEvent={data => { onAddEvent(data); setPendingSlot(null); }}
           onClose={() => setPendingSlot(null)}
         />
       )}
@@ -953,19 +934,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditingBlock(null)}
-        />
-      )}
-
-      {/* Modal: create event */}
-      {pendingEventSlot && !editingEvent && (
-        <EventModal
-          event={null}
-          defaultDate={pendingEventSlot.date}
-          defaultStartMinutes={pendingEventSlot.startMinutes}
-          defaultEndMinutes={pendingEventSlot.endMinutes}
-          projects={projects}
-          onSave={handleEventSave}
-          onClose={() => setPendingEventSlot(null)}
         />
       )}
 
