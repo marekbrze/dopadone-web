@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Task, Context, Effort } from '../types';
+import type { Task, Context, Effort, Project } from '../types';
+
+function normalizeProjectStartDate(startDate: string | null | undefined): string | null {
+  if (!startDate) return null;
+  const parts = startDate.split('-');
+  if (parts.length === 1) return `${parts[0]}-01-01`;
+  if (parts.length === 2) return `${parts[0]}-${parts[1]}-01`;
+  return startDate;
+}
 
 const EFFORTS: { value: Effort; label: string }[] = [
   { value: 'xs', label: 'XS' },
@@ -24,21 +32,29 @@ const priorityLabels: Record<Task['priority'], string> = {
 interface Props {
   task: Task;
   contexts: Context[];
+  project?: Project | null;
   onUpdate: (key: keyof Task, value: Task[keyof Task]) => void;
   onDelete: () => void;
   onClose: () => void;
   onCompleteWithNextAction: (nextActionName: string) => void;
 }
 
-export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose, onCompleteWithNextAction }: Props) {
+export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, onClose, onCompleteWithNextAction }: Props) {
   const [localName, setLocalName] = useState(task.name);
   const [localNotes, setLocalNotes] = useState(task.notes);
   const [nextAction, setNextAction] = useState('');
+  const [startDateError, setStartDateError] = useState('');
+  const [endDateError, setEndDateError] = useState('');
+
+  const projectStartMin = normalizeProjectStartDate(project?.startDate);
+  const projectEndMax = project?.endDate ?? null;
 
   useEffect(() => {
     setLocalName(task.name);
     setLocalNotes(task.notes ?? '');
     setNextAction('');
+    setStartDateError('');
+    setEndDateError('');
   }, [task.id]);
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
@@ -65,6 +81,34 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose, o
     if (localNotes !== task.notes) {
       onUpdate('notes', localNotes);
     }
+  };
+
+  const handleStartDateChange = (val: string) => {
+    const date = val || null;
+    if (date && projectStartMin && date < projectStartMin) {
+      setStartDateError(`Data nie może być wcześniejsza niż data rozpoczęcia projektu (${projectStartMin})`);
+      return;
+    }
+    if (date && task.endDate && date > task.endDate) {
+      setStartDateError('Data rozpoczęcia nie może być późniejsza niż data zakończenia zadania');
+      return;
+    }
+    setStartDateError('');
+    onUpdate('startDate', date);
+  };
+
+  const handleEndDateChange = (val: string) => {
+    const date = val || null;
+    if (date && projectEndMax && date > projectEndMax) {
+      setEndDateError(`Data nie może być późniejsza niż data zakończenia projektu (${projectEndMax})`);
+      return;
+    }
+    if (date && task.startDate && date < task.startDate) {
+      setEndDateError('Data zakończenia nie może być wcześniejsza niż data rozpoczęcia zadania');
+      return;
+    }
+    setEndDateError('');
+    onUpdate('endDate', date);
   };
 
   return (
@@ -167,6 +211,50 @@ export function TaskDetailPanel({ task, contexts, onUpdate, onDelete, onClose, o
             placeholder="Dodaj notatki..."
             rows={4}
           />
+        </div>
+
+        <div className="detail-field">
+          <label>Data rozpoczęcia</label>
+          <div className="detail-date-row">
+            <input
+              type="date"
+              className="detail-date-input"
+              value={task.startDate ?? ''}
+              min={projectStartMin ?? undefined}
+              max={task.endDate ?? undefined}
+              onChange={e => handleStartDateChange(e.target.value)}
+            />
+            {task.startDate && (
+              <button
+                className="close-btn"
+                onClick={() => { setStartDateError(''); onUpdate('startDate', null); }}
+                title="Wyczyść datę rozpoczęcia"
+              >✕</button>
+            )}
+          </div>
+          {startDateError && <span className="detail-date-error">{startDateError}</span>}
+        </div>
+
+        <div className="detail-field">
+          <label>Data zakończenia</label>
+          <div className="detail-date-row">
+            <input
+              type="date"
+              className="detail-date-input"
+              value={task.endDate ?? ''}
+              min={task.startDate ?? undefined}
+              max={projectEndMax ?? undefined}
+              onChange={e => handleEndDateChange(e.target.value)}
+            />
+            {task.endDate && (
+              <button
+                className="close-btn"
+                onClick={() => { setEndDateError(''); onUpdate('endDate', null); }}
+                title="Wyczyść datę zakończenia"
+              >✕</button>
+            )}
+          </div>
+          {endDateError && <span className="detail-date-error">{endDateError}</span>}
         </div>
 
         <div className="detail-field">

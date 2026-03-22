@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Task, Project, Context } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
+import { ConfirmModal } from './ConfirmModal';
 
 interface Props {
   tasks: Task[];
@@ -9,7 +10,7 @@ interface Props {
   onAddTask: (name: string) => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
-  onAssignToProject: (taskId: string, projectId: string) => void;
+  onAssignToProject: (taskId: string, projectId: string, clampEndDate?: boolean) => void;
 }
 
 export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, onDeleteTask, onAssignToProject }: Props) {
@@ -17,6 +18,7 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [assignConfirm, setAssignConfirm] = useState<{ taskId: string; projectId: string; projectName: string; projectEndDate: string; taskEndDate: string } | null>(null);
 
   const undone = tasks.filter(t => !t.done);
   const done = tasks.filter(t => t.done);
@@ -34,6 +36,15 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
     onAddTask(name);
     setNewTaskName('');
     inputRef.current?.focus();
+  };
+
+  const handleAssign = (task: Task, projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (task.endDate && project?.endDate && task.endDate > project.endDate) {
+      setAssignConfirm({ taskId: task.id, projectId, projectName: project.name, projectEndDate: project.endDate, taskEndDate: task.endDate });
+      return;
+    }
+    onAssignToProject(task.id, projectId);
   };
 
   return (
@@ -70,7 +81,7 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
               selected={selectedTaskId === task.id}
               onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
               onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
-              onAssign={projectId => onAssignToProject(task.id, projectId)}
+              onAssign={projectId => handleAssign(task, projectId)}
             />
           ))}
         </div>
@@ -93,7 +104,7 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
                     selected={selectedTaskId === task.id}
                     onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
                     onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
-                    onAssign={projectId => onAssignToProject(task.id, projectId)}
+                    onAssign={projectId => handleAssign(task, projectId)}
                   />
                 ))}
               </div>
@@ -113,6 +124,18 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
             onUpdateTask(selectedTask.id, { done: true });
             onAddTask(name);
           }}
+        />
+      )}
+
+      {assignConfirm && (
+        <ConfirmModal
+          title="Konflikt dat"
+          message={`Data zakończenia zadania (${assignConfirm.taskEndDate}) jest późniejsza niż data zakończenia projektu „${assignConfirm.projectName}" (${assignConfirm.projectEndDate}). Data zakończenia zadania zostanie zmieniona na ${assignConfirm.projectEndDate}.`}
+          onConfirm={() => {
+            onAssignToProject(assignConfirm.taskId, assignConfirm.projectId, true);
+            setAssignConfirm(null);
+          }}
+          onCancel={() => setAssignConfirm(null)}
         />
       )}
     </div>

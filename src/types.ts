@@ -43,6 +43,8 @@ export interface Task {
   effort: Effort | null;
   contextId: string | null;
   blocking: boolean;
+  startDate?: string | null;  // "YYYY-MM-DD"
+  endDate?: string | null;    // "YYYY-MM-DD"
 }
 
 export interface WorkBlock {

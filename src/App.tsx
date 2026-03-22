@@ -349,16 +349,44 @@ export default function App() {
   };
 
   const updateProject = async (id: string, updates: Partial<Project>) => {
+    if (updates.endDate !== undefined && updates.endDate !== null) {
+      const affectedTasks = data.tasks.filter(
+        t => t.projectId === id && t.endDate && t.endDate > updates.endDate!
+      );
+      if (affectedTasks.length > 0) {
+        await db.transaction('rw', [db.projects, db.tasks], async () => {
+          await db.projects.update(id, updates);
+          for (const t of affectedTasks) {
+            await db.tasks.update(t.id, { endDate: updates.endDate });
+          }
+        });
+        setData(d => d ? ({
+          ...d,
+          projects: d.projects.map(p => p.id === id ? { ...p, ...updates } : p),
+          tasks: d.tasks.map(t =>
+            affectedTasks.some(at => at.id === t.id)
+              ? { ...t, endDate: updates.endDate }
+              : t
+          ),
+        }) : d);
+        return;
+      }
+    }
     await db.projects.update(id, updates);
     setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === id ? { ...p, ...updates } : p) }) : d);
   };
 
 
-  const moveTaskToProject = async (taskId: string, targetProjectId: string) => {
+  const moveTaskToProject = async (taskId: string, targetProjectId: string, clampEndDate?: boolean) => {
     const task = data.tasks.find(t => t.id === taskId);
+    const project = data.projects.find(p => p.id === targetProjectId);
     if (!task || task.projectId === targetProjectId) return;
-    await db.tasks.update(taskId, { projectId: targetProjectId });
-    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, projectId: targetProjectId } : t) }) : d);
+    const taskUpdates: Partial<Task> = { projectId: targetProjectId };
+    if (clampEndDate && project?.endDate && task.endDate && task.endDate > project.endDate) {
+      taskUpdates.endDate = project.endDate;
+    }
+    await db.tasks.update(taskId, taskUpdates);
+    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...taskUpdates } : t) }) : d);
     if (selectedTaskId === taskId) setSelectedTaskId(null);
   };
 
@@ -626,7 +654,7 @@ export default function App() {
           onAddTask={name => addInboxTask(name).then(() => {})}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
-          onAssignToProject={(taskId, projectId) => updateTask(taskId, { projectId })}
+          onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
         />
       )}
 
@@ -869,6 +897,7 @@ export default function App() {
           <TaskDetailPanel
             task={selectedTask}
             contexts={data.contexts}
+            project={data.projects.find(p => p.id === selectedTask.projectId) ?? null}
             onUpdate={(key, value) => updateTask(selectedTask.id, { [key]: value })}
             onDelete={() => { deleteTask(selectedTask.id); setSelectedTaskId(null); }}
             onClose={() => setSelectedTaskId(null)}
@@ -892,6 +921,7 @@ export default function App() {
           return project ? (
             <ProjectDetailPanel
               project={project}
+              tasks={data.tasks.filter(t => t.projectId === editingProjectId)}
               onUpdate={updates => updateProject(editingProjectId, updates)}
               onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
               onClose={() => setEditingProjectId(null)}

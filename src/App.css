@@ -1158,6 +1158,13 @@ body {
 
 .detail-date-input:focus { border-bottom-color: var(--accent); }
 
+.detail-date-error {
+  display: block;
+  font-size: 0.75rem;
+  color: #c0392b;
+  margin-top: 4px;
+}
+
 .detail-checkbox-row {
   display: flex;
   align-items: center;

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Project } from '../types';
+import type { Project, Task } from '../types';
+import { ConfirmModal } from './ConfirmModal';
 
 interface Props {
   project: Project;
+  tasks: Task[];
   onUpdate: (updates: Partial<Project>) => void;
   onDelete: () => void;
   onClose: () => void;
@@ -34,8 +36,9 @@ function buildStartDate(year: string, month: string, day: string): string | null
   return `${year}-${month}-${day}`;
 }
 
-export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Props) {
+export function ProjectDetailPanel({ project, tasks, onUpdate, onDelete, onClose }: Props) {
   const [localName, setLocalName] = useState(project.name);
+  const [pendingEndDate, setPendingEndDate] = useState<string | null | undefined>(undefined);
 
   const parsed = parseStartDate(project.startDate);
   const [startYear, setStartYear] = useState(parsed.year);
@@ -48,6 +51,7 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
     setStartYear(p.year);
     setStartMonth(p.month);
     setStartDay(p.day);
+    setPendingEndDate(undefined);
   }, [project.id]);
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
@@ -88,6 +92,25 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
     onUpdate({ startDate: buildStartDate(startYear, startMonth, day) });
   };
 
+  const handleEndDateChange = (val: string) => {
+    const newDate = val || null;
+    if (newDate) {
+      const conflicting = tasks.filter(t => t.endDate && t.endDate > newDate);
+      if (conflicting.length > 0) {
+        setPendingEndDate(newDate);
+        return;
+      }
+    }
+    onUpdate({ endDate: newDate });
+  };
+
+  const confirmEndDateChange = () => {
+    if (pendingEndDate !== undefined) {
+      onUpdate({ endDate: pendingEndDate });
+      setPendingEndDate(undefined);
+    }
+  };
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 21 }, (_, i) => currentYear - 5 + i);
 
@@ -97,6 +120,7 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
   const days = Array.from({ length: maxDay }, (_, i) => String(i + 1).padStart(2, '0'));
 
   return (
+    <>
     <div
       className="task-detail-panel item-detail-panel"
       role="dialog"
@@ -175,7 +199,7 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
               type="date"
               className="detail-date-input"
               value={project.endDate ?? ''}
-              onChange={e => onUpdate({ endDate: e.target.value || null })}
+              onChange={e => handleEndDateChange(e.target.value)}
             />
             {project.endDate && (
               <button
@@ -190,5 +214,15 @@ export function ProjectDetailPanel({ project, onUpdate, onDelete, onClose }: Pro
         <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
       </div>
     </div>
+
+    {pendingEndDate !== undefined && (
+      <ConfirmModal
+        title="Zmiana daty zakończenia projektu"
+        message={`Nowa data zakończenia projektu (${pendingEndDate}) jest wcześniejsza niż daty zakończenia niektórych zadań. Daty zakończenia tych zadań zostaną automatycznie zmienione na ${pendingEndDate}.`}
+        onConfirm={confirmEndDateChange}
+        onCancel={() => setPendingEndDate(undefined)}
+      />
+    )}
+    </>
   );
 }
