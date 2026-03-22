@@ -2427,9 +2427,6 @@ body {
   z-index: 1;
 }
 
-.agenda-block:not(.agenda-event):hover {
-  cursor: grab;
-}
 
 .agenda-block:hover {
   filter: brightness(0.92);
