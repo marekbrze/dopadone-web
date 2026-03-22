@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote } from './types';
 import { loadData, queryAllData } from './data';
@@ -10,10 +10,10 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { ProjectDetailPanel } from './components/ProjectDetailPanel';
+import { DoingView } from './components/DoingView';
+import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
-const DoingView = lazy(() => import('./components/DoingView').then(m => ({ default: m.DoingView })));
-const AgendaView = lazy(() => import('./components/AgendaView').then(m => ({ default: m.AgendaView })));
-const InboxView = lazy(() => import('./components/InboxView').then(m => ({ default: m.InboxView })));
+import { InboxView } from './components/InboxView';
 import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
@@ -826,17 +826,15 @@ export default function App() {
       )}
 
       {currentView === 'inbox' && (
-        <Suspense fallback={null}>
-          <InboxView
-            tasks={data.tasks.filter(t => t.projectId === null)}
-            projects={data.projects.filter(p => !p.archived)}
-            contexts={data.contexts}
-            onAddTask={name => addInboxTask(name).then(() => {})}
-            onUpdateTask={updateTask}
-            onDeleteTask={deleteTask}
-            onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
-          />
-        </Suspense>
+        <InboxView
+          tasks={data.tasks.filter(t => t.projectId === null)}
+          projects={data.projects.filter(p => !p.archived)}
+          contexts={data.contexts}
+          onAddTask={name => addInboxTask(name).then(() => {})}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
+        />
       )}
 
       {currentView === 'today' && (
@@ -859,40 +857,36 @@ export default function App() {
       )}
 
       {currentView === 'agenda' && (
-        <Suspense fallback={null}>
-          <AgendaView
-            areas={data.areas}
-            lifters={data.lifters}
-            projects={data.projects}
-            contexts={data.contexts}
-            tasks={data.tasks}
-            workBlocks={data.workBlocks}
-            events={data.events}
-            onAdd={addWorkBlock}
-            onUpdate={updateWorkBlock}
-            onDelete={deleteWorkBlock}
-            onUpdateTask={updateTask}
-            onDeleteTask={deleteTask}
-            onCompleteWithNextAction={handleCompleteWithNextAction}
-            onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
-            onAddEvent={addEvent}
-            onUpdateEvent={updateEvent}
-            onDeleteEvent={deleteEvent}
-            onAddEventTask={addEventTask}
-          />
-        </Suspense>
+        <AgendaView
+          areas={data.areas}
+          lifters={data.lifters}
+          projects={data.projects}
+          contexts={data.contexts}
+          tasks={data.tasks}
+          workBlocks={data.workBlocks}
+          events={data.events}
+          onAdd={addWorkBlock}
+          onUpdate={updateWorkBlock}
+          onDelete={deleteWorkBlock}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onCompleteWithNextAction={handleCompleteWithNextAction}
+          onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
+          onAddEvent={addEvent}
+          onUpdateEvent={updateEvent}
+          onDeleteEvent={deleteEvent}
+          onAddEventTask={addEventTask}
+        />
       )}
 
       {currentView === 'do' && (
-        <Suspense fallback={null}>
-          <DoingView
-            tasks={data.tasks}
-            contexts={data.contexts}
-            onUpdateTask={updateTask}
-            onDeleteTask={deleteTask}
-            onCompleteWithNextAction={handleCompleteWithNextAction}
-          />
-        </Suspense>
+        <DoingView
+          tasks={data.tasks}
+          contexts={data.contexts}
+          onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onCompleteWithNextAction={handleCompleteWithNextAction}
+        />
       )}
 
       <main
