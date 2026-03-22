@@ -397,6 +397,10 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     ? (selectedBlock.taskIds ?? []).map(id => tasks.find(t => t.id === id)).filter((t): t is Task => t !== undefined)
     : [];
 
+  const pinnedTasksTotalDuration = pinnedTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
+  const selectedBlockDuration = selectedBlock ? selectedBlock.endMinutes - selectedBlock.startMinutes : 0;
+  const pinnedDurationOverflow = isManual && pinnedTasksTotalDuration > 0 && pinnedTasksTotalDuration > selectedBlockDuration;
+
   const allUndoneTasks = (isManual && selectedBlock)
     ? tasks.filter(t =>
         !t.done &&
@@ -807,6 +811,11 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             </div>
           )}
           <div className="agenda-block-panel-body">
+            {pinnedDurationOverflow && (
+              <div className="block-duration-warning">
+                ⚠ Suma czasów zadań ({pinnedTasksTotalDuration >= 60 ? `${Math.floor(pinnedTasksTotalDuration / 60)}h${pinnedTasksTotalDuration % 60 > 0 ? ` ${pinnedTasksTotalDuration % 60}m` : ''}` : `${pinnedTasksTotalDuration}m`}) przekracza długość bloku ({selectedBlockDuration}m)
+              </div>
+            )}
             {isManual ? (
               pinnedTasks.length === 0
                 ? <p className="agenda-block-panel-empty">Przeciągnij zadania z lewego panelu lub wpisz nowe powyżej.</p>

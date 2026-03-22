@@ -379,6 +379,17 @@ body {
   color: var(--surface);
 }
 
+/* ── Block duration warning ──────────────────────────────── */
+
+.block-duration-warning {
+  font-size: 0.78rem;
+  color: #a07830;
+  background: rgba(160, 120, 48, 0.1);
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  margin-bottom: 6px;
+}
+
 /* ── Tags ────────────────────────────────────────────────── */
 
 .tag {

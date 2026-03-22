@@ -150,6 +150,10 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     ? getMatchingTasks(displayBlock, tasks, projects)
     : [];
 
+  const blockTasksTotalDuration = blockTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
+  const displayBlockDuration = displayBlock ? displayBlock.endMinutes - displayBlock.startMinutes : 0;
+  const blockDurationOverflow = blockTasksTotalDuration > 0 && blockTasksTotalDuration > displayBlockDuration;
+
   const dateLabel = now.toLocaleDateString('pl-PL', {
     weekday: 'long',
     day: 'numeric',
@@ -374,6 +378,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           {blockTasks.filter(t => t.done).length}/{blockTasks.length}
                         </span>
                       </div>
+                      {blockDurationOverflow && (
+                        <div className="block-duration-warning">
+                          ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
+                        </div>
+                      )}
                       {blockTasks.map(task => (
                         <div
                           key={task.id}

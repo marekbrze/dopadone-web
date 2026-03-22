@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Task, Context, Effort, Project } from '../types';
+import type { Task, Context, Effort, Project, TaskDuration } from '../types';
 
 function normalizeProjectStartDate(startDate: string | null | undefined): string | null {
   if (!startDate) return null;
@@ -8,6 +8,17 @@ function normalizeProjectStartDate(startDate: string | null | undefined): string
   if (parts.length === 2) return `${parts[0]}-${parts[1]}-01`;
   return startDate;
 }
+
+const DURATIONS: { value: TaskDuration; label: string }[] = [
+  { value: 5,   label: '5m' },
+  { value: 10,  label: '10m' },
+  { value: 15,  label: '15m' },
+  { value: 25,  label: '25m' },
+  { value: 45,  label: '45m' },
+  { value: 60,  label: '1h' },
+  { value: 90,  label: '1,5h' },
+  { value: 120, label: '2h' },
+];
 
 const EFFORTS: { value: Effort; label: string }[] = [
   { value: 'xs', label: 'XS' },
@@ -182,6 +193,21 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
                 onClick={() => onUpdate('effort', task.effort === e.value ? null : e.value)}
               >
                 {e.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="detail-field">
+          <label>Czas trwania</label>
+          <div className="effort-pills">
+            {DURATIONS.map(d => (
+              <button
+                key={d.value}
+                className={`effort-pill ${task.duration === d.value ? 'active' : ''}`}
+                onClick={() => onUpdate('duration', task.duration === d.value ? null : d.value)}
+              >
+                {d.label}
               </button>
             ))}
           </div>

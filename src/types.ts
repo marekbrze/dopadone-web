@@ -27,6 +27,8 @@ export interface Project {
 
 export type Effort = 'xs' | 's' | 'm' | 'l' | 'xl';
 
+export type TaskDuration = 5 | 10 | 15 | 25 | 45 | 60 | 90 | 120;
+
 export interface Context {
   id: string;
   name: string;
@@ -45,6 +47,7 @@ export interface Task {
   blocking: boolean;
   startDate?: string | null;  // "YYYY-MM-DD"
   endDate?: string | null;    // "YYYY-MM-DD"
+  duration?: TaskDuration | null;
 }
 
 export interface WorkBlock {

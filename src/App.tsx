@@ -244,10 +244,10 @@ export default function App() {
     if (!selectedProjectId) return;
     let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
-      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
+      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
     } else {
-      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
       await db.tasks.put(task);
     }
   };
@@ -255,10 +255,10 @@ export default function App() {
   const addInboxTask = async (name: string): Promise<Task> => {
     let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
-      task = { id, name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      const id = await db.tasks.add({ name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
+      task = { id, name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
     } else {
-      task = { id: newId(), name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      task = { id: newId(), name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
       await db.tasks.put(task);
     }
     return task;
@@ -278,10 +278,10 @@ export default function App() {
     await updateTask(task.id, { done: true });
     let newTask: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false }) as string;
-      newTask = { id, name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false };
+      const id = await db.tasks.add({ name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null }) as string;
+      newTask = { id, name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null };
     } else {
-      newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false };
+      newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null };
       await db.tasks.put(newTask);
     }
     setSelectedProjectId(task.projectId);
@@ -562,10 +562,10 @@ export default function App() {
     let task: Task;
     const projectId = event.projectId;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
-      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
+      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
     } else {
-      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
+      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
       await db.tasks.put(task);
     }
     const updatedTaskIds = [...event.taskIds, task.id];
