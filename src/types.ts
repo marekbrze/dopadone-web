@@ -23,6 +23,7 @@ export interface Project {
   parentProjectId: string | null;
   startDate?: string | null;  // "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
   endDate?: string | null;    // "YYYY-MM-DD"
+  order?: number;
 }
 
 export type Effort = 'xs' | 's' | 'm' | 'l' | 'xl';

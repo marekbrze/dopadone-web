@@ -45,6 +45,7 @@ export default function App() {
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
   const [dropTargetRootZone, setDropTargetRootZone] = useState(false);
+  const [dropGapTarget, setDropGapTarget] = useState<{ parentProjectId: string | null; insertAfterProjectId: string | null } | null>(null);
   const prevAreasCount = useRef(0);
 
   const toggleColumn = (id: string) => {
@@ -184,11 +185,13 @@ export default function App() {
 
   const lifters = data.lifters.filter(l => l.areaId === selectedAreaId);
 
-  const visibleProjects = data.projects.filter(p => {
-    if (p.areaId !== selectedAreaId) return false;
-    if (selectedLifterId) return p.lifterId === selectedLifterId;
-    return true;
-  });
+  const visibleProjects = data.projects
+    .filter(p => {
+      if (p.areaId !== selectedAreaId) return false;
+      if (selectedLifterId) return p.lifterId === selectedLifterId;
+      return true;
+    })
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const visibleIds = new Set(visibleProjects.map(p => p.id));
   const rootProjects = visibleProjects.filter(p =>
@@ -229,12 +232,14 @@ export default function App() {
   };
 
   const addProject = async (name: string, parentProjectId: string | null = null) => {
+    const siblings = data.projects.filter(p => p.parentProjectId === parentProjectId && p.areaId === selectedAreaId);
+    const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order ?? 0)) + 1 : 0;
     let proj: Project;
     if (isCloudSchema()) {
-      const id = await db.projects.add({ name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId }) as string;
-      proj = { id, name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
+      const id = await db.projects.add({ name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order }) as string;
+      proj = { id, name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order };
     } else {
-      proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId };
+      proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order };
       await db.projects.put(proj);
     }
   };
@@ -405,7 +410,9 @@ export default function App() {
       const descendants = collectProjectIds(projectId, data.projects);
       if (descendants.includes(newParentId)) return;
     }
-    const updates: Partial<Project> = { parentProjectId: newParentId };
+    const newSiblings = data.projects.filter(p => p.parentProjectId === newParentId && p.id !== projectId);
+    const order = newSiblings.length > 0 ? Math.max(...newSiblings.map(p => p.order ?? 0)) + 1 : 0;
+    const updates: Partial<Project> = { parentProjectId: newParentId, order };
     if (newParentId !== null) {
       const parent = data.projects.find(p => p.id === newParentId);
       if (parent) updates.lifterId = parent.lifterId;
@@ -419,12 +426,63 @@ export default function App() {
     setDropTargetProjectId(null);
     setDropTargetLifterId(null);
     setDropTargetRootZone(false);
+    setDropGapTarget(null);
   };
+
+  const reorderProject = async (projectId: string, newParentId: string | null, insertAfterProjectId: string | null) => {
+    const project = data.projects.find(p => p.id === projectId);
+    if (!project) return;
+    if (newParentId !== null) {
+      const descendants = collectProjectIds(projectId, data.projects);
+      if (descendants.includes(newParentId)) return;
+    }
+    const siblings = data.projects
+      .filter(p => p.parentProjectId === newParentId && p.areaId === project.areaId && p.id !== projectId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const insertIdx = insertAfterProjectId === null
+      ? 0
+      : siblings.findIndex(p => p.id === insertAfterProjectId) + 1;
+    siblings.splice(insertIdx, 0, { ...project, parentProjectId: newParentId });
+    const updates: { id: string; order: number; parentProjectId?: string | null; lifterId?: string | null }[] = siblings.map((p, i) => ({
+      id: p.id,
+      order: i,
+      ...(p.id === projectId && p.parentProjectId !== project.parentProjectId ? { parentProjectId: newParentId } : {}),
+      ...(p.id === projectId && newParentId !== null && newParentId !== project.parentProjectId ? (() => {
+        const parent = data.projects.find(pr => pr.id === newParentId);
+        return parent ? { lifterId: parent.lifterId } : {};
+      })() : {}),
+    }));
+    await db.transaction('rw', db.projects, async () => {
+      for (const u of updates) await db.projects.update(u.id, u);
+    });
+    setData(d => {
+      if (!d) return d;
+      const updateMap = new Map(updates.map(u => [u.id, u]));
+      return { ...d, projects: d.projects.map(p => updateMap.has(p.id) ? { ...p, ...updateMap.get(p.id) } : p) };
+    });
+  };
+
+  const handleGapDragOver = (e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => {
+    if (!dragPayload || dragPayload.kind !== 'project') return;
+    e.preventDefault();
+    setDropTargetProjectId(null);
+    setDropGapTarget({ parentProjectId, insertAfterProjectId });
+  };
+
+  const handleGapDrop = (parentProjectId: string | null, insertAfterProjectId: string | null) => {
+    if (!dragPayload || dragPayload.kind !== 'project') return;
+    setDropGapTarget(null);
+    reorderProject(dragPayload.projectId, parentProjectId, insertAfterProjectId);
+    setDragPayload(null);
+  };
+
+  const handleGapDragLeave = () => setDropGapTarget(null);
 
   const handleProjectDragOver = (e: React.DragEvent, projectId: string) => {
     if (!dragPayload) return;
     e.preventDefault();
     setDropTargetProjectId(projectId);
+    setDropGapTarget(null);
   };
 
   const handleProjectDrop = (targetProjectId: string) => {
@@ -864,11 +922,15 @@ export default function App() {
               onEdit={openProjectEdit}
               dragPayload={dragPayload}
               dropTargetProjectId={dropTargetProjectId}
+              dropGapTarget={dropGapTarget}
               onProjectDragStart={id => setDragPayload({ kind: 'project', projectId: id })}
               onProjectDragEnd={handleProjectDragEnd}
               onProjectDragOver={handleProjectDragOver}
               onProjectDrop={handleProjectDrop}
               onProjectDragLeave={handleProjectDragLeave}
+              onGapDragOver={handleGapDragOver}
+              onGapDrop={handleGapDrop}
+              onGapDragLeave={handleGapDragLeave}
             />
           </div>
         </section>

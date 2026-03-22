@@ -700,6 +700,18 @@ body {
   outline: 1px dashed var(--border);
 }
 
+.project-gap-zone {
+  height: 4px;
+  border-radius: 2px;
+  transition: height 0.1s, background-color 0.1s;
+}
+
+.project-gap-zone.active {
+  height: 6px;
+  background-color: var(--accent);
+  border-radius: 3px;
+}
+
 .root-drop-zone {
   margin: 4px 0 8px;
   padding: 7px 12px;
