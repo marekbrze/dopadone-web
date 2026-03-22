@@ -3,10 +3,11 @@ import { ContextMenu } from './ContextMenu';
 
 interface Props {
   onEdit?: () => void;
+  onArchive?: () => void;
   onDelete?: () => void;
 }
 
-export function RowMenuButton({ onEdit, onDelete }: Props) {
+export function RowMenuButton({ onEdit, onArchive, onDelete }: Props) {
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState({ x: 0, y: 0 });
 
@@ -25,6 +26,7 @@ export function RowMenuButton({ onEdit, onDelete }: Props) {
           x={pos.x}
           y={pos.y}
           onEdit={() => { setOpen(false); onEdit?.(); }}
+          onArchive={onArchive ? () => { setOpen(false); onArchive(); } : undefined}
           onDelete={() => { setOpen(false); onDelete?.(); }}
           onClose={() => setOpen(false)}
         />

@@ -6,6 +6,7 @@ interface Props {
   project: Project;
   tasks: Task[];
   onUpdate: (updates: Partial<Project>) => void;
+  onArchive: () => void;
   onDelete: () => void;
   onClose: () => void;
 }
@@ -36,7 +37,7 @@ function buildStartDate(year: string, month: string, day: string): string | null
   return `${year}-${month}-${day}`;
 }
 
-export function ProjectDetailPanel({ project, tasks, onUpdate, onDelete, onClose }: Props) {
+export function ProjectDetailPanel({ project, tasks, onUpdate, onArchive, onDelete, onClose }: Props) {
   const [localName, setLocalName] = useState(project.name);
   const [pendingEndDate, setPendingEndDate] = useState<string | null | undefined>(undefined);
 
@@ -211,6 +212,7 @@ export function ProjectDetailPanel({ project, tasks, onUpdate, onDelete, onClose
           </div>
         </div>
 
+        <button className="delete-task-btn" style={{ background: 'var(--surface2)', color: 'var(--text)' }} onClick={onArchive}>Archiwizuj projekt</button>
         <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
       </div>
     </div>

@@ -5,12 +5,13 @@ interface Props {
   x: number;
   y: number;
   onEdit: () => void;
+  onArchive?: () => void;
   onDelete: () => void;
   onClose: () => void;
 }
 
-export function ContextMenu({ x, y, onEdit, onDelete, onClose }: Props) {
-  const menuHeight = 80;
+export function ContextMenu({ x, y, onEdit, onArchive, onDelete, onClose }: Props) {
+  const menuHeight = onArchive ? 120 : 80;
   const top = y + menuHeight > window.innerHeight ? y - menuHeight : y;
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function ContextMenu({ x, y, onEdit, onDelete, onClose }: Props) {
   return createPortal(
     <div className="context-menu" style={{ left: x, top }}>
       <button className="context-menu-item" onClick={onEdit}>Edytuj</button>
+      {onArchive && <button className="context-menu-item" onClick={onArchive}>Archiwizuj</button>}
       <button className="context-menu-item danger" onClick={onDelete}>Usuń</button>
     </div>,
     document.body

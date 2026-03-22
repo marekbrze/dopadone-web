@@ -187,6 +187,7 @@ export default function App() {
 
   const visibleProjects = data.projects
     .filter(p => {
+      if (p.archived) return false;
       if (p.areaId !== selectedAreaId) return false;
       if (selectedLifterId) return p.lifterId === selectedLifterId;
       return true;
@@ -298,6 +299,31 @@ export default function App() {
     const children = allProjects.filter(p => p.parentProjectId === rootId);
     return [rootId, ...children.flatMap(c => collectProjectIds(c.id, allProjects))];
   }
+
+  const archiveProject = async (id: string) => {
+    const ids = collectProjectIds(id, data.projects);
+    const archivedAt = new Date().toISOString();
+    await db.transaction('rw', [db.projects], async () => {
+      for (const pid of ids) await db.projects.update(pid, { archived: true, archivedAt });
+    });
+    setData(d => {
+      if (!d) return d;
+      return { ...d, projects: d.projects.map(p => ids.includes(p.id) ? { ...p, archived: true, archivedAt } : p) };
+    });
+    if (selectedProjectId && ids.includes(selectedProjectId)) {
+      setSelectedProjectId(null);
+      setSelectedTaskId(null);
+    }
+    if (editingProjectId && ids.includes(editingProjectId)) setEditingProjectId(null);
+  };
+
+  const restoreProject = async (id: string) => {
+    await db.projects.update(id, { archived: false, archivedAt: null });
+    setData(d => {
+      if (!d) return d;
+      return { ...d, projects: d.projects.map(p => p.id === id ? { ...p, archived: false, archivedAt: null } : p) };
+    });
+  };
 
   const deleteProject = async (id: string) => {
     const ids = collectProjectIds(id, data.projects);
@@ -746,7 +772,7 @@ export default function App() {
       {currentView === 'inbox' && (
         <InboxView
           tasks={data.tasks.filter(t => t.projectId === null)}
-          projects={data.projects}
+          projects={data.projects.filter(p => !p.archived)}
           contexts={data.contexts}
           onAddTask={name => addInboxTask(name).then(() => {})}
           onUpdateTask={updateTask}
@@ -919,6 +945,7 @@ export default function App() {
               selectedProjectId={selectedProjectId}
               onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); }}
               onDelete={deleteProject}
+              onArchive={archiveProject}
               onEdit={openProjectEdit}
               dragPayload={dragPayload}
               dropTargetProjectId={dropTargetProjectId}
@@ -1024,6 +1051,7 @@ export default function App() {
               project={project}
               tasks={data.tasks.filter(t => t.projectId === editingProjectId)}
               onUpdate={updates => updateProject(editingProjectId, updates)}
+              onArchive={() => { archiveProject(editingProjectId); setEditingProjectId(null); }}
               onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
               onClose={() => setEditingProjectId(null)}
             />
@@ -1042,11 +1070,13 @@ export default function App() {
           areas={data.areas}
           lifters={data.lifters}
           contexts={data.contexts}
+          projects={data.projects}
           onDeleteArea={deleteArea}
           onDeleteLifter={deleteLifter}
           onReorderAreas={reorderAreas}
           onAddContext={addContext}
           onDeleteContext={deleteContext}
+          onRestoreProject={restoreProject}
           onClose={() => setModal(null)}
         />
       )}

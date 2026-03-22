@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Context, ExportData, ImportPreview, ImportMode } from '../types';
+import type { Area, Lifter, Context, Project, ExportData, ImportPreview, ImportMode } from '../types';
 import { db, isCloudSchema } from '../db';
 import { migrateToCloudSchema, connectToExistingCloud } from '../utils/cloudMigration';
 import {
@@ -18,23 +18,25 @@ interface Props {
   areas: Area[];
   lifters: Lifter[];
   contexts: Context[];
+  projects: Project[];
   onDeleteArea: (id: string) => void;
   onDeleteLifter: (id: string) => void;
   onReorderAreas: (fromIndex: number, toIndex: number) => void;
   onAddContext: (name: string, icon: string) => void;
   onDeleteContext: (id: string) => void;
+  onRestoreProject: (id: string) => void;
   onClose: () => void;
 }
 
 const EMOJI_OPTIONS = ['📞', '✉️', '💬', '🎨', '💻', '🏙️', '🛒', '📝', '🔧', '📱', '🤝', '📚', '🏠', '🚗', '💡', '⚡'];
 
 export function SettingsModal({
-  areas, lifters, contexts,
+  areas, lifters, contexts, projects,
   onDeleteArea, onDeleteLifter, onReorderAreas,
-  onAddContext, onDeleteContext,
+  onAddContext, onDeleteContext, onRestoreProject,
   onClose,
 }: Props) {
-  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'backup' | 'sync'>('obszary');
+  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'projekty' | 'backup' | 'sync'>('obszary');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [ctxName, setCtxName] = useState('');
@@ -264,6 +266,12 @@ export function SettingsModal({
             Konteksty
           </button>
           <button
+            className={`settings-nav-item ${activeCategory === 'projekty' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('projekty')}
+          >
+            Projekty
+          </button>
+          <button
             className={`settings-nav-item ${activeCategory === 'backup' ? 'active' : ''}`}
             onClick={() => setActiveCategory('backup')}
           >
@@ -282,6 +290,7 @@ export function SettingsModal({
             <span>
               {activeCategory === 'obszary' ? 'Obszary i podobszary'
                 : activeCategory === 'konteksty' ? 'Konteksty'
+                : activeCategory === 'projekty' ? 'Zarchiwizowane projekty'
                 : activeCategory === 'backup' ? 'Kopia zapasowa'
                 : 'Synchronizacja'}
             </span>
@@ -356,6 +365,37 @@ export function SettingsModal({
                     <button type="submit">Dodaj</button>
                   </div>
                 </form>
+              </div>
+            )}
+
+            {activeCategory === 'projekty' && (
+              <div>
+                {projects.filter(p => p.archived).length === 0 && (
+                  <p className="empty-hint">Brak zarchiwizowanych projektów</p>
+                )}
+                {[...projects.filter(p => p.archived)]
+                  .sort((a, b) => (b.archivedAt ?? '').localeCompare(a.archivedAt ?? ''))
+                  .map(project => (
+                    <div key={project.id} className="settings-area-block">
+                      <div className="settings-area-row">
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <span className="settings-area-name">{project.name}</span>
+                          {project.archivedAt && (
+                            <span style={{ display: 'block', fontSize: '0.78em', opacity: 0.55, marginTop: '2px' }}>
+                              {new Date(project.archivedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          className="sync-btn"
+                          style={{ fontSize: '0.85em', flexShrink: 0 }}
+                          onClick={() => onRestoreProject(project.id)}
+                        >
+                          Przywróć
+                        </button>
+                      </div>
+                    </div>
+                  ))}
               </div>
             )}
 

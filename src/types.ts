@@ -24,6 +24,8 @@ export interface Project {
   startDate?: string | null;  // "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
   endDate?: string | null;    // "YYYY-MM-DD"
   order?: number;
+  archived?: boolean;
+  archivedAt?: string | null;  // ISO 8601
 }
 
 export type Effort = 'xs' | 's' | 'm' | 'l' | 'xl';

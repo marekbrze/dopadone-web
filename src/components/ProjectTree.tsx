@@ -13,6 +13,7 @@ interface Props {
   selectedProjectId: string | null;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
+  onArchive?: (id: string) => void;
   onEdit?: (id: string) => void;
   depth?: number;
   parentProjectId?: string | null;
@@ -29,7 +30,7 @@ interface Props {
   onGapDragLeave?: () => void;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave }: Props) {
+export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave }: Props) {
   const sorted = [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const isGapActive = (insertAfterProjectId: string | null) =>
@@ -72,6 +73,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
               </div>
               <RowMenuButton
                 onEdit={onEdit ? () => onEdit(project.id) : undefined}
+                onArchive={onArchive ? () => onArchive(project.id) : undefined}
                 onDelete={onDelete ? () => onDelete(project.id) : undefined}
               />
             </div>
@@ -82,6 +84,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 selectedProjectId={selectedProjectId}
                 onSelect={onSelect}
                 onDelete={onDelete}
+                onArchive={onArchive}
                 onEdit={onEdit}
                 depth={depth + 1}
                 parentProjectId={project.id}
