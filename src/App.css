@@ -2688,6 +2688,30 @@ body {
   box-sizing: border-box;
 }
 
+.agenda-task-area-group {
+  margin-bottom: 4px;
+}
+
+.agenda-task-area-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding: 8px 12px 2px;
+}
+
+.agenda-task-lifter-group {
+  margin-bottom: 2px;
+}
+
+.agenda-task-lifter-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 3px 12px 2px 16px;
+}
+
 .agenda-left-task-item {
   cursor: grab;
   justify-content: space-between;
