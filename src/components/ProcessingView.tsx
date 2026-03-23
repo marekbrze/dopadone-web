@@ -9,6 +9,7 @@ interface ProcessingViewProps {
   lifters: Lifter[];
   contexts: Context[];
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  onDeleteTask: (id: string) => Promise<void>;
   onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
   onConvertToProject: (taskId: string, projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
 }
@@ -69,7 +70,7 @@ function contextKeyForId(contextId: string | null | undefined, contexts: Context
 
 const TIMER_DURATION = 120; // 2 minutes in seconds
 
-export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onCreateProject, onConvertToProject }: ProcessingViewProps) {
+export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onDeleteTask, onCreateProject, onConvertToProject }: ProcessingViewProps) {
   const [screen, setScreen] = useState<ProcessingScreen>('summary');
   const [sessionTaskIds, setSessionTaskIds] = useState<string[]>([]);
   const [allSteps, setAllSteps] = useState<ProcessingStep[]>([]);
@@ -251,6 +252,27 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     markStepCompleted(currentStep.taskId, 'project');
     advanceStep(allSteps, currentStepIndex);
   }, [currentStep, onCreateProject, onUpdateTask, markStepCompleted, advanceStep, allSteps, currentStepIndex]);
+
+  const handleDeleteTask = useCallback(async () => {
+    if (!currentStep) return;
+    const taskId = currentStep.taskId;
+    await onDeleteTask(taskId);
+    setCompletedSteps(prev => {
+      const next = new Set(prev);
+      allSteps.filter(s => s.taskId === taskId).forEach(s => next.add(`${s.taskId}:${s.kind}`));
+      return next;
+    });
+    const nextIdx = allSteps.findIndex((s, i) => i > currentStepIndex && s.taskId !== taskId);
+    if (nextIdx !== -1) {
+      setCurrentStepIndex(nextIdx);
+      resetStepState();
+      const nextStep = allSteps[nextIdx];
+      const nextTask = tasks.find(t => t.id === nextStep.taskId) ?? null;
+      initPendingFromTask(nextTask, nextStep.kind);
+    } else {
+      setScreen('done');
+    }
+  }, [currentStep, onDeleteTask, allSteps, currentStepIndex, tasks, resetStepState, initPendingFromTask]);
 
   const handleConvertToProject = useCallback(async (projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => {
     if (!currentStep) return;
@@ -536,13 +558,22 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           {/* Timer + Done row */}
           <div className="proc-top-row">
             <TimerRing seconds={timerSeconds} total={TIMER_DURATION} />
-            <button
-              className="proc-done-btn"
-              onClick={() => markTaskDone(currentStep.taskId, allSteps, currentStepIndex)}
-              title="Oznacz jako zrobione (d)"
-            >
-              ✓ Zrobione <kbd>d</kbd>
-            </button>
+            <div className="proc-top-actions">
+              <button
+                className="proc-done-btn"
+                onClick={() => markTaskDone(currentStep.taskId, allSteps, currentStepIndex)}
+                title="Oznacz jako zrobione (d)"
+              >
+                ✓ Zrobione <kbd>d</kbd>
+              </button>
+              <button
+                className="proc-delete-btn"
+                onClick={handleDeleteTask}
+                title="Usuń zadanie"
+              >
+                Usuń
+              </button>
+            </div>
           </div>
 
           {/* Step indicator */}

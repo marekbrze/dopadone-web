@@ -1018,6 +1018,7 @@ export default function App() {
           lifters={data.lifters}
           contexts={data.contexts}
           onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
           onCreateProject={addProjectForProcessing}
           onConvertToProject={convertTaskToProject}
         />

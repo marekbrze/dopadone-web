@@ -718,6 +718,13 @@
   color: var(--text-faint);
 }
 
+/* ── Top actions (done + delete) ── */
+.proc-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 /* ── Done button ── */
 .proc-done-btn {
   background: transparent;
@@ -738,6 +745,24 @@
   border-color: #5a7a5e;
   color: #5a7a5e;
   background: color-mix(in srgb, #5a7a5e 6%, transparent);
+}
+
+/* ── Delete button ── */
+.proc-delete-btn {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-faint);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.proc-delete-btn:hover {
+  border-color: #a33a2a;
+  color: #a33a2a;
+  background: color-mix(in srgb, #a33a2a 6%, transparent);
 }
 
 /* ── Tab badge anchor ── */
