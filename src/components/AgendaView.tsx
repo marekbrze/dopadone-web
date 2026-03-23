@@ -457,7 +457,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       const areaGroup = areaMap.get(areaKey)!;
       let lifterGroup = areaGroup.lifters.find(l => l.lifterId === lifterId);
       if (!lifterGroup) {
-        lifterGroup = { lifterId, lifterName: lifter?.name ?? 'Bez podobszaru', lifterOrder: lifter?.order ?? 999, tasks: [] };
+        lifterGroup = { lifterId, lifterName: lifter?.name ?? 'Bez podobszaru', lifterOrder: 999, tasks: [] };
         areaGroup.lifters.push(lifterGroup);
       }
       lifterGroup.tasks.push(task);
