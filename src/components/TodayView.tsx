@@ -382,9 +382,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         onClick={() => handleEventClick(event.id)}
                       >
                         <span className="agenda-block-title">◈ {event.title}</span>
-                        <span className="agenda-block-time">
-                          {formatTime(start)}–{formatTime(end)}
-                        </span>
+                        {height >= 35 && (
+                          <span className="agenda-block-time">
+                            {formatTime(start)}–{formatTime(end)}
+                          </span>
+                        )}
                       </div>
                     );
                   })}
