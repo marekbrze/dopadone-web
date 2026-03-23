@@ -16,6 +16,7 @@ import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
+import { ProcessingView } from './components/ProcessingView';
 import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
@@ -43,7 +44,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox' | 'processing'>('today');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
@@ -249,6 +250,11 @@ export default function App() {
 
   const inboxTaskCount = useMemo(
     () => data ? data.tasks.filter(t => !t.done && t.projectId === null).length : 0,
+    [data]
+  );
+
+  const processingBadgeCount = useMemo(
+    () => data ? data.tasks.filter(t => !t.done && (t.projectId === null || t.duration == null || t.contextId === null)).length : 0,
     [data]
   );
 
@@ -835,6 +841,15 @@ export default function App() {
             className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
             onClick={() => setCurrentView('do')}
           >Robienie</button>
+          <button
+            className={`view-tab processing-tab ${currentView === 'processing' ? 'active' : ''}`}
+            onClick={() => setCurrentView('processing')}
+          >
+            Procesowanie
+            {processingBadgeCount > 0 && (
+              <span className="inbox-badge">{processingBadgeCount}</span>
+            )}
+          </button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia" data-tour="settings">
@@ -872,6 +887,15 @@ export default function App() {
                 className={`mobile-nav-item ${currentView === 'do' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('do'); setMobileNavOpen(false); }}
               >Robienie</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'processing' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('processing'); setMobileNavOpen(false); }}
+              >
+                Procesowanie
+                {processingBadgeCount > 0 && (
+                  <span className="mobile-nav-badge">{processingBadgeCount}</span>
+                )}
+              </button>
             </nav>
           </div>
         </div>
@@ -954,6 +978,15 @@ export default function App() {
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
+        />
+      )}
+
+      {currentView === 'processing' && (
+        <ProcessingView
+          tasks={data.tasks.filter(t => !t.done)}
+          projects={data.projects.filter(p => !p.archived)}
+          contexts={data.contexts}
+          onUpdateTask={updateTask}
         />
       )}
 

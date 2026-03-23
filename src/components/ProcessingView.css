@@ -1,0 +1,389 @@
+/* ── Processing view shell ── */
+.processing-view {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+/* ── Summary screen ── */
+.proc-summary {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  padding: 40px;
+}
+
+.proc-stats {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.proc-stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 24px 32px;
+  text-align: center;
+  min-width: 130px;
+}
+
+.proc-stat-number {
+  font-size: 40px;
+  font-weight: 300;
+  color: var(--accent);
+  line-height: 1;
+}
+
+.proc-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.proc-start-btn {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius, 2px);
+  color: #fff;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 40px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.proc-start-btn:hover { opacity: 0.85; }
+.proc-start-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.proc-all-done {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Processing layout ── */
+.proc-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Sidebar ── */
+.proc-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--border-light, var(--border));
+  overflow-y: auto;
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+}
+
+.proc-sidebar-header {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 14px 16px 8px;
+  border-bottom: 1px solid var(--border-light, var(--border));
+}
+
+.proc-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-muted);
+  transition: background 0.12s, color 0.12s;
+  border-left: 2px solid transparent;
+  min-height: 36px;
+}
+
+.proc-sidebar-item:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.proc-sidebar-item.current {
+  border-left-color: var(--accent);
+  color: var(--text);
+  font-weight: 500;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}
+
+.proc-sidebar-item.done {
+  color: var(--text-faint);
+}
+
+.proc-sidebar-item.done .proc-sidebar-name {
+  text-decoration: line-through;
+}
+
+.proc-sidebar-check {
+  color: var(--accent);
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.proc-sidebar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Main area ── */
+.proc-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 48px 64px;
+  overflow-y: auto;
+  gap: 24px;
+}
+
+/* ── Step indicator ── */
+.proc-step-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.proc-step-crumb {
+  color: var(--text-faint);
+  transition: color 0.15s;
+}
+
+.proc-step-crumb.active {
+  color: var(--accent);
+  border-bottom: 1.5px solid var(--accent);
+  padding-bottom: 1px;
+}
+
+.proc-step-crumb.done {
+  color: var(--text-muted);
+}
+
+.proc-step-sep {
+  color: var(--border);
+  font-weight: 300;
+  margin: 0 6px;
+}
+
+/* ── Task name ── */
+.proc-task-name {
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: -0.5px;
+  color: var(--text);
+  line-height: 1.25;
+  max-width: 700px;
+}
+
+/* ── Step hint ── */
+.proc-step-hint {
+  font-size: 12px;
+  color: var(--text-faint);
+}
+
+/* ── Project step ── */
+.proc-project-step {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 500px;
+}
+
+.proc-project-search {
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid var(--border);
+  padding: 6px 0 8px;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  outline: none;
+  width: 100%;
+}
+
+.proc-project-search:focus {
+  border-bottom-color: var(--accent);
+}
+
+.proc-project-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid var(--border-light, var(--border));
+  border-radius: 2px;
+  background: var(--surface);
+}
+
+.proc-project-option {
+  padding: 9px 14px;
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.proc-project-option:hover,
+.proc-project-option.highlighted {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.proc-project-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+/* ── Option step (duration / context) ── */
+.proc-option-step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 700px;
+}
+
+.proc-options-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.proc-option-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 14px 20px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.12s, background 0.12s;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  min-width: 72px;
+}
+
+.proc-option-card:hover {
+  border-color: var(--text-muted);
+  background: var(--surface2);
+}
+
+.proc-option-card.highlighted {
+  border-color: var(--accent);
+  border-width: 2px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.proc-option-key {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.proc-option-label {
+  font-size: 15px;
+  font-weight: 400;
+  color: var(--text);
+}
+
+.proc-option-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ── Skip / Back controls ── */
+.proc-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 4px;
+}
+
+.proc-skip-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.proc-skip-btn:hover { color: var(--text-muted); }
+
+.proc-back-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.proc-back-btn:hover { color: var(--text-muted); }
+
+/* ── kbd inside processing view ── */
+.processing-view kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  font-size: 10px;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  color: var(--text-faint);
+  background: var(--surface2);
+}
+
+/* ── Done screen ── */
+.proc-done {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+.proc-done-title {
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--text);
+}
+
+/* ── Tab badge anchor ── */
+.processing-tab {
+  position: relative;
+}
