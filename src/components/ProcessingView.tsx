@@ -595,6 +595,20 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           {/* Task name */}
           <div className="proc-task-name">{currentTask.name}</div>
 
+          {/* Task context breadcrumb */}
+          {currentTask.projectId && (() => {
+            const project = projects.find(p => p.id === currentTask.projectId);
+            const area = project ? areas.find(a => a.id === project.areaId) : null;
+            const lifter = project?.lifterId ? lifters.find(l => l.id === project.lifterId) : null;
+            return (
+              <div className="proc-task-breadcrumb">
+                {area && <span className="proc-breadcrumb-area">{area.name}</span>}
+                {lifter && <><span className="proc-breadcrumb-sep"> / </span><span className="proc-breadcrumb-lifter">{lifter.name}</span></>}
+                {project && <><span className="proc-breadcrumb-sep"> / </span><span className="proc-breadcrumb-project">{project.name}</span></>}
+              </div>
+            );
+          })()}
+
           <div className="proc-divider" />
 
           {/* Step panel */}
