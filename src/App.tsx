@@ -383,13 +383,10 @@ export default function App() {
     if (!selectedProjectId) return;
     const now = new Date().toISOString();
     if (isCloudSchema()) {
-      const id = await db.projectNotes.add({ projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now }) as string;
-      const note: ProjectNote = { id, projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now };
-      setData(d => d ? ({ ...d, projectNotes: [...d.projectNotes, note] }) : d);
+      await db.projectNotes.add({ projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now });
     } else {
       const note: ProjectNote = { id: newId(), projectId: selectedProjectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now };
       await db.projectNotes.put(note);
-      setData(d => d ? ({ ...d, projectNotes: [...d.projectNotes, note] }) : d);
     }
   };
 
