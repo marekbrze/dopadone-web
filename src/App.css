@@ -2892,9 +2892,9 @@ body {
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
-  color: #7c5cbf;
-  background: #7c5cbf18;
-  border: 1px solid #7c5cbf44;
+  color: #b8542a;
+  background: #b8542a18;
+  border: 1px solid #b8542a40;
   cursor: pointer;
   transition: background 0.15s;
   max-width: 160px;
@@ -2902,12 +2902,12 @@ body {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.today-allday-chip:hover { background: #7c5cbf28; }
-.today-allday-chip.selected { background: #7c5cbf33; border-color: #7c5cbf; }
+.today-allday-chip:hover { background: #b8542a28; }
+.today-allday-chip.selected { background: #b8542a33; border-color: #b8542a; }
 
 .agenda-event {
   /* extends .agenda-block */
-  color: #7c5cbf !important;
+  color: #b8542a !important;
 }
 
 .today-timeline-wrap {
@@ -3376,14 +3376,14 @@ body {
   border-radius: 10px;
   font-size: 10px;
   font-weight: 500;
-  color: #7c5cbf;
-  background: #7c5cbf18;
-  border: 1px solid #7c5cbf44;
+  color: #b8542a;
+  background: #b8542a18;
+  border: 1px solid #b8542a40;
   cursor: pointer;
   max-width: 130px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.agenda-allday-chip:hover { background: #7c5cbf28; }
-.agenda-allday-chip.selected { background: #7c5cbf33; border-color: #7c5cbf; }
+.agenda-allday-chip:hover { background: #b8542a28; }
+.agenda-allday-chip.selected { background: #b8542a33; border-color: #b8542a; }

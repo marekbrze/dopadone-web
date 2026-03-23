@@ -68,7 +68,7 @@ function getBlockColor(block: WorkBlock, areas: Area[]): string {
 
 const DAY_LABELS = ['Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb', 'Nd'];
 
-const EVENT_COLOR = '#7c5cbf';
+const EVENT_COLOR = '#b8542a';
 
 function isEventOnDate(event: CalendarEvent, dateStr: string): boolean {
   if (event.date === dateStr) return true;
@@ -847,7 +847,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         top: `${start}px`,
                         height: `${height}px`,
                         background: EVENT_COLOR + '22',
-                        borderLeft: `3px dashed ${EVENT_COLOR}`,
+                        borderLeft: `3px solid ${EVENT_COLOR}`,
                       }}
                       onClick={e => {
                         e.stopPropagation();

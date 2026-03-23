@@ -70,7 +70,7 @@ const priorityColors: Record<Task['priority'], string> = {
   high: '#a33a2a',
 };
 
-const EVENT_COLOR = '#7c5cbf';
+const EVENT_COLOR = '#b8542a';
 
 const hours = Array.from({ length: 24 }, (_, i) => i);
 
@@ -377,7 +377,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           top: `${start}px`,
                           height: `${height}px`,
                           background: EVENT_COLOR + '22',
-                          borderLeft: `3px dashed ${EVENT_COLOR}`,
+                          borderLeft: `3px solid ${EVENT_COLOR}`,
                         }}
                         onClick={() => handleEventClick(event.id)}
                       >
