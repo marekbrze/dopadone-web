@@ -61,6 +61,8 @@ function contextKeyForId(contextId: string | null | undefined, contexts: Context
   return idx >= 0 ? (OPTION_KEYS[idx] ?? null) : null;
 }
 
+const TIMER_DURATION = 120; // 2 minutes in seconds
+
 export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: ProcessingViewProps) {
   const [screen, setScreen] = useState<ProcessingScreen>('summary');
   const [sessionTaskIds, setSessionTaskIds] = useState<string[]>([]);
@@ -74,6 +76,10 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
 
   // Duration / Context step state
   const [pendingOptionKey, setPendingOptionKey] = useState<string | null>(null);
+
+  // Timer state
+  const [timerSeconds, setTimerSeconds] = useState(TIMER_DURATION);
+  const timerTaskIdRef = useRef<string | null>(null);
 
   const projectInputRef = useRef<HTMLInputElement>(null);
   const projectListRef = useRef<HTMLDivElement>(null);
@@ -177,6 +183,46 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     }
   }, [tasks, resetStepState, initPendingFromTask]);
 
+  // Timer: reset when task changes
+  useEffect(() => {
+    if (screen !== 'processing' || !currentStep) return;
+    if (timerTaskIdRef.current !== currentStep.taskId) {
+      timerTaskIdRef.current = currentStep.taskId;
+      setTimerSeconds(TIMER_DURATION);
+    }
+  }, [screen, currentStep?.taskId]);
+
+  // Timer: countdown tick
+  useEffect(() => {
+    if (screen !== 'processing') return;
+    if (timerSeconds <= 0) return;
+    const id = setInterval(() => setTimerSeconds(s => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [screen, timerSeconds]);
+
+  // Mark current task as done
+  const markTaskDone = useCallback((taskId: string, steps: ProcessingStep[], idx: number) => {
+    onUpdateTask(taskId, { done: true }).then(() => {
+      // Mark all steps for this task as completed
+      setCompletedSteps(prev => {
+        const next = new Set(prev);
+        steps.filter(s => s.taskId === taskId).forEach(s => next.add(`${s.taskId}:${s.kind}`));
+        return next;
+      });
+      // Advance to first step of next task (skip remaining steps of current task)
+      const nextIdx = steps.findIndex((s, i) => i > idx && s.taskId !== taskId);
+      if (nextIdx !== -1) {
+        setCurrentStepIndex(nextIdx);
+        resetStepState();
+        const nextStep = steps[nextIdx];
+        const nextTask = tasks.find(t => t.id === nextStep.taskId) ?? null;
+        initPendingFromTask(nextTask, nextStep.kind);
+      } else {
+        setScreen('done');
+      }
+    });
+  }, [onUpdateTask, tasks, resetStepState, initPendingFromTask]);
+
   // Scroll highlighted project into view
   useEffect(() => {
     if (screen !== 'processing' || currentStep?.kind !== 'project') return;
@@ -243,6 +289,12 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
           goBack(allSteps, currentStepIndex);
           return;
         }
+        // 'd' — mark done (only when input is not the target)
+        if (e.key === 'd' && (e.target as HTMLElement).tagName !== 'INPUT') {
+          e.preventDefault();
+          markTaskDone(currentStep.taskId, allSteps, currentStepIndex);
+          return;
+        }
         return;
       }
 
@@ -258,6 +310,11 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
       if (e.key === 'Escape') {
         e.preventDefault();
         advanceStep(allSteps, currentStepIndex);
+        return;
+      }
+      if (e.key === 'd') {
+        e.preventDefault();
+        markTaskDone(currentStep.taskId, allSteps, currentStepIndex);
         return;
       }
       if (e.key === 'Enter') {
@@ -307,7 +364,7 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     screen, currentStep, currentStepIndex, allSteps,
     filteredProjects, projectCursorIndex, pendingOptionKey,
     contexts, nothingToDo,
-    onUpdateTask, markStepCompleted, advanceStep, goBack, startSession,
+    onUpdateTask, markStepCompleted, advanceStep, goBack, startSession, markTaskDone,
   ]);
 
   // Reset project cursor when query changes
@@ -425,6 +482,18 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
 
         {/* Main area */}
         <div className="proc-main">
+          {/* Timer + Done row */}
+          <div className="proc-top-row">
+            <TimerRing seconds={timerSeconds} total={TIMER_DURATION} />
+            <button
+              className="proc-done-btn"
+              onClick={() => markTaskDone(currentStep.taskId, allSteps, currentStepIndex)}
+              title="Oznacz jako zrobione (d)"
+            >
+              ✓ Zrobione <kbd>d</kbd>
+            </button>
+          </div>
+
           {/* Step indicator */}
           <div className="proc-step-indicator">
             {taskStepsInSession.map((step, i) => {
@@ -605,6 +674,41 @@ function OptionStepPanel({ options, pendingKey, onSelect, onConfirm, onSkip }: O
       <button className="proc-skip-btn" onClick={onSkip}>
         Pomiń <kbd>Esc</kbd>
       </button>
+    </div>
+  );
+}
+
+// ── Timer ring ────────────────────────────────────────────────────────────────
+
+interface TimerRingProps {
+  seconds: number;
+  total: number;
+}
+
+function TimerRing({ seconds, total }: TimerRingProps) {
+  const r = 18;
+  const circ = 2 * Math.PI * r;
+  const progress = seconds / total; // 1 = full, 0 = empty
+  const offset = circ * (1 - progress);
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  const timeStr = `${mins}:${String(secs).padStart(2, '0')}`;
+  const urgent = seconds <= 30 && seconds > 0;
+  const expired = seconds === 0;
+
+  return (
+    <div className={`proc-timer${urgent ? ' urgent' : ''}${expired ? ' expired' : ''}`}>
+      <svg width="44" height="44" viewBox="0 0 44 44">
+        <circle cx="22" cy="22" r={r} className="proc-timer-track" />
+        <circle
+          cx="22" cy="22" r={r}
+          className="proc-timer-fill"
+          strokeDasharray={circ}
+          strokeDashoffset={offset}
+          transform="rotate(-90 22 22)"
+        />
+      </svg>
+      <span className="proc-timer-text">{timeStr}</span>
     </div>
   );
 }

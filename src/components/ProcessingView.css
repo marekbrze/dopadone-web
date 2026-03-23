@@ -525,6 +525,82 @@
   text-align: center;
 }
 
+/* ── Top row: timer + done button ── */
+.proc-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Timer ring ── */
+.proc-timer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.proc-timer-track {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2.5;
+}
+
+.proc-timer-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s linear, stroke 0.3s;
+}
+
+.proc-timer.urgent .proc-timer-fill {
+  stroke: #a33a2a;
+}
+
+.proc-timer.expired .proc-timer-fill {
+  stroke: var(--border);
+}
+
+.proc-timer-text {
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  min-width: 32px;
+}
+
+.proc-timer.urgent .proc-timer-text {
+  color: #a33a2a;
+}
+
+.proc-timer.expired .proc-timer-text {
+  color: var(--text-faint);
+}
+
+/* ── Done button ── */
+.proc-done-btn {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.proc-done-btn:hover {
+  border-color: #5a7a5e;
+  color: #5a7a5e;
+  background: color-mix(in srgb, #5a7a5e 6%, transparent);
+}
+
 /* ── Tab badge anchor ── */
 .processing-tab {
   position: relative;
