@@ -350,6 +350,33 @@ export default function App() {
     }
   };
 
+  const addProjectForProcessing = async (name: string, areaId: string, lifterId: string | null): Promise<Project> => {
+    const siblings = data.projects.filter(p => p.parentProjectId === null && p.areaId === areaId);
+    const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order ?? 0)) + 1 : 0;
+    let proj: Project;
+    if (isCloudSchema()) {
+      const id = await db.projects.add({ name, areaId, lifterId, parentProjectId: null, order }) as string;
+      proj = { id, name, areaId, lifterId, parentProjectId: null, order };
+    } else {
+      proj = { id: newId(), name, areaId, lifterId, parentProjectId: null, order };
+      await db.projects.put(proj);
+    }
+    return proj;
+  };
+
+  const convertTaskToProject = async (taskId: string, projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => {
+    const project = await addProjectForProcessing(projectName, areaId, lifterId);
+    for (const name of subtaskNames) {
+      if (isCloudSchema()) {
+        await db.tasks.add({ name, projectId: project.id, done: false, priority: 'medium' as const, notes: '', effort: null, contextId: null, blocking: false, duration: null });
+      } else {
+        const task: Task = { id: newId(), name, projectId: project.id, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+        await db.tasks.put(task);
+      }
+    }
+    await db.tasks.delete(taskId);
+  };
+
   // Tasks
   const addTask = async (name: string) => {
     if (!selectedProjectId) return;
@@ -921,6 +948,8 @@ export default function App() {
         <InboxView
           tasks={data.tasks.filter(t => t.projectId === null)}
           projects={data.projects.filter(p => !p.archived)}
+          areas={data.areas}
+          lifters={data.lifters}
           contexts={data.contexts}
           onAddTask={name => addInboxTask(name).then(() => {})}
           onUpdateTask={updateTask}
@@ -985,8 +1014,12 @@ export default function App() {
         <ProcessingView
           tasks={data.tasks.filter(t => !t.done)}
           projects={data.projects.filter(p => !p.archived)}
+          areas={data.areas}
+          lifters={data.lifters}
           contexts={data.contexts}
           onUpdateTask={updateTask}
+          onCreateProject={addProjectForProcessing}
+          onConvertToProject={convertTaskToProject}
         />
       )}
 

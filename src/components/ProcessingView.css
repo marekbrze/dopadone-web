@@ -381,6 +381,145 @@
   font-style: italic;
 }
 
+/* ── Project grouping ── */
+.proc-project-group-header {
+  padding: 5px 16px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light, var(--border));
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.proc-group-sep {
+  opacity: 0.4;
+}
+
+.proc-group-lifter {
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.85;
+}
+
+/* ── Create option ── */
+.proc-project-create {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--accent);
+  cursor: pointer;
+  border-top: 1px solid var(--border);
+  transition: background 0.08s;
+}
+.proc-project-create:hover {
+  background: var(--surface2);
+}
+
+/* ── Bottom row (skip + convert) ── */
+.proc-project-bottom {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.proc-convert-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.15s;
+}
+.proc-convert-btn:hover { color: var(--text-muted); }
+
+/* ── New project / convert forms ── */
+.proc-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 520px;
+}
+
+.proc-form-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.proc-form-row--col {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.proc-form-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.proc-form-select {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  padding: 6px 10px;
+  cursor: pointer;
+  flex: 1;
+  outline: none;
+}
+.proc-form-select:focus { border-color: var(--accent); }
+
+.proc-form-textarea {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+  width: 100%;
+  box-sizing: border-box;
+  outline: none;
+  line-height: 1.5;
+}
+.proc-form-textarea:focus { border-color: var(--accent); }
+
+.proc-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.proc-form-confirm {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #fff;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 8px 20px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.proc-form-confirm:hover:not(:disabled) { opacity: 0.82; }
+.proc-form-confirm:disabled { opacity: 0.3; cursor: not-allowed; }
+
 /* ── Option step (duration / context) ── */
 .proc-option-step {
   display: flex;

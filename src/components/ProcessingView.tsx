@@ -1,13 +1,19 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import type { Task, Project, Context, TaskDuration } from '../types';
+import type { Task, Project, Context, TaskDuration, Area, Lifter } from '../types';
 import './ProcessingView.css';
 
 interface ProcessingViewProps {
   tasks: Task[];
   projects: Project[];
+  areas: Area[];
+  lifters: Lifter[];
   contexts: Context[];
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
+  onConvertToProject: (taskId: string, projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
 }
+
+type ProjectPanelMode = 'list' | 'new-project' | 'convert';
 
 type ProcessingStepKind = 'project' | 'duration' | 'context';
 type ProcessingScreen = 'summary' | 'processing' | 'done';
@@ -63,7 +69,7 @@ function contextKeyForId(contextId: string | null | undefined, contexts: Context
 
 const TIMER_DURATION = 120; // 2 minutes in seconds
 
-export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: ProcessingViewProps) {
+export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onCreateProject, onConvertToProject }: ProcessingViewProps) {
   const [screen, setScreen] = useState<ProcessingScreen>('summary');
   const [sessionTaskIds, setSessionTaskIds] = useState<string[]>([]);
   const [allSteps, setAllSteps] = useState<ProcessingStep[]>([]);
@@ -73,6 +79,7 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
   // Project step state
   const [projectQuery, setProjectQuery] = useState('');
   const [projectCursorIndex, setProjectCursorIndex] = useState(0);
+  const [projectPanelMode, setProjectPanelMode] = useState<ProjectPanelMode>('list');
 
   // Duration / Context step state
   const [pendingOptionKey, setPendingOptionKey] = useState<string | null>(null);
@@ -96,16 +103,30 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     [currentStep, tasks]
   );
 
-  // Filtered projects for project step
+  // Filtered + sorted projects for project step
   const filteredProjects = useMemo(() => {
-    if (!projectQuery.trim()) return projects;
-    return projects.filter(p => p.name.toLowerCase().includes(projectQuery.toLowerCase()));
-  }, [projects, projectQuery]);
+    const filtered = projectQuery.trim()
+      ? projects.filter(p => p.name.toLowerCase().includes(projectQuery.toLowerCase()))
+      : projects;
+    return [...filtered].sort((a, b) => {
+      const areaA = areas.find(ar => ar.id === a.areaId);
+      const areaB = areas.find(ar => ar.id === b.areaId);
+      const orderA = areaA?.order ?? 999;
+      const orderB = areaB?.order ?? 999;
+      if (orderA !== orderB) return orderA - orderB;
+      if (a.areaId !== b.areaId) return a.areaId.localeCompare(b.areaId);
+      const lifterA = a.lifterId ? (lifters.find(l => l.id === a.lifterId)?.name ?? '') : '';
+      const lifterB = b.lifterId ? (lifters.find(l => l.id === b.lifterId)?.name ?? '') : '';
+      if (lifterA !== lifterB) return lifterA.localeCompare(lifterB);
+      return (a.order ?? 0) - (b.order ?? 0);
+    });
+  }, [projects, areas, lifters, projectQuery]);
 
   const resetStepState = useCallback(() => {
     setProjectQuery('');
     setProjectCursorIndex(0);
     setPendingOptionKey(null);
+    setProjectPanelMode('list');
   }, []);
 
   const initPendingFromTask = useCallback((task: Task | null, kind: ProcessingStepKind) => {
@@ -223,6 +244,35 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     });
   }, [onUpdateTask, tasks, resetStepState, initPendingFromTask]);
 
+  const handleCreateProject = useCallback(async (name: string, areaId: string, lifterId: string | null) => {
+    if (!currentStep) return;
+    const project = await onCreateProject(name, areaId, lifterId);
+    await onUpdateTask(currentStep.taskId, { projectId: project.id });
+    markStepCompleted(currentStep.taskId, 'project');
+    advanceStep(allSteps, currentStepIndex);
+  }, [currentStep, onCreateProject, onUpdateTask, markStepCompleted, advanceStep, allSteps, currentStepIndex]);
+
+  const handleConvertToProject = useCallback(async (projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => {
+    if (!currentStep) return;
+    const taskId = currentStep.taskId;
+    await onConvertToProject(taskId, projectName, areaId, lifterId, subtaskNames);
+    setCompletedSteps(prev => {
+      const next = new Set(prev);
+      allSteps.filter(s => s.taskId === taskId).forEach(s => next.add(`${s.taskId}:${s.kind}`));
+      return next;
+    });
+    const nextIdx = allSteps.findIndex((s, i) => i > currentStepIndex && s.taskId !== taskId);
+    if (nextIdx !== -1) {
+      setCurrentStepIndex(nextIdx);
+      resetStepState();
+      const nextStep = allSteps[nextIdx];
+      const nextTask = tasks.find(t => t.id === nextStep.taskId) ?? null;
+      initPendingFromTask(nextTask, nextStep.kind);
+    } else {
+      setScreen('done');
+    }
+  }, [currentStep, onConvertToProject, allSteps, currentStepIndex, tasks, resetStepState, initPendingFromTask]);
+
   // Scroll highlighted project into view
   useEffect(() => {
     if (screen !== 'processing' || currentStep?.kind !== 'project') return;
@@ -258,6 +308,7 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
       if (!currentStep) return;
 
       if (currentStep.kind === 'project') {
+        if (projectPanelMode !== 'list') return;
         if (e.key === 'ArrowDown') {
           e.preventDefault();
           setProjectCursorIndex(i => Math.min(i + 1, filteredProjects.length - 1));
@@ -362,7 +413,7 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     return () => document.removeEventListener('keydown', handler);
   }, [
     screen, currentStep, currentStepIndex, allSteps,
-    filteredProjects, projectCursorIndex, pendingOptionKey,
+    filteredProjects, projectCursorIndex, projectPanelMode, pendingOptionKey,
     contexts, nothingToDo,
     onUpdateTask, markStepCompleted, advanceStep, goBack, startSession, markTaskDone,
   ]);
@@ -519,6 +570,8 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
           {currentStep.kind === 'project' && (
             <ProjectStepPanel
               projects={filteredProjects}
+              areas={areas}
+              lifters={lifters}
               query={projectQuery}
               cursorIndex={projectCursorIndex}
               inputRef={projectInputRef}
@@ -532,6 +585,11 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
                 });
               }}
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
+              onCreateProject={handleCreateProject}
+              onConvertToProject={handleConvertToProject}
+              taskName={currentTask.name}
+              mode={projectPanelMode}
+              onModeChange={setProjectPanelMode}
             />
           )}
 
@@ -588,8 +646,31 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+type ProjectGroup = {
+  areaId: string; areaName: string;
+  lifterId: string | null; lifterName: string | null;
+  items: Array<{ project: Project; flatIndex: number }>;
+};
+
+function buildProjectGroups(projects: Project[], areas: Area[], lifters: Lifter[]): ProjectGroup[] {
+  const groups: ProjectGroup[] = [];
+  projects.forEach((project, flatIndex) => {
+    let group = groups.find(g => g.areaId === project.areaId && g.lifterId === project.lifterId);
+    if (!group) {
+      const area = areas.find(a => a.id === project.areaId);
+      const lifter = project.lifterId ? lifters.find(l => l.id === project.lifterId) : null;
+      group = { areaId: project.areaId, areaName: area?.name ?? '—', lifterId: project.lifterId, lifterName: lifter?.name ?? null, items: [] };
+      groups.push(group);
+    }
+    group.items.push({ project, flatIndex });
+  });
+  return groups;
+}
+
 interface ProjectStepPanelProps {
   projects: Project[];
+  areas: Area[];
+  lifters: Lifter[];
   query: string;
   cursorIndex: number;
   inputRef: React.RefObject<HTMLInputElement | null>;
@@ -598,9 +679,182 @@ interface ProjectStepPanelProps {
   onSelect: (idx: number) => void;
   onConfirm: (projectId: string) => void;
   onSkip: () => void;
+  onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<void>;
+  onConvertToProject: (projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
+  taskName: string;
+  mode: ProjectPanelMode;
+  onModeChange: (mode: ProjectPanelMode) => void;
 }
 
-function ProjectStepPanel({ projects, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip }: ProjectStepPanelProps) {
+function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip, onCreateProject, onConvertToProject, taskName, mode, onModeChange }: ProjectStepPanelProps) {
+  const [newProjName, setNewProjName] = useState('');
+  const [newProjAreaId, setNewProjAreaId] = useState('');
+  const [newProjLifterId, setNewProjLifterId] = useState<string | null>(null);
+  const [convProjName, setConvProjName] = useState('');
+  const [convAreaId, setConvAreaId] = useState('');
+  const [convLifterId, setConvLifterId] = useState<string | null>(null);
+  const [convSubtasks, setConvSubtasks] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const groups = useMemo(() => buildProjectGroups(projects, areas, lifters), [projects, areas, lifters]);
+  const showCreateOption = query.trim() !== '';
+
+  const openNewProject = () => {
+    setNewProjName(query);
+    setNewProjAreaId(areas[0]?.id ?? '');
+    setNewProjLifterId(null);
+    onModeChange('new-project');
+  };
+
+  const openConvert = () => {
+    setConvProjName(taskName);
+    setConvAreaId(areas[0]?.id ?? '');
+    setConvLifterId(null);
+    setConvSubtasks('');
+    onModeChange('convert');
+  };
+
+  const cancelForm = () => {
+    onModeChange('list');
+    setTimeout(() => inputRef.current?.focus(), 50);
+  };
+
+  const submitNewProject = async () => {
+    if (!newProjName.trim() || !newProjAreaId || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      await onCreateProject(newProjName.trim(), newProjAreaId, newProjLifterId);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const submitConvert = async () => {
+    if (!convProjName.trim() || !convAreaId || isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const subtaskNames = convSubtasks.split('\n').map(s => s.trim()).filter(Boolean);
+      await onConvertToProject(convProjName.trim(), convAreaId, convLifterId, subtaskNames);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (mode === 'new-project') {
+    const areaLifters = lifters.filter(l => l.areaId === newProjAreaId);
+    return (
+      <div className="proc-project-step">
+        <div className="proc-step-hint">Nowy projekt</div>
+        <div className="proc-form">
+          <input
+            className="proc-project-search"
+            placeholder="Nazwa projektu"
+            value={newProjName}
+            onChange={e => setNewProjName(e.target.value)}
+            autoFocus
+            onKeyDown={e => {
+              if (e.key === 'Escape') { e.stopPropagation(); cancelForm(); }
+              if (e.key === 'Enter') { e.stopPropagation(); submitNewProject(); }
+            }}
+          />
+          <div className="proc-form-row">
+            <label className="proc-form-label">Obszar</label>
+            <select
+              className="proc-form-select"
+              value={newProjAreaId}
+              onChange={e => { setNewProjAreaId(e.target.value); setNewProjLifterId(null); }}
+            >
+              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          {areaLifters.length > 0 && (
+            <div className="proc-form-row">
+              <label className="proc-form-label">Podobszar</label>
+              <select
+                className="proc-form-select"
+                value={newProjLifterId ?? ''}
+                onChange={e => setNewProjLifterId(e.target.value || null)}
+              >
+                <option value="">— brak —</option>
+                {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="proc-form-actions">
+            <button className="proc-form-confirm" onClick={submitNewProject} disabled={!newProjName.trim() || isSubmitting}>
+              Utwórz projekt
+            </button>
+            <button className="proc-skip-btn" onClick={cancelForm}>Anuluj</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (mode === 'convert') {
+    const areaLifters = lifters.filter(l => l.areaId === convAreaId);
+    return (
+      <div className="proc-project-step">
+        <div className="proc-step-hint">Zamień zadanie w projekt</div>
+        <div className="proc-form">
+          <input
+            className="proc-project-search"
+            placeholder="Nazwa projektu"
+            value={convProjName}
+            onChange={e => setConvProjName(e.target.value)}
+            autoFocus
+            onKeyDown={e => {
+              if (e.key === 'Escape') { e.stopPropagation(); cancelForm(); }
+            }}
+          />
+          <div className="proc-form-row">
+            <label className="proc-form-label">Obszar</label>
+            <select
+              className="proc-form-select"
+              value={convAreaId}
+              onChange={e => { setConvAreaId(e.target.value); setConvLifterId(null); }}
+            >
+              {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+            </select>
+          </div>
+          {areaLifters.length > 0 && (
+            <div className="proc-form-row">
+              <label className="proc-form-label">Podobszar</label>
+              <select
+                className="proc-form-select"
+                value={convLifterId ?? ''}
+                onChange={e => setConvLifterId(e.target.value || null)}
+              >
+                <option value="">— brak —</option>
+                {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div className="proc-form-row proc-form-row--col">
+            <label className="proc-form-label">Zadania projektu (jedno na linię)</label>
+            <textarea
+              className="proc-form-textarea"
+              value={convSubtasks}
+              onChange={e => setConvSubtasks(e.target.value)}
+              placeholder={"Zamów materiały\nUmów hydraulika"}
+              rows={4}
+              onKeyDown={e => {
+                if (e.key === 'Escape') { e.stopPropagation(); cancelForm(); }
+              }}
+            />
+          </div>
+          <div className="proc-form-actions">
+            <button className="proc-form-confirm" onClick={submitConvert} disabled={!convProjName.trim() || isSubmitting}>
+              Zamień w projekt
+            </button>
+            <button className="proc-skip-btn" onClick={cancelForm}>Anuluj</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // mode === 'list'
   return (
     <div className="proc-project-step">
       <div className="proc-step-hint">Wybierz projekt <kbd>↵</kbd> lub pomiń <kbd>Esc</kbd></div>
@@ -612,23 +866,44 @@ function ProjectStepPanel({ projects, query, cursorIndex, inputRef, listRef, onQ
         onChange={e => onQueryChange(e.target.value)}
       />
       <div className="proc-project-list" ref={listRef}>
-        {projects.map((p, i) => (
-          <div
-            key={p.id}
-            className={`proc-project-option${i === cursorIndex ? ' highlighted' : ''}`}
-            onMouseEnter={() => onSelect(i)}
-            onMouseDown={e => { e.preventDefault(); onConfirm(p.id); }}
-          >
-            {p.name}
-          </div>
-        ))}
-        {projects.length === 0 && (
+        {groups.length === 0 && !showCreateOption && (
           <div className="proc-project-empty">Brak projektów — wpisz inną frazę lub pomiń</div>
         )}
+        {groups.map(group => (
+          <div key={`${group.areaId}-${group.lifterId ?? ''}`} className="proc-project-group">
+            <div className="proc-project-group-header">
+              <span className="proc-group-area">{group.areaName}</span>
+              {group.lifterName && <><span className="proc-group-sep"> / </span><span className="proc-group-lifter">{group.lifterName}</span></>}
+            </div>
+            {group.items.map(({ project, flatIndex }) => (
+              <div
+                key={project.id}
+                className={`proc-project-option${flatIndex === cursorIndex ? ' highlighted' : ''}`}
+                onMouseEnter={() => onSelect(flatIndex)}
+                onMouseDown={e => { e.preventDefault(); onConfirm(project.id); }}
+              >
+                {project.name}
+              </div>
+            ))}
+          </div>
+        ))}
+        {showCreateOption && (
+          <div
+            className="proc-project-create"
+            onMouseDown={e => { e.preventDefault(); openNewProject(); }}
+          >
+            + Stwórz projekt: „{query}"
+          </div>
+        )}
       </div>
-      <button className="proc-skip-btn" onClick={onSkip}>
-        Pomiń — zostaw w Inbox <kbd>Esc</kbd>
-      </button>
+      <div className="proc-project-bottom">
+        <button className="proc-skip-btn" onClick={onSkip}>
+          Pomiń — zostaw w Inbox <kbd>Esc</kbd>
+        </button>
+        <button className="proc-convert-btn" onClick={openConvert}>
+          Zamień w projekt
+        </button>
+      </div>
     </div>
   );
 }

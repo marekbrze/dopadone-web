@@ -1,11 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import type { Task, Project, Context } from '../types';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import type { Task, Project, Context, Area, Lifter } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { ConfirmModal } from './ConfirmModal';
 
 interface Props {
   tasks: Task[];
   projects: Project[];
+  areas: Area[];
+  lifters: Lifter[];
   contexts: Context[];
   onAddTask: (name: string) => void;
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
@@ -13,7 +15,7 @@ interface Props {
   onAssignToProject: (taskId: string, projectId: string, clampEndDate?: boolean) => void;
 }
 
-export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, onDeleteTask, onAssignToProject }: Props) {
+export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask, onUpdateTask, onDeleteTask, onAssignToProject }: Props) {
   const [newTaskName, setNewTaskName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -78,6 +80,8 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
               key={task.id}
               task={task}
               projects={projects}
+              areas={areas}
+              lifters={lifters}
               selected={selectedTaskId === task.id}
               onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
               onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
@@ -101,6 +105,8 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
                     key={task.id}
                     task={task}
                     projects={projects}
+                    areas={areas}
+                    lifters={lifters}
                     selected={selectedTaskId === task.id}
                     onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
                     onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
@@ -145,13 +151,46 @@ export function InboxView({ tasks, projects, contexts, onAddTask, onUpdateTask, 
 interface RowProps {
   task: Task;
   projects: Project[];
+  areas: Area[];
+  lifters: Lifter[];
   selected: boolean;
   onSelect: () => void;
   onToggleDone: () => void;
   onAssign: (projectId: string) => void;
 }
 
-function ProjectPicker({ projects, onAssign }: { projects: Project[]; onAssign: (id: string) => void }) {
+type InboxProjectGroup = {
+  areaId: string; areaName: string;
+  lifterId: string | null; lifterName: string | null;
+  projects: Project[];
+};
+
+function buildInboxGroups(projects: Project[], areas: Area[], lifters: Lifter[]): InboxProjectGroup[] {
+  const groups: InboxProjectGroup[] = [];
+  const sorted = [...projects].sort((a, b) => {
+    const areaA = areas.find(ar => ar.id === a.areaId);
+    const areaB = areas.find(ar => ar.id === b.areaId);
+    const orderA = areaA?.order ?? 999;
+    const orderB = areaB?.order ?? 999;
+    if (orderA !== orderB) return orderA - orderB;
+    if (a.areaId !== b.areaId) return a.areaId.localeCompare(b.areaId);
+    if (a.lifterId !== b.lifterId) return (a.lifterId ?? '').localeCompare(b.lifterId ?? '');
+    return (a.order ?? 0) - (b.order ?? 0);
+  });
+  sorted.forEach(project => {
+    let group = groups.find(g => g.areaId === project.areaId && g.lifterId === project.lifterId);
+    if (!group) {
+      const area = areas.find(a => a.id === project.areaId);
+      const lifter = project.lifterId ? lifters.find(l => l.id === project.lifterId) : null;
+      group = { areaId: project.areaId, areaName: area?.name ?? '—', lifterId: project.lifterId, lifterName: lifter?.name ?? null, projects: [] };
+      groups.push(group);
+    }
+    group.projects.push(project);
+  });
+  return groups;
+}
+
+function ProjectPicker({ projects, areas, lifters, onAssign }: { projects: Project[]; areas: Area[]; lifters: Lifter[]; onAssign: (id: string) => void }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -160,6 +199,8 @@ function ProjectPicker({ projects, onAssign }: { projects: Project[]; onAssign: 
   const filtered = query.trim()
     ? projects.filter(p => p.name.toLowerCase().includes(query.toLowerCase()))
     : projects;
+
+  const groups = useMemo(() => buildInboxGroups(filtered, areas, lifters), [filtered, areas, lifters]);
 
   const close = useCallback(() => { setOpen(false); setQuery(''); }, []);
 
@@ -193,15 +234,22 @@ function ProjectPicker({ projects, onAssign }: { projects: Project[]; onAssign: 
             onKeyDown={e => { if (e.key === 'Escape') close(); }}
           />
           <div className="inbox-project-list">
-            {filtered.length === 0
+            {groups.length === 0
               ? <div className="inbox-project-option-empty">Brak wyników</div>
-              : filtered.map(p => (
-                <div
-                  key={p.id}
-                  className="inbox-project-option"
-                  onMouseDown={() => { onAssign(p.id); close(); }}
-                >
-                  {p.name}
+              : groups.map(group => (
+                <div key={`${group.areaId}-${group.lifterId ?? ''}`}>
+                  <div className="inbox-project-group-header">
+                    {group.areaName}{group.lifterName ? ` / ${group.lifterName}` : ''}
+                  </div>
+                  {group.projects.map(p => (
+                    <div
+                      key={p.id}
+                      className="inbox-project-option"
+                      onMouseDown={() => { onAssign(p.id); close(); }}
+                    >
+                      {p.name}
+                    </div>
+                  ))}
                 </div>
               ))
             }
@@ -212,7 +260,7 @@ function ProjectPicker({ projects, onAssign }: { projects: Project[]; onAssign: 
   );
 }
 
-function InboxTaskRow({ task, projects, selected, onSelect, onToggleDone, onAssign }: RowProps) {
+function InboxTaskRow({ task, projects, areas, lifters, selected, onSelect, onToggleDone, onAssign }: RowProps) {
   return (
     <div className={`inbox-task-row${selected ? ' selected' : ''}`} onClick={onSelect}>
       <input
@@ -223,7 +271,7 @@ function InboxTaskRow({ task, projects, selected, onSelect, onToggleDone, onAssi
         className="inbox-task-checkbox"
       />
       <span className="inbox-task-name">{task.name}</span>
-      <ProjectPicker projects={projects} onAssign={onAssign} />
+      <ProjectPicker projects={projects} areas={areas} lifters={lifters} onAssign={onAssign} />
     </div>
   );
 }
