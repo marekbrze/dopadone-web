@@ -322,29 +322,26 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
       <div className="processing-view">
         <div className="proc-summary">
           {nothingToDo ? (
-            <div className="proc-all-done">Wszystko gotowe! Brak zadań do przetworzenia.</div>
+            <div className="proc-all-done">Wszystko gotowe — brak zadań do przetworzenia.</div>
           ) : (
             <>
+              <div className="proc-summary-title">Do przetworzenia</div>
               <div className="proc-stats">
-                <div className="proc-stat-card">
+                <div className={`proc-stat-card${inboxCount === 0 ? ' zero' : ''}`}>
                   <div className="proc-stat-number">{inboxCount}</div>
-                  <div className="proc-stat-label">Zadań w Inbox</div>
+                  <div className="proc-stat-label">Inbox</div>
                 </div>
-                <div className="proc-stat-card">
+                <div className={`proc-stat-card${noDurationCount === 0 ? ' zero' : ''}`}>
                   <div className="proc-stat-number">{noDurationCount}</div>
-                  <div className="proc-stat-label">Bez czasu trwania</div>
+                  <div className="proc-stat-label">Bez czasu</div>
                 </div>
-                <div className="proc-stat-card">
+                <div className={`proc-stat-card${noContextCount === 0 ? ' zero' : ''}`}>
                   <div className="proc-stat-number">{noContextCount}</div>
                   <div className="proc-stat-label">Bez kontekstu</div>
                 </div>
               </div>
-              <button
-                className="proc-start-btn"
-                onClick={startSession}
-                disabled={nothingToDo}
-              >
-                Start <kbd>↵</kbd>
+              <button className="proc-start-btn" onClick={startSession}>
+                Rozpocznij <kbd>↵</kbd>
               </button>
             </>
           )}
@@ -358,6 +355,7 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
     return (
       <div className="processing-view">
         <div className="proc-done">
+          <div className="proc-done-icon">✓</div>
           <div className="proc-done-title">Przetworzono {processedCount} {processedCount === 1 ? 'zadanie' : processedCount < 5 ? 'zadania' : 'zadań'}</div>
           <button className="proc-start-btn" onClick={() => setScreen('summary')}>
             Wróć do podsumowania
@@ -372,30 +370,57 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
 
   const taskStepsInSession = allSteps.filter(s => s.taskId === currentStep.taskId);
   const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', duration: 'Czas', context: 'Kontekst' };
+  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', duration: 'Czas', context: 'Kontekst' };
+
+  const doneTaskCount = sessionTaskIds.filter(id => isTaskFullyProcessed(id, allSteps, completedSteps)).length;
+  const progressPct = sessionTaskIds.length > 0 ? (doneTaskCount / sessionTaskIds.length) * 100 : 0;
 
   return (
     <div className="processing-view">
       <div className="proc-layout">
         {/* Sidebar */}
         <div className="proc-sidebar">
-          <div className="proc-sidebar-header">Zadania</div>
-          {sessionTaskIds.map(taskId => {
-            const task = tasks.find(t => t.id === taskId);
-            if (!task) return null;
-            const isCurrent = currentStep.taskId === taskId;
-            const isDone = isTaskFullyProcessed(taskId, allSteps, completedSteps);
-            return (
-              <div
-                key={taskId}
-                className={`proc-sidebar-item${isCurrent ? ' current' : ''}${isDone ? ' done' : ''}`}
-                onClick={() => jumpToTask(taskId, allSteps)}
-                title={task.name}
-              >
-                {isDone && <span className="proc-sidebar-check">✓</span>}
-                <span className="proc-sidebar-name">{task.name}</span>
-              </div>
-            );
-          })}
+          <div className="proc-sidebar-head">
+            <span className="proc-sidebar-label">Zadania w sesji</span>
+            <span className="proc-sidebar-progress">
+              <strong>{doneTaskCount}</strong> / {sessionTaskIds.length}
+            </span>
+          </div>
+          <div className="proc-progress-bar">
+            <div className="proc-progress-fill" style={{ width: `${progressPct}%` }} />
+          </div>
+          <div className="proc-sidebar-list">
+            {sessionTaskIds.map((taskId, index) => {
+              const task = tasks.find(t => t.id === taskId);
+              if (!task) return null;
+              const isCurrent = currentStep.taskId === taskId;
+              const isDone = isTaskFullyProcessed(taskId, allSteps, completedSteps);
+              const taskSteps = allSteps.filter(s => s.taskId === taskId);
+              return (
+                <div
+                  key={taskId}
+                  className={`proc-sidebar-item${isCurrent ? ' current' : ''}${isDone ? ' done' : ''}`}
+                  onClick={() => jumpToTask(taskId, allSteps)}
+                >
+                  <span className="proc-sidebar-num">{String(index + 1).padStart(2, '0')}</span>
+                  <div className="proc-sidebar-body">
+                    <div className="proc-sidebar-name">{task.name}</div>
+                    <div className="proc-sidebar-tags">
+                      {taskSteps.map(step => {
+                        const stepDone = completedSteps.has(`${taskId}:${step.kind}`);
+                        return (
+                          <span key={step.kind} className={`proc-sidebar-tag${stepDone ? ' done-tag' : ''}`}>
+                            {stepDone ? '✓ ' : ''}{stepTagLabels[step.kind]}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {isDone && <span className="proc-sidebar-check">✓</span>}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Main area */}
@@ -407,8 +432,8 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
               const isDoneStep = completedSteps.has(`${step.taskId}:${step.kind}`);
               return (
                 <span key={step.kind}>
-                  {i > 0 && <span className="proc-step-sep"> · </span>}
-                  <span className={`proc-step-crumb${isActive ? ' active' : ''}${isDoneStep && !isActive ? ' done' : ''}`}>
+                  {i > 0 && <span className="proc-step-sep">·</span>}
+                  <span className={`proc-step-crumb${isActive ? ' active' : ''}${isDoneStep && !isActive ? ' done-step' : ''}`}>
                     {isDoneStep && !isActive ? '✓ ' : ''}{stepLabels[step.kind]}
                   </span>
                 </span>
@@ -418,6 +443,8 @@ export function ProcessingView({ tasks, projects, contexts, onUpdateTask }: Proc
 
           {/* Task name */}
           <div className="proc-task-name">{currentTask.name}</div>
+
+          <div className="proc-divider" />
 
           {/* Step panel */}
           {currentStep.kind === 'project' && (
