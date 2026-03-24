@@ -2100,6 +2100,55 @@ body {
 
 .inbox-done-toggle:hover { color: var(--text); }
 
+/* ── Block: done section (shared by AgendaView & TodayView) ─────── */
+
+.block-done-section {
+  margin-top: 8px;
+}
+
+.block-done-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+}
+
+.block-done-toggle:hover { color: var(--text); }
+
+.agenda-block-task-item.done .agenda-block-task-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.today-active-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.today-block-duplicate-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 8px;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+.today-block-duplicate-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
 /* ── Agenda: add task to manual block ────────────────────────────── */
 
 .agenda-block-add-task {

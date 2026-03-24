@@ -19,6 +19,7 @@ interface Props {
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
   onAddWorkBlock: (data: Omit<WorkBlock, 'id'>) => void;
   onUpdateWorkBlock: (id: string, updates: Partial<WorkBlock>) => void;
+  onDuplicateWorkBlock: (id: string) => void;
 }
 
 function toDateString(d: Date): string {
@@ -58,6 +59,24 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
+function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project[]): Task[] {
+  if (block.blockType === 'manual') {
+    return (block.taskIds ?? [])
+      .map(id => tasks.find(t => t.id === id))
+      .filter((t): t is Task => t !== undefined && t.done);
+  }
+  return tasks.filter(task => {
+    if (!task.done) return false;
+    const project = projects.find(p => p.id === task.projectId);
+    if (!project) return false;
+    if (block.contextIds.length > 0 && !block.contextIds.includes(task.contextId ?? '')) return false;
+    if (block.projectIds.length > 0) return block.projectIds.includes(task.projectId ?? '');
+    if (block.lifterIds.length > 0 && (!project.lifterId || !block.lifterIds.includes(project.lifterId))) return false;
+    if (block.areaIds.length > 0 && !block.areaIds.includes(project.areaId)) return false;
+    return true;
+  });
+}
+
 function isEventOnDate(event: CalendarEvent, dateStr: string): boolean {
   if (event.date === dateStr) return true;
   if (event.endDate && event.date <= dateStr && dateStr <= event.endDate) return true;
@@ -78,9 +97,10 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDuplicateWorkBlock }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [showBlockDone, setShowBlockDone] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
@@ -155,6 +175,8 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     }
   }, [workBlocks]);
 
+  useEffect(() => { setShowBlockDone(false); }, [selectedBlockId]);
+
   useEffect(() => {
     if (selectedEventId && !todayEvents.find(e => e.id === selectedEventId)) {
       setSelectedEventId(null);
@@ -169,6 +191,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 
   const blockTasks = displayBlock
     ? getMatchingTasks(displayBlock, tasks, projects)
+    : [];
+
+  const blockUndoneTasks = blockTasks.filter(t => !t.done);
+  const blockDoneTasks = displayBlock
+    ? getMatchingDoneTasks(displayBlock, tasks, projects)
     : [];
 
   const blockTasksTotalDuration = blockTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
@@ -421,10 +448,17 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       <span className="today-active-live-dot" />
                     )}
                   </div>
-                  <div className="today-active-title">{displayBlock.title}</div>
+                  <div className="today-active-title-row">
+                    <div className="today-active-title">{displayBlock.title}</div>
+                    <button
+                      className="today-block-duplicate-btn"
+                      onClick={() => onDuplicateWorkBlock(displayBlock.id)}
+                      title="Duplikuj blok"
+                    >Duplikuj</button>
+                  </div>
                 </div>
                 <div className="today-active-tasks">
-                  {blockTasks.length === 0 ? (
+                  {blockUndoneTasks.length === 0 && blockDoneTasks.length === 0 ? (
                     <div className="today-active-empty">
                       Brak zadań przypisanych do tego bloku.
                     </div>
@@ -433,7 +467,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       <div className="today-tasks-section-label">
                         Zadania
                         <span className="today-tasks-count">
-                          {blockTasks.filter(t => t.done).length}/{blockTasks.length}
+                          {blockDoneTasks.length}/{blockUndoneTasks.length + blockDoneTasks.length}
                         </span>
                       </div>
                       {blockDurationOverflow && (
@@ -441,15 +475,15 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
                         </div>
                       )}
-                      {blockTasks.map(task => (
+                      {blockUndoneTasks.map(task => (
                         <div
                           key={task.id}
-                          className={`today-task-item${task.done ? ' done' : ''}`}
+                          className="today-task-item"
                         >
                           <input
                             type="checkbox"
-                            checked={task.done}
-                            onChange={() => onUpdateTask(task.id, { done: !task.done })}
+                            checked={false}
+                            onChange={() => onUpdateTask(task.id, { done: true })}
                             id={`today-task-${task.id}`}
                           />
                           <label
@@ -465,6 +499,37 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           />
                         </div>
                       ))}
+                      {blockDoneTasks.length > 0 && (
+                        <div className="block-done-section">
+                          <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
+                            {showBlockDone ? '▾' : '▸'} Ukończone ({blockDoneTasks.length})
+                          </button>
+                          {showBlockDone && blockDoneTasks.map(task => (
+                            <div
+                              key={task.id}
+                              className="today-task-item done"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => onUpdateTask(task.id, { done: false })}
+                                id={`today-task-done-${task.id}`}
+                              />
+                              <label
+                                className="today-task-name"
+                                htmlFor={`today-task-done-${task.id}`}
+                              >
+                                {task.name}
+                              </label>
+                              <span
+                                className="today-priority-dot"
+                                style={{ background: priorityColors[task.priority] }}
+                                title={task.priority}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>

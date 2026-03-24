@@ -769,6 +769,13 @@ export default function App() {
     setData(d => d ? ({ ...d, workBlocks: d.workBlocks.filter(wb => wb.id !== id) }) : d);
   };
 
+  const duplicateWorkBlock = async (id: string) => {
+    const original = data?.workBlocks.find(wb => wb.id === id);
+    if (!original) return;
+    const { id: _id, ...rest } = original;
+    await addWorkBlock({ ...rest });
+  };
+
   // Events
   const addEvent = async (eventData: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> => {
     let event: CalendarEvent;
@@ -974,6 +981,7 @@ export default function App() {
           onAddEventTask={addEventTask}
           onAddWorkBlock={addWorkBlock}
           onUpdateWorkBlock={updateWorkBlock}
+          onDuplicateWorkBlock={duplicateWorkBlock}
         />
       )}
 
@@ -989,6 +997,7 @@ export default function App() {
           onAdd={addWorkBlock}
           onUpdate={updateWorkBlock}
           onDelete={deleteWorkBlock}
+          onDuplicate={duplicateWorkBlock}
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
