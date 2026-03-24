@@ -958,11 +958,13 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           } : undefined}
         >
           <div className="agenda-block-panel-header">
-            <span className="agenda-block-panel-title">{selectedBlock.title}</span>
+            <div className="agenda-block-panel-header-top">
+              <span className="agenda-block-panel-title">{selectedBlock.title}</span>
+              <button className="agenda-block-panel-close" onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); }}>✕</button>
+            </div>
             <div className="agenda-block-panel-actions">
               <button onClick={() => onDuplicate(selectedBlock.id)}>Duplikuj</button>
               <button onClick={() => setEditingBlock(selectedBlock)}>Edytuj blok</button>
-              <button onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); }}>✕</button>
             </div>
           </div>
           {isManual && (

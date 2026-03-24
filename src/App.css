@@ -2224,11 +2224,17 @@ body {
 
 .agenda-block-panel-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 8px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.agenda-block-panel-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .agenda-block-panel-title {
@@ -2236,6 +2242,19 @@ body {
   font-weight: 600;
   color: var(--text);
 }
+
+.agenda-block-panel-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+
+.agenda-block-panel-close:hover { color: var(--text); }
 
 .agenda-block-panel-actions {
   display: flex;
