@@ -3158,6 +3158,28 @@ body {
   color: var(--text-faint);
 }
 
+.today-task-remove-btn {
+  flex-shrink: 0;
+  padding: 2px 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: var(--radius);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.today-task-item:hover .today-task-remove-btn {
+  opacity: 1;
+}
+
+.today-task-remove-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
 .today-priority-dot {
   width: 6px;
   height: 6px;

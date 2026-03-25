@@ -187,6 +187,12 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     ? (todayBlocks.find(b => b.id === selectedBlockId) ?? currentBlock)
     : currentBlock;
 
+  const handleRemoveTaskFromBlock = (taskId: string) => {
+    if (!displayBlock || displayBlock.blockType !== 'manual') return;
+    const current = displayBlock.taskIds ?? [];
+    onUpdateWorkBlock(displayBlock.id, { taskIds: current.filter(id => id !== taskId) });
+  };
+
   const selectedEvent = selectedEventId ? events.find(e => e.id === selectedEventId) ?? null : null;
 
   const blockTasks = displayBlock
@@ -497,6 +503,13 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             style={{ background: priorityColors[task.priority] }}
                             title={task.priority}
                           />
+                          {displayBlock.blockType === 'manual' && (
+                            <button
+                              className="today-task-remove-btn"
+                              onClick={() => handleRemoveTaskFromBlock(task.id)}
+                              title="Usuń z bloku"
+                            >✕</button>
+                          )}
                         </div>
                       ))}
                       {blockDoneTasks.length > 0 && (
@@ -526,6 +539,13 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                 style={{ background: priorityColors[task.priority] }}
                                 title={task.priority}
                               />
+                              {displayBlock.blockType === 'manual' && (
+                                <button
+                                  className="today-task-remove-btn"
+                                  onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                  title="Usuń z bloku"
+                                >✕</button>
+                              )}
                             </div>
                           ))}
                         </div>
