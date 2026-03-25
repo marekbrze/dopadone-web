@@ -512,11 +512,22 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                   </div>
                   <div className="today-active-title-row">
                     <div className="today-active-title">{displayBlock.title}</div>
-                    <button
-                      className="today-block-duplicate-btn"
-                      onClick={() => onDuplicateWorkBlock(displayBlock.id)}
-                      title="Duplikuj blok"
-                    >Duplikuj</button>
+                    <div className="today-block-header-actions">
+                      <select
+                        className="today-grouping-select"
+                        value={taskGrouping}
+                        onChange={e => setTaskGrouping(e.target.value as TaskGrouping)}
+                      >
+                        <option value="none">Brak grupowania</option>
+                        <option value="area">Obszar</option>
+                        <option value="context">Kontekst</option>
+                      </select>
+                      <button
+                        className="today-block-duplicate-btn"
+                        onClick={() => onDuplicateWorkBlock(displayBlock.id)}
+                        title="Duplikuj blok"
+                      >Duplikuj</button>
+                    </div>
                   </div>
                 </div>
                 <div className="today-active-tasks">
@@ -537,21 +548,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
                         </div>
                       )}
-                      <div className="agenda-grouping-switcher">
-                        <button
-                          className={`agenda-grouping-btn${taskGrouping === 'none' ? ' active' : ''}`}
-                          onClick={() => setTaskGrouping('none')}
-                        >Brak</button>
-                        <button
-                          className={`agenda-grouping-btn${taskGrouping === 'area' ? ' active' : ''}`}
-                          onClick={() => setTaskGrouping('area')}
-                        >Obszar</button>
-                        <button
-                          className={`agenda-grouping-btn${taskGrouping === 'context' ? ' active' : ''}`}
-                          onClick={() => setTaskGrouping('context')}
-                        >Kontekst</button>
-                      </div>
-                      {taskGrouping === 'none' && blockUndoneTasks.map(task => (
+{taskGrouping === 'none' && blockUndoneTasks.map(task => (
                         <div
                           key={task.id}
                           className="today-task-item"
