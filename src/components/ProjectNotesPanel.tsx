@@ -125,7 +125,7 @@ export function ProjectNotesPanel({ notes, onCreate, onUpdate, onDelete }: Props
   const [activeNoteId, setActiveNoteId] = useState<string | null>(notes[0]?.id ?? null);
   const [composerContent, setComposerContent] = useState('');
   const [composerTitle, setComposerTitle] = useState('');
-  const [showComposerTitle, setShowComposerTitle] = useState(false);
+  const [showComposerTitle, setShowComposerTitle] = useState(true);
 
   const feedRef = useRef<HTMLDivElement>(null);
   const noteRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -257,26 +257,28 @@ export function ProjectNotesPanel({ notes, onCreate, onUpdate, onDelete }: Props
                 else noteRefs.current.delete(note.id);
               }}
             >
-              <div className="note-card-header">
-                {editingNoteId === note.id ? (
-                  <input
-                    className="note-edit-title"
-                    placeholder="Tytuł (opcjonalny)"
-                    value={editTitle}
-                    onChange={e => setEditTitle(e.target.value)}
-                  />
-                ) : (
-                  note.title && <span className="note-title">{note.title}</span>
+              <div className="note-card-actions">
+                {editingNoteId !== note.id && (
+                  <>
+                    <button className="note-action-btn" onClick={() => startEdit(note)} title="Edytuj">✏️</button>
+                    <button className="note-action-btn note-delete-btn" onClick={() => onDelete(note.id)} title="Usuń">🗑</button>
+                  </>
                 )}
-                <div className="note-card-actions">
-                  {editingNoteId !== note.id && (
-                    <>
-                      <button className="note-action-btn" onClick={() => startEdit(note)} title="Edytuj">✏️</button>
-                      <button className="note-action-btn note-delete-btn" onClick={() => onDelete(note.id)} title="Usuń">🗑</button>
-                    </>
+              </div>
+              {(editingNoteId === note.id || note.title) && (
+                <div className="note-card-header">
+                  {editingNoteId === note.id ? (
+                    <input
+                      className="note-edit-title"
+                      placeholder="Tytuł (opcjonalny)"
+                      value={editTitle}
+                      onChange={e => setEditTitle(e.target.value)}
+                    />
+                  ) : (
+                    <span className="note-title">{note.title}</span>
                   )}
                 </div>
-              </div>
+              )}
 
               {editingNoteId === note.id ? (
                 <div className="note-edit-body">
