@@ -26,6 +26,11 @@
       "sourceType": "github",
       "computedHash": "72aafb8c05d2e9948fc78e1c57cb48f5a3a816a4225f605383f68d254852a6e4"
     },
+    "user-onboarding": {
+      "source": "refoundai/lenny-skills",
+      "sourceType": "github",
+      "computedHash": "5f34d31a0e3ca46e84af0180bf275a0c3d3700d40cd0617d0e5a29a12cc698e4"
+    },
     "vite-react-best-practices": {
       "source": "claudiocebpaz/vite-react-best-practices",
       "sourceType": "github",

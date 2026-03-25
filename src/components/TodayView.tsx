@@ -101,6 +101,8 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showBlockDone, setShowBlockDone] = useState(false);
+  type TaskGrouping = 'none' | 'area' | 'context';
+  const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>('none');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
@@ -176,6 +178,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   }, [workBlocks]);
 
   useEffect(() => { setShowBlockDone(false); }, [selectedBlockId]);
+  useEffect(() => { setTaskGrouping('none'); }, [selectedBlockId]);
 
   useEffect(() => {
     if (selectedEventId && !todayEvents.find(e => e.id === selectedEventId)) {
@@ -207,6 +210,59 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const blockTasksTotalDuration = blockTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const displayBlockDuration = displayBlock ? displayBlock.endMinutes - displayBlock.startMinutes : 0;
   const blockDurationOverflow = blockTasksTotalDuration > 0 && blockTasksTotalDuration > displayBlockDuration;
+
+  type LifterGroup = { lifterId: string | null; lifterName: string; lifterOrder: number; tasks: Task[] };
+  type AreaGroup = { areaId: string | null; areaName: string; areaOrder: number; lifters: LifterGroup[] };
+
+  const blockGroupedByArea: AreaGroup[] = React.useMemo(() => {
+    if (!displayBlock) return [];
+    const areaMap = new Map<string, AreaGroup>();
+    for (const task of blockUndoneTasks) {
+      const project = projects.find(p => p.id === task.projectId);
+      const areaId = project?.areaId ?? null;
+      const lifterId = project?.lifterId ?? null;
+      const area = areas.find(a => a.id === areaId);
+      const lifter = lifters.find(l => l.id === lifterId);
+      const areaKey = areaId ?? '__no_area__';
+      if (!areaMap.has(areaKey)) {
+        areaMap.set(areaKey, { areaId, areaName: area?.name ?? 'Bez obszaru', areaOrder: (area as any)?.order ?? 999, lifters: [] });
+      }
+      const areaGroup = areaMap.get(areaKey)!;
+      let lifterGroup = areaGroup.lifters.find(l => l.lifterId === lifterId);
+      if (!lifterGroup) {
+        lifterGroup = { lifterId, lifterName: lifter?.name ?? 'Bez podobszaru', lifterOrder: 999, tasks: [] };
+        areaGroup.lifters.push(lifterGroup);
+      }
+      lifterGroup.tasks.push(task);
+    }
+    const result = [...areaMap.values()];
+    result.sort((a, b) => a.areaOrder - b.areaOrder);
+    result.forEach(ag => ag.lifters.sort((a, b) => a.lifterOrder - b.lifterOrder));
+    return result;
+  }, [blockUndoneTasks, projects, areas, lifters, displayBlock]);
+
+  type ContextGroup = { contextId: string | null; contextName: string; contextIcon: string; tasks: Task[] };
+
+  const blockGroupedByContext: ContextGroup[] = React.useMemo(() => {
+    if (!displayBlock) return [];
+    const contextMap = new Map<string, ContextGroup>();
+    for (const task of blockUndoneTasks) {
+      const contextId = task.contextId ?? null;
+      const context = contexts.find(c => c.id === contextId);
+      const key = contextId ?? '__no_context__';
+      if (!contextMap.has(key)) {
+        contextMap.set(key, { contextId, contextName: context?.name ?? 'Bez kontekstu', contextIcon: context?.icon ?? '', tasks: [] });
+      }
+      contextMap.get(key)!.tasks.push(task);
+    }
+    const result = [...contextMap.values()];
+    result.sort((a, b) => {
+      if (a.contextId === null) return 1;
+      if (b.contextId === null) return -1;
+      return a.contextName.localeCompare(b.contextName);
+    });
+    return result;
+  }, [blockUndoneTasks, contexts, displayBlock]);
 
   const dateLabel = now.toLocaleDateString('pl-PL', {
     weekday: 'long',
@@ -481,7 +537,21 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
                         </div>
                       )}
-                      {blockUndoneTasks.map(task => (
+                      <div className="agenda-grouping-switcher">
+                        <button
+                          className={`agenda-grouping-btn${taskGrouping === 'none' ? ' active' : ''}`}
+                          onClick={() => setTaskGrouping('none')}
+                        >Brak</button>
+                        <button
+                          className={`agenda-grouping-btn${taskGrouping === 'area' ? ' active' : ''}`}
+                          onClick={() => setTaskGrouping('area')}
+                        >Obszar</button>
+                        <button
+                          className={`agenda-grouping-btn${taskGrouping === 'context' ? ' active' : ''}`}
+                          onClick={() => setTaskGrouping('context')}
+                        >Kontekst</button>
+                      </div>
+                      {taskGrouping === 'none' && blockUndoneTasks.map(task => (
                         <div
                           key={task.id}
                           className="today-task-item"
@@ -510,6 +580,73 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               title="Usuń z bloku"
                             >✕</button>
                           )}
+                        </div>
+                      ))}
+                      {taskGrouping === 'area' && blockGroupedByArea.map(areaGroup => (
+                        <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
+                          <div className="agenda-task-area-header">{areaGroup.areaName}</div>
+                          {areaGroup.lifters.map(lifterGroup => (
+                            <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
+                              <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
+                              {lifterGroup.tasks.map(task => (
+                                <div key={task.id} className="today-task-item">
+                                  <input
+                                    type="checkbox"
+                                    checked={false}
+                                    onChange={() => onUpdateTask(task.id, { done: true })}
+                                    id={`today-task-${task.id}`}
+                                  />
+                                  <label className="today-task-name" htmlFor={`today-task-${task.id}`}>
+                                    {task.name}
+                                  </label>
+                                  <span
+                                    className="today-priority-dot"
+                                    style={{ background: priorityColors[task.priority] }}
+                                    title={task.priority}
+                                  />
+                                  {displayBlock.blockType === 'manual' && (
+                                    <button
+                                      className="today-task-remove-btn"
+                                      onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                      title="Usuń z bloku"
+                                    >✕</button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ))}
+                        </div>
+                      ))}
+                      {taskGrouping === 'context' && blockGroupedByContext.map(ctxGroup => (
+                        <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
+                          <div className="agenda-task-context-header">
+                            {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
+                          </div>
+                          {ctxGroup.tasks.map(task => (
+                            <div key={task.id} className="today-task-item">
+                              <input
+                                type="checkbox"
+                                checked={false}
+                                onChange={() => onUpdateTask(task.id, { done: true })}
+                                id={`today-task-${task.id}`}
+                              />
+                              <label className="today-task-name" htmlFor={`today-task-${task.id}`}>
+                                {task.name}
+                              </label>
+                              <span
+                                className="today-priority-dot"
+                                style={{ background: priorityColors[task.priority] }}
+                                title={task.priority}
+                              />
+                              {displayBlock.blockType === 'manual' && (
+                                <button
+                                  className="today-task-remove-btn"
+                                  onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                  title="Usuń z bloku"
+                                >✕</button>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       ))}
                       {blockDoneTasks.length > 0 && (
