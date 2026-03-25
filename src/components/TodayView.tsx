@@ -35,6 +35,22 @@ function formatTime(minutes: number): string {
   return `${h}:${m}`;
 }
 
+function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return '0:00';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function getCountdownColor(pct: number): string {
+  if (pct > 0.5) return '#4a7c59';
+  if (pct > 0.25) return '#9a7420';
+  if (pct > 0.1) return '#b85a18';
+  return '#b83232';
+}
+
 function getBlockColor(block: WorkBlock, areas: Area[]): string {
   if (block.color) return block.color;
   const area = areas.find(a => a.id === block.areaIds[0]);
@@ -216,6 +232,16 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const blockTasksTotalDuration = blockTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const displayBlockDuration = displayBlock ? displayBlock.endMinutes - displayBlock.startMinutes : 0;
   const blockDurationOverflow = blockTasksTotalDuration > 0 && blockTasksTotalDuration > displayBlockDuration;
+
+  const isCurrentlyActive = displayBlock?.id === currentBlock?.id;
+  const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+  const remainingSeconds = isCurrentlyActive && displayBlock
+    ? Math.max(0, displayBlock.endMinutes * 60 - nowSeconds)
+    : 0;
+  const blockDurationSeconds = displayBlock
+    ? (displayBlock.endMinutes - displayBlock.startMinutes) * 60
+    : 1;
+  const remainingPct = remainingSeconds / blockDurationSeconds;
 
   type LifterGroup = { lifterId: string | null; lifterName: string; lifterOrder: number; tasks: Task[] };
   type AreaGroup = { areaId: string | null; areaName: string; areaOrder: number; lifters: LifterGroup[] };
@@ -514,6 +540,14 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     </span>
                     {displayBlock.id === currentBlock?.id && (
                       <span className="today-active-live-dot" />
+                    )}
+                    {isCurrentlyActive && (
+                      <span
+                        className="today-block-countdown"
+                        style={{ color: getCountdownColor(remainingPct) }}
+                      >
+                        {formatCountdown(remainingSeconds)}
+                      </span>
                     )}
                   </div>
                   <div className="today-active-title-row">
