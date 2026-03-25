@@ -104,7 +104,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   type TaskGrouping = 'none' | 'area' | 'context';
   const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>(() => {
     const saved = localStorage.getItem('dopadone-today-grouping');
-    return (saved === 'area' || saved === 'context') ? saved : 'none';
+    return (saved === 'none' || saved === 'area' || saved === 'context') ? saved : 'area';
   });
   const setAndSaveGrouping = (g: TaskGrouping) => {
     setTaskGrouping(g);
