@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { liveQuery } from 'dexie';
-import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote } from './types';
+import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote, BlockTemplate } from './types';
 import { loadData, queryAllData, isNewUser, seedFromOnboarding } from './data';
 import { OnboardingWizard, SpotlightTour } from './components/OnboardingWizard';
 import type { OnboardingResult } from './components/OnboardingWizard';
@@ -53,6 +53,9 @@ export default function App() {
   const [dropGapTarget, setDropGapTarget] = useState<{ parentProjectId: string | null; insertAfterProjectId: string | null } | null>(null);
   const prevAreasCount = useRef(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [blockTemplates, setBlockTemplates] = useState<BlockTemplate[]>(() => {
+    try { return JSON.parse(localStorage.getItem('dopadone-block-templates') ?? '[]'); } catch { return []; }
+  });
   const [showTour, setShowTour] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
 
@@ -776,6 +779,24 @@ export default function App() {
     await addWorkBlock({ ...rest });
   };
 
+  // Block Templates
+  const addBlockTemplate = (t: Omit<BlockTemplate, 'id'>) => {
+    const newTemplate: BlockTemplate = { ...t, id: crypto.randomUUID() };
+    setBlockTemplates(prev => {
+      const updated = [...prev, newTemplate];
+      localStorage.setItem('dopadone-block-templates', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const deleteBlockTemplate = (id: string) => {
+    setBlockTemplates(prev => {
+      const updated = prev.filter(t => t.id !== id);
+      localStorage.setItem('dopadone-block-templates', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // Events
   const addEvent = async (eventData: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> => {
     let event: CalendarEvent;
@@ -974,6 +995,7 @@ export default function App() {
           contexts={data.contexts}
           workBlocks={data.workBlocks}
           events={data.events}
+          blockTemplates={blockTemplates}
           onUpdateTask={updateTask}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
@@ -994,6 +1016,7 @@ export default function App() {
           tasks={data.tasks}
           workBlocks={data.workBlocks}
           events={data.events}
+          blockTemplates={blockTemplates}
           onAdd={addWorkBlock}
           onUpdate={updateWorkBlock}
           onDelete={deleteWorkBlock}
@@ -1300,12 +1323,15 @@ export default function App() {
           lifters={data.lifters}
           contexts={data.contexts}
           projects={data.projects}
+          blockTemplates={blockTemplates}
           onDeleteArea={deleteArea}
           onDeleteLifter={deleteLifter}
           onReorderAreas={reorderAreas}
           onAddContext={addContext}
           onDeleteContext={deleteContext}
           onRestoreProject={restoreProject}
+          onAddBlockTemplate={addBlockTemplate}
+          onDeleteBlockTemplate={deleteBlockTemplate}
           onClose={() => setModal(null)}
         />
       )}

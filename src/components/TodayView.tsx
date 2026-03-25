@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
-import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent } from '../types';
+import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, BlockTemplate } from '../types';
 import { EventDetailPanel } from './EventDetailPanel';
 import { CreateSlotModal } from './CreateSlotModal';
 
@@ -20,6 +20,7 @@ interface Props {
   onAddWorkBlock: (data: Omit<WorkBlock, 'id'>) => void;
   onUpdateWorkBlock: (id: string, updates: Partial<WorkBlock>) => void;
   onDuplicateWorkBlock: (id: string) => void;
+  blockTemplates?: BlockTemplate[];
 }
 
 function toDateString(d: Date): string {
@@ -113,7 +114,7 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDuplicateWorkBlock }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDuplicateWorkBlock, blockTemplates = [] }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showBlockDone, setShowBlockDone] = useState(false);
@@ -756,6 +757,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           lifters={lifters}
           projects={projects}
           contexts={contexts}
+          blockTemplates={blockTemplates}
           onSaveBlock={data => { onAddWorkBlock(data); setPendingSlot(null); }}
           onSaveEvent={async data => { const ev = await onAddEvent(data); setSelectedEventId(ev.id); setPendingSlot(null); }}
           onClose={() => setPendingSlot(null)}

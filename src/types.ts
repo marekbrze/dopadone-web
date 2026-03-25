@@ -68,6 +68,15 @@ export interface WorkBlock {
   color?: string;
 }
 
+export interface BlockTemplate {
+  id: string;
+  name: string;
+  areaIds: string[];
+  lifterIds: string[];
+  projectIds: string[];
+  contextIds: string[];
+}
+
 export interface CalendarEvent {
   id: string;
   title: string;

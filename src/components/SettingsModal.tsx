@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Context, Project, ExportData, ImportPreview, ImportMode } from '../types';
+import type { Area, Lifter, Context, Project, ExportData, ImportPreview, ImportMode, BlockTemplate } from '../types';
 import { db, isCloudSchema } from '../db';
 import { migrateToCloudSchema, connectToExistingCloud } from '../utils/cloudMigration';
 import {
@@ -19,12 +19,15 @@ interface Props {
   lifters: Lifter[];
   contexts: Context[];
   projects: Project[];
+  blockTemplates?: BlockTemplate[];
   onDeleteArea: (id: string) => void;
   onDeleteLifter: (id: string) => void;
   onReorderAreas: (fromIndex: number, toIndex: number) => void;
   onAddContext: (name: string, icon: string) => void;
   onDeleteContext: (id: string) => void;
   onRestoreProject: (id: string) => void;
+  onAddBlockTemplate?: (t: Omit<BlockTemplate, 'id'>) => void;
+  onDeleteBlockTemplate?: (id: string) => void;
   onClose: () => void;
 }
 
@@ -32,11 +35,13 @@ const EMOJI_OPTIONS = ['📞', '✉️', '💬', '🎨', '💻', '🏙️', '�
 
 export function SettingsModal({
   areas, lifters, contexts, projects,
+  blockTemplates = [],
   onDeleteArea, onDeleteLifter, onReorderAreas,
   onAddContext, onDeleteContext, onRestoreProject,
+  onAddBlockTemplate, onDeleteBlockTemplate,
   onClose,
 }: Props) {
-  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'projekty' | 'backup' | 'sync'>('obszary');
+  const [activeCategory, setActiveCategory] = useState<'obszary' | 'konteksty' | 'projekty' | 'backup' | 'sync' | 'szablony'>('obszary');
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [ctxName, setCtxName] = useState('');
@@ -53,6 +58,33 @@ export function SettingsModal({
   const [importError, setImportError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [autoBackup, setAutoBackup] = useState<ExportData | null>(null);
+  // Block template form state
+  const [showTemplateForm, setShowTemplateForm] = useState(false);
+  const [tplName, setTplName] = useState('');
+  const [tplAreaIds, setTplAreaIds] = useState<string[]>([]);
+  const [tplLifterIds, setTplLifterIds] = useState<string[]>([]);
+  const [tplProjectIds, setTplProjectIds] = useState<string[]>([]);
+  const [tplContextIds, setTplContextIds] = useState<string[]>([]);
+
+  function toggleTplArr<T>(arr: T[], val: T): T[] {
+    return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
+  }
+
+  const tplFilteredLifters = tplAreaIds.length > 0 ? lifters.filter(l => tplAreaIds.includes(l.areaId)) : lifters;
+  const tplFilteredProjects = projects.filter(p => {
+    if (tplAreaIds.length > 0 && !tplAreaIds.includes(p.areaId)) return false;
+    if (tplLifterIds.length > 0 && p.lifterId && !tplLifterIds.includes(p.lifterId)) return false;
+    return !p.archived;
+  });
+
+  const handleSaveTemplate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!tplName.trim() || !onAddBlockTemplate) return;
+    onAddBlockTemplate({ name: tplName.trim(), areaIds: tplAreaIds, lifterIds: tplLifterIds, projectIds: tplProjectIds, contextIds: tplContextIds });
+    setTplName(''); setTplAreaIds([]); setTplLifterIds([]); setTplProjectIds([]); setTplContextIds([]);
+    setShowTemplateForm(false);
+  };
+
   const [cloudUrl, setCloudUrl] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
   const [urlDraft, setUrlDraft] = useState(() => localStorage.getItem('dopadone-cloud-url') ?? '');
   const [urlError, setUrlError] = useState<string | null>(null);
@@ -272,6 +304,12 @@ export function SettingsModal({
             Projekty
           </button>
           <button
+            className={`settings-nav-item ${activeCategory === 'szablony' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('szablony')}
+          >
+            Szablony bloków
+          </button>
+          <button
             className={`settings-nav-item ${activeCategory === 'backup' ? 'active' : ''}`}
             onClick={() => setActiveCategory('backup')}
           >
@@ -291,6 +329,7 @@ export function SettingsModal({
               {activeCategory === 'obszary' ? 'Obszary i podobszary'
                 : activeCategory === 'konteksty' ? 'Konteksty'
                 : activeCategory === 'projekty' ? 'Zarchiwizowane projekty'
+                : activeCategory === 'szablony' ? 'Szablony bloków'
                 : activeCategory === 'backup' ? 'Kopia zapasowa'
                 : 'Synchronizacja'}
             </span>
@@ -421,6 +460,143 @@ export function SettingsModal({
                       </div>
                     </div>
                   ))}
+              </div>
+            )}
+
+            {activeCategory === 'szablony' && (
+              <div>
+                <div className="settings-templates-header">
+                  <button
+                    type="button"
+                    className="sync-btn"
+                    onClick={() => setShowTemplateForm(v => !v)}
+                  >
+                    {showTemplateForm ? 'Anuluj' : '+ Nowy szablon'}
+                  </button>
+                </div>
+
+                {showTemplateForm && (
+                  <form className="settings-template-form" onSubmit={handleSaveTemplate}>
+                    <div className="form-group">
+                      <label>Nazwa szablonu</label>
+                      <input
+                        type="text"
+                        placeholder="np. Praca głęboka"
+                        value={tplName}
+                        onChange={e => setTplName(e.target.value)}
+                        required
+                        autoFocus
+                      />
+                    </div>
+
+                    {areas.length > 0 && (
+                      <div className="agenda-filter-section">
+                        <span className="agenda-filter-label">Obszary</span>
+                        <div className="agenda-filter-checkboxes">
+                          {areas.map(a => {
+                            const active = tplAreaIds.includes(a.id);
+                            return (
+                              <button
+                                key={a.id}
+                                type="button"
+                                className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                                style={active ? { background: a.color, borderColor: a.color } : { borderColor: a.color, color: a.color }}
+                                onClick={() => setTplAreaIds(prev => toggleTplArr(prev, a.id))}
+                              >{a.name}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {tplFilteredLifters.length > 0 && (
+                      <div className="agenda-filter-section">
+                        <span className="agenda-filter-label">Podobszary</span>
+                        <div className="agenda-filter-checkboxes">
+                          {tplFilteredLifters.map(l => (
+                            <button key={l.id} type="button"
+                              className={`agenda-filter-pill ${tplLifterIds.includes(l.id) ? 'active' : ''}`}
+                              onClick={() => setTplLifterIds(prev => toggleTplArr(prev, l.id))}
+                            >{l.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {tplFilteredProjects.length > 0 && (
+                      <div className="agenda-filter-section">
+                        <span className="agenda-filter-label">Projekty</span>
+                        <div className="agenda-filter-checkboxes">
+                          {tplFilteredProjects.map(p => (
+                            <button key={p.id} type="button"
+                              className={`agenda-filter-pill ${tplProjectIds.includes(p.id) ? 'active' : ''}`}
+                              onClick={() => setTplProjectIds(prev => toggleTplArr(prev, p.id))}
+                            >{p.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {contexts.length > 0 && (
+                      <div className="agenda-filter-section">
+                        <span className="agenda-filter-label">Konteksty</span>
+                        <div className="agenda-filter-checkboxes">
+                          {contexts.map(c => (
+                            <button key={c.id} type="button"
+                              className={`agenda-filter-pill ${tplContextIds.includes(c.id) ? 'active' : ''}`}
+                              onClick={() => setTplContextIds(prev => toggleTplArr(prev, c.id))}
+                            >{c.icon} {c.name}</button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: 12 }}>
+                      <button type="submit" className="btn-primary">Zapisz szablon</button>
+                    </div>
+                  </form>
+                )}
+
+                <div className="settings-template-list">
+                  {blockTemplates.length === 0 && !showTemplateForm && (
+                    <p className="empty-hint">Brak zapisanych szablonów</p>
+                  )}
+                  {blockTemplates.map(tpl => {
+                    const tplAreas = areas.filter(a => tpl.areaIds.includes(a.id));
+                    const tplLifters = lifters.filter(l => tpl.lifterIds.includes(l.id));
+                    const tplProjects = projects.filter(p => tpl.projectIds.includes(p.id));
+                    const tplCtxs = contexts.filter(c => tpl.contextIds.includes(c.id));
+                    return (
+                      <div key={tpl.id} className="settings-template-item">
+                        <div className="settings-template-item-header">
+                          <span className="settings-template-name">{tpl.name}</span>
+                          <button
+                            type="button"
+                            className="delete-btn"
+                            onClick={() => onDeleteBlockTemplate?.(tpl.id)}
+                          >✕</button>
+                        </div>
+                        <div className="settings-template-filter-chips">
+                          {tplAreas.map(a => (
+                            <span key={a.id} className="template-chip" style={{ background: a.color + '30', borderColor: a.color, color: a.color }}>{a.name}</span>
+                          ))}
+                          {tplLifters.map(l => (
+                            <span key={l.id} className="template-chip">{l.name}</span>
+                          ))}
+                          {tplProjects.map(p => (
+                            <span key={p.id} className="template-chip">{p.name}</span>
+                          ))}
+                          {tplCtxs.map(c => (
+                            <span key={c.id} className="template-chip">{c.icon} {c.name}</span>
+                          ))}
+                          {tplAreas.length === 0 && tplLifters.length === 0 && tplProjects.length === 0 && tplCtxs.length === 0 && (
+                            <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>brak filtrów</span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 

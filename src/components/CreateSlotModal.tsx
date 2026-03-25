@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import React from 'react';
-import type { Area, Lifter, Project, Context, WorkBlock, CalendarEvent } from '../types';
+import type { Area, Lifter, Project, Context, WorkBlock, CalendarEvent, BlockTemplate } from '../types';
 
 function formatTime(minutes: number): string {
   const h = Math.floor(minutes / 60).toString().padStart(2, '0');
@@ -25,6 +25,7 @@ interface Props {
   lifters: Lifter[];
   projects: Project[];
   contexts: Context[];
+  blockTemplates?: BlockTemplate[];
   onSaveBlock: (data: Omit<WorkBlock, 'id'>) => void;
   onSaveEvent: (data: Omit<CalendarEvent, 'id'>) => void;
   onClose: () => void;
@@ -38,6 +39,7 @@ export function CreateSlotModal({
   lifters,
   projects,
   contexts,
+  blockTemplates = [],
   onSaveBlock,
   onSaveEvent,
   onClose,
@@ -59,6 +61,17 @@ export function CreateSlotModal({
   const [lifterIds, setLifterIds] = useState<string[]>([]);
   const [projectIds, setProjectIds] = useState<string[]>([]);
   const [contextIds, setContextIds] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = blockTemplates.find(t => t.id === templateId);
+    if (!tpl) return;
+    setSelectedTemplateId(templateId);
+    setAreaIds(tpl.areaIds);
+    setLifterIds(tpl.lifterIds);
+    setProjectIds(tpl.projectIds);
+    setContextIds(tpl.contextIds);
+  };
 
   const handleBlockStartChange = (val: string) => {
     const s = parseTime(val);
@@ -221,6 +234,36 @@ export function CreateSlotModal({
                 >Manualny</button>
               </div>
             </div>
+
+            {blockType === 'auto' && blockTemplates.length > 0 && (
+              <div className="form-group template-picker-row">
+                <label>Szablon</label>
+                <div className="template-picker-controls">
+                  <select
+                    className="template-picker-select"
+                    value={selectedTemplateId ?? ''}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val) applyTemplate(val);
+                      else { setSelectedTemplateId(null); }
+                    }}
+                  >
+                    <option value="">Wybierz szablon…</option>
+                    {blockTemplates.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  {selectedTemplateId && (
+                    <button
+                      type="button"
+                      className="template-clear-btn"
+                      onClick={() => setSelectedTemplateId(null)}
+                      title="Wyczyść wybór szablonu"
+                    >×</button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {blockType === 'auto' && (
               <details className="form-group agenda-filters-details">

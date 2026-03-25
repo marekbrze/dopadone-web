@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent } from '../types';
+import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent, BlockTemplate } from '../types';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { EventModal } from './EventModal';
@@ -13,6 +13,7 @@ interface Props {
   tasks: Task[];
   workBlocks: WorkBlock[];
   events: CalendarEvent[];
+  blockTemplates?: BlockTemplate[];
   onAdd: (block: Omit<WorkBlock, 'id'>) => void;
   onUpdate: (id: string, updates: Partial<WorkBlock>) => void;
   onDelete: (id: string) => void;
@@ -88,6 +89,7 @@ interface ModalProps {
   lifters: Lifter[];
   projects: Project[];
   contexts: Context[];
+  blockTemplates?: BlockTemplate[];
   onSave: (data: Omit<WorkBlock, 'id'>) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -102,6 +104,7 @@ function WorkBlockModal({
   lifters,
   projects,
   contexts,
+  blockTemplates = [],
   onSave,
   onDelete,
   onClose,
@@ -117,7 +120,18 @@ function WorkBlockModal({
   const [lifterIds, setLifterIds] = useState<string[]>(block?.lifterIds ?? []);
   const [projectIds, setProjectIds] = useState<string[]>(block?.projectIds ?? []);
   const [contextIds, setContextIds] = useState<string[]>(block?.contextIds ?? []);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
+
+  const applyTemplate = (templateId: string) => {
+    const tpl = blockTemplates.find(t => t.id === templateId);
+    if (!tpl) return;
+    setSelectedTemplateId(templateId);
+    setAreaIds(tpl.areaIds);
+    setLifterIds(tpl.lifterIds);
+    setProjectIds(tpl.projectIds);
+    setContextIds(tpl.contextIds);
+  };
 
   useEffect(() => {
     titleRef.current?.focus();
@@ -219,6 +233,36 @@ function WorkBlockModal({
               >Manualny</button>
             </div>
           </div>
+
+          {blockType === 'auto' && blockTemplates.length > 0 && (
+            <div className="form-group template-picker-row">
+              <label>Szablon</label>
+              <div className="template-picker-controls">
+                <select
+                  className="template-picker-select"
+                  value={selectedTemplateId ?? ''}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val) applyTemplate(val);
+                    else setSelectedTemplateId(null);
+                  }}
+                >
+                  <option value="">Wybierz szablon…</option>
+                  {blockTemplates.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+                {selectedTemplateId && (
+                  <button
+                    type="button"
+                    className="template-clear-btn"
+                    onClick={() => setSelectedTemplateId(null)}
+                    title="Wyczyść wybór szablonu"
+                  >×</button>
+                )}
+              </div>
+            </div>
+          )}
 
           {blockType === 'auto' && (
           <details className="form-group agenda-filters-details">
@@ -358,7 +402,7 @@ function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, blockTemplates = [], onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
@@ -1250,6 +1294,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           lifters={lifters}
           projects={projects}
           contexts={contexts}
+          blockTemplates={blockTemplates}
           onSaveBlock={handleSave}
           onSaveEvent={data => { onAddEvent(data); setPendingSlot(null); }}
           onClose={() => setPendingSlot(null)}
@@ -1266,6 +1311,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           lifters={lifters}
           projects={projects}
           contexts={contexts}
+          blockTemplates={blockTemplates}
           onSave={handleSave}
           onDelete={handleDelete}
           onClose={() => setEditingBlock(null)}
