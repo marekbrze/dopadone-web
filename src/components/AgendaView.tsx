@@ -384,6 +384,8 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const dragMovedRef = useRef(false);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
+  type TaskGrouping = 'area' | 'context';
+  const [leftPanelGrouping, setLeftPanelGrouping] = useState<TaskGrouping>('area');
   const [dropTargetActive, setDropTargetActive] = useState(false);
   const [newBlockTaskName, setNewBlockTaskName] = useState('');
   const [showBlockDone, setShowBlockDone] = useState(false);
@@ -493,6 +495,34 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     result.forEach(ag => ag.lifters.sort((a, b) => a.lifterOrder - b.lifterOrder));
     return result;
   }, [allUndoneTasks, projects, areas, lifters, isManual, selectedBlock]);
+
+  type ContextGroup = { contextId: string | null; contextName: string; contextIcon: string; tasks: Task[] };
+
+  const groupedByContext: ContextGroup[] = React.useMemo(() => {
+    if (!isManual || !selectedBlock) return [];
+    const contextMap = new Map<string, ContextGroup>();
+    for (const task of allUndoneTasks) {
+      const contextId = task.contextId ?? null;
+      const context = contexts.find(c => c.id === contextId);
+      const key = contextId ?? '__no_context__';
+      if (!contextMap.has(key)) {
+        contextMap.set(key, {
+          contextId,
+          contextName: context?.name ?? 'Bez kontekstu',
+          contextIcon: context?.icon ?? '',
+          tasks: [],
+        });
+      }
+      contextMap.get(key)!.tasks.push(task);
+    }
+    const result = [...contextMap.values()];
+    result.sort((a, b) => {
+      if (a.contextId === null) return 1;
+      if (b.contextId === null) return -1;
+      return a.contextName.localeCompare(b.contextName);
+    });
+    return result;
+  }, [allUndoneTasks, contexts, isManual, selectedBlock]);
 
   const handleAddTaskToBlock = (taskId: string) => {
     if (!selectedBlock) return;
@@ -694,42 +724,86 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               onChange={e => setLeftPanelSearch(e.target.value)}
             />
           </div>
+          <div className="agenda-grouping-switcher">
+            <button
+              className={`agenda-grouping-btn${leftPanelGrouping === 'area' ? ' active' : ''}`}
+              onClick={() => setLeftPanelGrouping('area')}
+            >Obszar</button>
+            <button
+              className={`agenda-grouping-btn${leftPanelGrouping === 'context' ? ' active' : ''}`}
+              onClick={() => setLeftPanelGrouping('context')}
+            >Kontekst</button>
+          </div>
           <div className="agenda-block-panel-body">
-            {groupedTasks.length === 0
-              ? <p className="agenda-block-panel-empty">Brak zadań</p>
-              : groupedTasks.map(areaGroup => (
-                  <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
-                    <div className="agenda-task-area-header">{areaGroup.areaName}</div>
-                    {areaGroup.lifters.map(lifterGroup => (
-                      <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
-                        <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
-                        {lifterGroup.tasks.map(task => {
-                          const project = projects.find(p => p.id === task.projectId);
-                          return (
-                            <div
-                              key={task.id}
-                              className="agenda-block-task-item agenda-left-task-item"
-                              draggable
-                              onDragStart={() => setTaskDragId(task.id)}
-                              onDragEnd={() => setTaskDragId(null)}
-                            >
-                              <div className="agenda-block-task-info">
-                                <span className="agenda-block-task-name">{task.name}</span>
-                                {project && <span className="agenda-block-task-project">{project.name}</span>}
+            {leftPanelGrouping === 'area' && (
+              groupedTasks.length === 0
+                ? <p className="agenda-block-panel-empty">Brak zadań</p>
+                : groupedTasks.map(areaGroup => (
+                    <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
+                      <div className="agenda-task-area-header">{areaGroup.areaName}</div>
+                      {areaGroup.lifters.map(lifterGroup => (
+                        <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
+                          <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
+                          {lifterGroup.tasks.map(task => {
+                            const project = projects.find(p => p.id === task.projectId);
+                            return (
+                              <div
+                                key={task.id}
+                                className="agenda-block-task-item agenda-left-task-item"
+                                draggable
+                                onDragStart={() => setTaskDragId(task.id)}
+                                onDragEnd={() => setTaskDragId(null)}
+                              >
+                                <div className="agenda-block-task-info">
+                                  <span className="agenda-block-task-name">{task.name}</span>
+                                  {project && <span className="agenda-block-task-project">{project.name}</span>}
+                                </div>
+                                <button
+                                  className="agenda-left-task-add-btn"
+                                  onClick={() => handleAddTaskToBlock(task.id)}
+                                  title="Dodaj do bloku"
+                                >+</button>
                               </div>
-                              <button
-                                className="agenda-left-task-add-btn"
-                                onClick={() => handleAddTaskToBlock(task.id)}
-                                title="Dodaj do bloku"
-                              >+</button>
-                            </div>
-                          );
-                        })}
+                            );
+                          })}
+                        </div>
+                      ))}
+                    </div>
+                  ))
+            )}
+            {leftPanelGrouping === 'context' && (
+              groupedByContext.length === 0
+                ? <p className="agenda-block-panel-empty">Brak zadań</p>
+                : groupedByContext.map(ctxGroup => (
+                    <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
+                      <div className="agenda-task-context-header">
+                        {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
                       </div>
-                    ))}
-                  </div>
-                ))
-            }
+                      {ctxGroup.tasks.map(task => {
+                        const project = projects.find(p => p.id === task.projectId);
+                        return (
+                          <div
+                            key={task.id}
+                            className="agenda-block-task-item agenda-left-task-item"
+                            draggable
+                            onDragStart={() => setTaskDragId(task.id)}
+                            onDragEnd={() => setTaskDragId(null)}
+                          >
+                            <div className="agenda-block-task-info">
+                              <span className="agenda-block-task-name">{task.name}</span>
+                              {project && <span className="agenda-block-task-project">{project.name}</span>}
+                            </div>
+                            <button
+                              className="agenda-left-task-add-btn"
+                              onClick={() => handleAddTaskToBlock(task.id)}
+                              title="Dodaj do bloku"
+                            >+</button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ))
+            )}
           </div>
         </div>
       )}
