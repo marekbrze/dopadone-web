@@ -1315,6 +1315,41 @@ body {
   border-color: rgba(155, 50, 38, 0.40);
 }
 
+.project-danger-zone {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.project-danger-zone .delete-task-btn {
+  margin-top: 0;
+}
+
+.archive-project-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  align-self: flex-start;
+}
+
+.archive-project-btn:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
 .next-action-btn {
   background: transparent;
   border: 1px solid rgba(60, 120, 70, 0.30);

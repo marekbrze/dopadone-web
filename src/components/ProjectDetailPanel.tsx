@@ -212,8 +212,10 @@ export function ProjectDetailPanel({ project, tasks, onUpdate, onArchive, onDele
           </div>
         </div>
 
-        <button className="delete-task-btn" style={{ background: 'var(--surface2)', color: 'var(--text)' }} onClick={onArchive}>Archiwizuj projekt</button>
-        <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
+        <div className="project-danger-zone">
+          <button className="archive-project-btn" onClick={onArchive}>Archiwizuj projekt</button>
+          <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
+        </div>
       </div>
     </div>
 
