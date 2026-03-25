@@ -125,7 +125,7 @@ export function ProjectNotesPanel({ notes, onCreate, onUpdate, onDelete }: Props
   const [activeNoteId, setActiveNoteId] = useState<string | null>(notes[0]?.id ?? null);
   const [composerContent, setComposerContent] = useState('');
   const [composerTitle, setComposerTitle] = useState('');
-  const [showComposerTitle, setShowComposerTitle] = useState(true);
+  const [composerFocused, setComposerFocused] = useState(false);
 
   const feedRef = useRef<HTMLDivElement>(null);
   const noteRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -197,7 +197,6 @@ export function ProjectNotesPanel({ notes, onCreate, onUpdate, onDelete }: Props
     await onCreate({ title: composerTitle.trim() || undefined, content });
     setComposerContent('');
     setComposerTitle('');
-    setShowComposerTitle(false);
   };
 
   const handleComposerKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -314,35 +313,39 @@ export function ProjectNotesPanel({ notes, onCreate, onUpdate, onDelete }: Props
         </div>
 
         {/* Composer */}
-        <div className="notes-composer">
-          {showComposerTitle && (
+        <div className={`notes-composer${composerFocused ? ' focused' : ''}`}>
+          <div className="notes-composer-card">
             <input
               className="composer-title-input"
-              placeholder="Tytuł notatki (opcjonalny)"
+              placeholder="Tytuł (opcjonalny)"
               value={composerTitle}
               onChange={e => setComposerTitle(e.target.value)}
+              onFocus={() => setComposerFocused(true)}
+              onBlur={() => setComposerFocused(false)}
             />
-          )}
-          <div className="composer-row">
-            <button
-              className="composer-title-toggle"
-              onClick={() => setShowComposerTitle(v => !v)}
-              title={showComposerTitle ? 'Ukryj tytuł' : 'Dodaj tytuł'}
-            >T</button>
+            <div className="composer-divider" />
             <textarea
               className="composer-textarea"
-              placeholder="Napisz notatkę… (Enter = wyślij, Shift+Enter = nowa linia)"
+              placeholder="Napisz notatkę…"
               value={composerContent}
-              onChange={e => setComposerContent(e.target.value)}
+              onChange={e => {
+                setComposerContent(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = e.target.scrollHeight + 'px';
+              }}
               onKeyDown={handleComposerKeyDown}
+              onFocus={() => setComposerFocused(true)}
+              onBlur={() => setComposerFocused(false)}
               rows={2}
             />
-            <button
-              className="composer-send-btn"
-              onClick={submitComposer}
-              disabled={!composerContent.trim()}
-              title="Dodaj notatkę"
-            >↑</button>
+            <div className="composer-footer">
+              <span className="composer-hint">Enter ↵ wyślij · Shift+Enter nowa linia</span>
+              <button
+                className="composer-send-btn"
+                onClick={submitComposer}
+                disabled={!composerContent.trim()}
+              >Dodaj →</button>
+            </div>
           </div>
         </div>
       </div>
