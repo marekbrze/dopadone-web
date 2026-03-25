@@ -102,7 +102,14 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [showBlockDone, setShowBlockDone] = useState(false);
   type TaskGrouping = 'none' | 'area' | 'context';
-  const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>('none');
+  const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>(() => {
+    const saved = localStorage.getItem('dopadone-today-grouping');
+    return (saved === 'area' || saved === 'context') ? saved : 'none';
+  });
+  const setAndSaveGrouping = (g: TaskGrouping) => {
+    setTaskGrouping(g);
+    localStorage.setItem('dopadone-today-grouping', g);
+  };
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
@@ -178,7 +185,6 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   }, [workBlocks]);
 
   useEffect(() => { setShowBlockDone(false); }, [selectedBlockId]);
-  useEffect(() => { setTaskGrouping('none'); }, [selectedBlockId]);
 
   useEffect(() => {
     if (selectedEventId && !todayEvents.find(e => e.id === selectedEventId)) {
@@ -516,7 +522,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       <select
                         className="today-grouping-select"
                         value={taskGrouping}
-                        onChange={e => setTaskGrouping(e.target.value as TaskGrouping)}
+                        onChange={e => setAndSaveGrouping(e.target.value as TaskGrouping)}
                       >
                         <option value="none">Brak grupowania</option>
                         <option value="area">Obszar</option>
