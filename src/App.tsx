@@ -436,6 +436,16 @@ export default function App() {
     }
   };
 
+  const addNoteForProject = async (projectId: string, noteData: { title?: string; content: string }) => {
+    const now = new Date().toISOString();
+    if (isCloudSchema()) {
+      await db.projectNotes.add({ projectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now });
+    } else {
+      const note: ProjectNote = { id: newId(), projectId, content: noteData.content, title: noteData.title ?? null, createdAt: now, updatedAt: now };
+      await db.projectNotes.put(note);
+    }
+  };
+
   const updateNote = async (noteId: string, updates: Partial<ProjectNote>) => {
     await db.projectNotes.update(noteId, updates);
     setData(d => d ? ({ ...d, projectNotes: d.projectNotes.map(n => n.id === noteId ? { ...n, ...updates } : n) }) : d);
@@ -1035,6 +1045,10 @@ export default function App() {
           onAddWorkBlock={addWorkBlock}
           onUpdateWorkBlock={updateWorkBlock}
           onDuplicateWorkBlock={duplicateWorkBlock}
+          notes={data.projectNotes}
+          onAddNote={addNoteForProject}
+          onUpdateNote={updateNote}
+          onDeleteNote={deleteNote}
         />
       )}
 
