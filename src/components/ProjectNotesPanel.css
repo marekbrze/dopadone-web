@@ -188,13 +188,6 @@
   font-size: 13px;
   line-height: 1.6;
   color: var(--text);
-  cursor: pointer;
-  border-radius: 4px;
-  transition: background 0.12s;
-}
-
-.note-content:hover {
-  background: var(--surface2);
 }
 
 .note-meta {
@@ -443,4 +436,15 @@
   padding: 1px 5px;
   font-family: 'IBM Plex Mono', 'Fira Code', monospace;
   font-size: 12px;
+}
+
+.note-content .md-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+}
+
+.note-content .md-link:hover {
+  opacity: 0.75;
 }
