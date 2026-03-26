@@ -909,6 +909,11 @@ export default function App() {
         <div className="logo">Dopadone</div>
         <div className="view-tabs">
           <button
+            className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
+            onClick={() => setCurrentView('today')}
+            data-tour="today"
+          >Dziś</button>
+          <button
             className={`view-tab inbox-tab ${currentView === 'inbox' ? 'active' : ''}`}
             onClick={() => setCurrentView('inbox')}
             data-tour="inbox"
@@ -918,34 +923,29 @@ export default function App() {
               <span className="inbox-badge">{inboxTaskCount}</span>
             )}
           </button>
-          <button
-            className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
-            onClick={() => setCurrentView('today')}
-            data-tour="today"
-          >Dziś</button>
-          <button
-            className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
-            onClick={() => setCurrentView('agenda')}
-            data-tour="agenda"
-          >Agenda</button>
+          {processingBadgeCount > 0 && (
+            <button
+              className={`view-tab processing-tab ${currentView === 'processing' ? 'active' : ''}`}
+              onClick={() => setCurrentView('processing')}
+            >
+              Procesowanie
+              <span className="inbox-badge">{processingBadgeCount}</span>
+            </button>
+          )}
           <button
             className={`view-tab ${currentView === 'plan' ? 'active' : ''}`}
             onClick={() => setCurrentView('plan')}
             data-tour="plan"
-          >Planowanie</button>
+          >Projekty</button>
+          <button
+            className={`view-tab ${currentView === 'agenda' ? 'active' : ''}`}
+            onClick={() => setCurrentView('agenda')}
+            data-tour="agenda"
+          >Kalendarz</button>
           <button
             className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
             onClick={() => setCurrentView('do')}
-          >Robienie</button>
-          <button
-            className={`view-tab processing-tab ${currentView === 'processing' ? 'active' : ''}`}
-            onClick={() => setCurrentView('processing')}
-          >
-            Procesowanie
-            {processingBadgeCount > 0 && (
-              <span className="inbox-badge">{processingBadgeCount}</span>
-            )}
-          </button>
+          >Kanban</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia" data-tour="settings">
@@ -959,6 +959,10 @@ export default function App() {
             <button className="mobile-nav-close" onClick={() => setMobileNavOpen(false)}>✕</button>
             <nav className="mobile-nav-items">
               <button
+                className={`mobile-nav-item ${currentView === 'today' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('today'); setMobileNavOpen(false); }}
+              >Dziś</button>
+              <button
                 className={`mobile-nav-item ${currentView === 'inbox' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('inbox'); setMobileNavOpen(false); }}
               >
@@ -967,31 +971,27 @@ export default function App() {
                   <span className="mobile-nav-badge">{inboxTaskCount}</span>
                 )}
               </button>
-              <button
-                className={`mobile-nav-item ${currentView === 'today' ? 'active' : ''}`}
-                onClick={() => { setCurrentView('today'); setMobileNavOpen(false); }}
-              >Dziś</button>
-              <button
-                className={`mobile-nav-item ${currentView === 'agenda' ? 'active' : ''}`}
-                onClick={() => { setCurrentView('agenda'); setMobileNavOpen(false); }}
-              >Agenda</button>
+              {processingBadgeCount > 0 && (
+                <button
+                  className={`mobile-nav-item ${currentView === 'processing' ? 'active' : ''}`}
+                  onClick={() => { setCurrentView('processing'); setMobileNavOpen(false); }}
+                >
+                  Procesowanie
+                  <span className="mobile-nav-badge">{processingBadgeCount}</span>
+                </button>
+              )}
               <button
                 className={`mobile-nav-item ${currentView === 'plan' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('plan'); setMobileNavOpen(false); }}
-              >Planowanie</button>
+              >Projekty</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'agenda' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('agenda'); setMobileNavOpen(false); }}
+              >Kalendarz</button>
               <button
                 className={`mobile-nav-item ${currentView === 'do' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('do'); setMobileNavOpen(false); }}
-              >Robienie</button>
-              <button
-                className={`mobile-nav-item ${currentView === 'processing' ? 'active' : ''}`}
-                onClick={() => { setCurrentView('processing'); setMobileNavOpen(false); }}
-              >
-                Procesowanie
-                {processingBadgeCount > 0 && (
-                  <span className="mobile-nav-badge">{processingBadgeCount}</span>
-                )}
-              </button>
+              >Kanban</button>
             </nav>
           </div>
         </div>
