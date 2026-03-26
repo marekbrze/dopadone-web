@@ -1044,6 +1044,7 @@ export default function App() {
           onAddEventTask={addEventTask}
           onAddWorkBlock={addWorkBlock}
           onUpdateWorkBlock={updateWorkBlock}
+          onDeleteWorkBlock={deleteWorkBlock}
           onDuplicateWorkBlock={duplicateWorkBlock}
           notes={data.projectNotes}
           onAddNote={addNoteForProject}

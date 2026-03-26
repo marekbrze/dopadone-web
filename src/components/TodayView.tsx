@@ -4,6 +4,7 @@ import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, Bl
 import { EventDetailPanel } from './EventDetailPanel';
 import { ActiveEventPanel } from './ActiveEventPanel';
 import { CreateSlotModal } from './CreateSlotModal';
+import { WorkBlockModal } from './WorkBlockModal';
 
 interface Props {
   areas: Area[];
@@ -20,6 +21,7 @@ interface Props {
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
   onAddWorkBlock: (data: Omit<WorkBlock, 'id'>) => void;
   onUpdateWorkBlock: (id: string, updates: Partial<WorkBlock>) => void;
+  onDeleteWorkBlock: (id: string) => void;
   onDuplicateWorkBlock: (id: string) => void;
   blockTemplates?: BlockTemplate[];
   notes: ProjectNote[];
@@ -119,9 +121,10 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
+  const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [showBlockDone, setShowBlockDone] = useState(false);
   type TaskGrouping = 'none' | 'area' | 'context';
   const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>(() => {
@@ -719,6 +722,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         onClick={() => onDuplicateWorkBlock(displayBlock.id)}
                         title="Duplikuj blok"
                       >Duplikuj</button>
+                      <button
+                        className="today-block-duplicate-btn"
+                        onClick={() => setEditingBlock(displayBlock)}
+                        title="Edytuj blok"
+                      >Edytuj blok</button>
                     </div>
                   </div>
                 </div>
@@ -912,6 +920,21 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           onSaveBlock={data => { onAddWorkBlock(data); setPendingSlot(null); }}
           onSaveEvent={async data => { const ev = await onAddEvent(data); setSelectedEventId(ev.id); setPendingSlot(null); }}
           onClose={() => setPendingSlot(null)}
+        />
+      )}
+      {editingBlock && (
+        <WorkBlockModal
+          block={editingBlock}
+          defaultDate={editingBlock.date}
+          defaultStartMinutes={editingBlock.startMinutes}
+          areas={areas}
+          lifters={lifters}
+          projects={projects}
+          contexts={contexts}
+          blockTemplates={blockTemplates}
+          onSave={data => { onUpdateWorkBlock(editingBlock.id, data); setEditingBlock(null); }}
+          onDelete={() => { onDeleteWorkBlock(editingBlock.id); setEditingBlock(null); setSelectedBlockId(null); }}
+          onClose={() => setEditingBlock(null)}
         />
       )}
     </>
