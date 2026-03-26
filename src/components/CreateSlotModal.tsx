@@ -49,10 +49,12 @@ export function CreateSlotModal({
 
   useEffect(() => {
     titleRef.current?.focus();
-  }, [tab]);
+  }, []);
+
+  // ── Shared state ─────────────────────────────────────────────────────────────
+  const [title, setTitle] = useState('');
 
   // ── Block form state ────────────────────────────────────────────────────────
-  const [blockTitle, setBlockTitle] = useState('');
   const [blockDate, setBlockDate] = useState(defaultDate);
   const [blockStartMin, setBlockStartMin] = useState(defaultStartMinutes);
   const [blockEndMin, setBlockEndMin] = useState(defaultEndMinutes);
@@ -91,9 +93,9 @@ export function CreateSlotModal({
 
   const handleBlockSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!blockTitle.trim()) return;
+    if (!title.trim()) return;
     onSaveBlock({
-      title: blockTitle.trim(),
+      title: title.trim(),
       date: blockDate,
       startMinutes: blockStartMin,
       endMinutes: blockEndMin,
@@ -107,7 +109,6 @@ export function CreateSlotModal({
   };
 
   // ── Event form state ────────────────────────────────────────────────────────
-  const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState(defaultDate);
   const [allDay, setAllDay] = useState(false);
   const [eventStartMin, setEventStartMin] = useState(defaultStartMinutes);
@@ -141,9 +142,9 @@ export function CreateSlotModal({
 
   const handleEventSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eventTitle.trim()) return;
+    if (!title.trim()) return;
     onSaveEvent({
-      title: eventTitle.trim(),
+      title: title.trim(),
       date: eventDate,
       allDay,
       startMinutes: allDay ? undefined : eventStartMin,
@@ -166,6 +167,20 @@ export function CreateSlotModal({
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
+        <div className="modal-body" style={{ paddingBottom: 0 }}>
+          <div className="form-group">
+            <label>Tytuł</label>
+            <input
+              ref={titleRef}
+              type="text"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              placeholder={tab === 'block' ? 'np. Praca głęboka' : 'np. Spotkanie z zespołem'}
+              required
+            />
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="create-slot-tabs">
           <button
@@ -183,18 +198,6 @@ export function CreateSlotModal({
         {/* ── Block form ── */}
         {tab === 'block' && (
           <form onSubmit={handleBlockSubmit} className="modal-body">
-            <div className="form-group">
-              <label>Tytuł</label>
-              <input
-                ref={titleRef}
-                type="text"
-                value={blockTitle}
-                onChange={e => setBlockTitle(e.target.value)}
-                placeholder="np. Praca głęboka"
-                required
-              />
-            </div>
-
             <div className="form-group">
               <label>Data</label>
               <input type="date" value={blockDate} onChange={e => setBlockDate(e.target.value)} />
@@ -359,55 +362,6 @@ export function CreateSlotModal({
         {tab === 'event' && (
           <form onSubmit={handleEventSubmit} className="modal-body">
             <div className="form-group">
-              <label>Tytuł</label>
-              <input
-                ref={titleRef}
-                type="text"
-                value={eventTitle}
-                onChange={e => setEventTitle(e.target.value)}
-                placeholder="np. Spotkanie z zespołem"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label>Data</label>
-              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label className="event-modal-check-label">
-                <input
-                  type="checkbox"
-                  checked={allDay}
-                  onChange={e => setAllDay(e.target.checked)}
-                />
-                Cały dzień
-              </label>
-            </div>
-
-            {!allDay && (
-              <div className="form-group agenda-time-row">
-                <div>
-                  <label>Od</label>
-                  <input
-                    type="time"
-                    value={formatTime(eventStartMin)}
-                    onChange={e => handleEventStartChange(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label>Do</label>
-                  <input
-                    type="time"
-                    value={formatTime(eventEndMin)}
-                    onChange={e => setEventEndMin(parseTime(e.target.value))}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="form-group">
               <label>Projekt</label>
               <div className="event-project-picker-wrap" ref={projectPickerRef}>
                 <button
@@ -450,6 +404,43 @@ export function CreateSlotModal({
                 )}
               </div>
             </div>
+
+            <div className="form-group">
+              <label>Data</label>
+              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+            </div>
+
+            <div className="form-group">
+              <label className="event-modal-check-label">
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  onChange={e => setAllDay(e.target.checked)}
+                />
+                Cały dzień
+              </label>
+            </div>
+
+            {!allDay && (
+              <div className="form-group agenda-time-row">
+                <div>
+                  <label>Od</label>
+                  <input
+                    type="time"
+                    value={formatTime(eventStartMin)}
+                    onChange={e => handleEventStartChange(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label>Do</label>
+                  <input
+                    type="time"
+                    value={formatTime(eventEndMin)}
+                    onChange={e => setEventEndMin(parseTime(e.target.value))}
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="modal-footer">
               <button type="submit" className="btn-primary">Dodaj</button>

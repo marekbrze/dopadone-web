@@ -110,43 +110,6 @@ export function EventModal({
           </div>
 
           <div className="form-group">
-            <label>Data</label>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
-          </div>
-
-          <div className="form-group">
-            <label className="event-modal-check-label">
-              <input
-                type="checkbox"
-                checked={allDay}
-                onChange={e => setAllDay(e.target.checked)}
-              />
-              Cały dzień
-            </label>
-          </div>
-
-          {!allDay && (
-            <div className="form-group agenda-time-row">
-              <div>
-                <label>Od</label>
-                <input
-                  type="time"
-                  value={formatTime(startMin)}
-                  onChange={e => handleStartChange(e.target.value)}
-                />
-              </div>
-              <div>
-                <label>Do</label>
-                <input
-                  type="time"
-                  value={formatTime(endMin)}
-                  onChange={e => setEndMin(parseTime(e.target.value))}
-                />
-              </div>
-            </div>
-          )}
-
-          <div className="form-group">
             <label>Projekt</label>
             <div className="event-project-picker-wrap" ref={projectPickerRef}>
               <button
@@ -189,6 +152,43 @@ export function EventModal({
               )}
             </div>
           </div>
+
+          <div className="form-group">
+            <label>Data</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
+          </div>
+
+          <div className="form-group">
+            <label className="event-modal-check-label">
+              <input
+                type="checkbox"
+                checked={allDay}
+                onChange={e => setAllDay(e.target.checked)}
+              />
+              Cały dzień
+            </label>
+          </div>
+
+          {!allDay && (
+            <div className="form-group agenda-time-row">
+              <div>
+                <label>Od</label>
+                <input
+                  type="time"
+                  value={formatTime(startMin)}
+                  onChange={e => handleStartChange(e.target.value)}
+                />
+              </div>
+              <div>
+                <label>Do</label>
+                <input
+                  type="time"
+                  value={formatTime(endMin)}
+                  onChange={e => setEndMin(parseTime(e.target.value))}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="modal-footer">
             {isEdit && onDelete && (
