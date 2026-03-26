@@ -1340,16 +1340,31 @@ export default function App() {
         })()}
         {!selectedTask && !editingLifterId && editingProjectId && (() => {
           const project = data.projects.find(p => p.id === editingProjectId);
-          return project ? (
+          if (!project) return null;
+          const projectLifters = data.lifters.filter(l => l.areaId === project.areaId);
+          const descendants = collectProjectIds(editingProjectId, data.projects);
+          const parentCandidates = data.projects.filter(p =>
+            p.areaId === project.areaId &&
+            p.id !== editingProjectId &&
+            !descendants.includes(p.id)
+          );
+          return (
             <ProjectDetailPanel
               project={project}
               tasks={data.tasks.filter(t => t.projectId === editingProjectId)}
+              lifters={projectLifters}
+              parentCandidates={parentCandidates}
               onUpdate={updates => updateProject(editingProjectId, updates)}
+              onMoveToParent={parentId => reparentProject(editingProjectId, parentId)}
+              onMoveToLifter={lifterId => {
+                if (lifterId) moveProjectToLifter(editingProjectId, lifterId);
+                else updateProject(editingProjectId, { lifterId: null });
+              }}
               onArchive={() => { archiveProject(editingProjectId); setEditingProjectId(null); }}
               onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
               onClose={() => setEditingProjectId(null)}
             />
-          ) : null;
+          );
         })()}
       </main>
 
