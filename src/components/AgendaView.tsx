@@ -48,16 +48,6 @@ function getWeekDates(anchor: string): string[] {
   });
 }
 
-function formatTime(minutes: number): string {
-  const h = Math.floor(minutes / 60).toString().padStart(2, '0');
-  const m = (minutes % 60).toString().padStart(2, '0');
-  return `${h}:${m}`;
-}
-
-function parseTime(value: string): number {
-  const [h, m] = value.split(':').map(Number);
-  return h * 60 + m;
-}
 
 function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
