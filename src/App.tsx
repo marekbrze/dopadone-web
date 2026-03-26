@@ -1347,7 +1347,7 @@ export default function App() {
             p.areaId === project.areaId &&
             p.id !== editingProjectId &&
             !descendants.includes(p.id)
-          );
+          ).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
           return (
             <ProjectDetailPanel
               project={project}
