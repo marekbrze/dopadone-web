@@ -44,6 +44,7 @@ export default function App() {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
+  const [showPlanDone, setShowPlanDone] = useState(false);
   const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox' | 'processing'>('today');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
@@ -112,6 +113,8 @@ export default function App() {
         setDataInitialized(true);
       });
   }, [applyInitialData]);
+
+  useEffect(() => { setShowPlanDone(false); }, [selectedProjectId]);
 
   // Subscribe to live updates (e.g. from Dexie Cloud sync) — starts after data is ready
   useEffect(() => {
@@ -235,6 +238,9 @@ export default function App() {
     () => (data && selectedProjectId) ? data.tasks.filter(t => t.projectId === selectedProjectId) : [],
     [data, selectedProjectId]
   );
+
+  const undoneTasks = useMemo(() => tasks.filter(t => !t.done), [tasks]);
+  const doneTasks = useMemo(() => tasks.filter(t => t.done), [tasks]);
 
   const projectNotes = useMemo(
     () => (data && selectedProjectId) ? (data.projectNotes ?? []).filter(n => n.projectId === selectedProjectId) : [],
@@ -1231,12 +1237,12 @@ export default function App() {
             >
               {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
               {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
-              {tasks.map(task => {
+              {undoneTasks.map(task => {
                 const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
                 return (
                   <div
                     key={task.id}
-                    className={`task-item ${task.done ? 'done' : ''} ${task.id === selectedTaskId ? 'selected' : ''}`}
+                    className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
                     draggable
                     onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
                     onDragEnd={() => setDragPayload(null)}
@@ -1245,8 +1251,8 @@ export default function App() {
                     <div className="task-main">
                       <input
                         type="checkbox"
-                        checked={task.done}
-                        onChange={() => updateTask(task.id, { done: !task.done })}
+                        checked={false}
+                        onChange={() => updateTask(task.id, { done: true })}
                         onClick={e => e.stopPropagation()}
                       />
                       <span className="task-name">{task.name}</span>
@@ -1257,6 +1263,42 @@ export default function App() {
                   </div>
                 );
               })}
+              {doneTasks.length > 0 && (
+                <div className="block-done-section">
+                  <button
+                    className="block-done-toggle"
+                    onClick={() => setShowPlanDone(v => !v)}
+                  >
+                    {showPlanDone ? '▾' : '▸'} Ukończone ({doneTasks.length})
+                  </button>
+                  {showPlanDone && doneTasks.map(task => {
+                    const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`task-item done ${task.id === selectedTaskId ? 'selected' : ''}`}
+                        draggable
+                        onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
+                        onDragEnd={() => setDragPayload(null)}
+                        onClick={() => selectTask(task.id)}
+                      >
+                        <div className="task-main">
+                          <input
+                            type="checkbox"
+                            checked={true}
+                            onChange={() => updateTask(task.id, { done: false })}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <span className="task-name">{task.name}</span>
+                          <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                          {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                          {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
           {projectTab === 'notes' && selectedProjectId && (
