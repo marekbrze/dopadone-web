@@ -765,13 +765,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             id={`today-task-${task.id}`}
                             onClick={e => e.stopPropagation()}
                           />
-                          <label
-                            className="today-task-name"
-                            htmlFor={`today-task-${task.id}`}
-                            onClick={e => e.stopPropagation()}
-                          >
-                            {task.name}
-                          </label>
+                          <span className="today-task-name">{task.name}</span>
                           <span
                             className="today-priority-dot"
                             style={{ background: priorityColors[task.priority] }}
@@ -805,9 +799,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                     id={`today-task-${task.id}`}
                                     onClick={e => e.stopPropagation()}
                                   />
-                                  <label className="today-task-name" htmlFor={`today-task-${task.id}`} onClick={e => e.stopPropagation()}>
-                                    {task.name}
-                                  </label>
+                                  <span className="today-task-name">{task.name}</span>
                                   <span
                                     className="today-priority-dot"
                                     style={{ background: priorityColors[task.priority] }}
@@ -844,9 +836,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                 id={`today-task-${task.id}`}
                                 onClick={e => e.stopPropagation()}
                               />
-                              <label className="today-task-name" htmlFor={`today-task-${task.id}`} onClick={e => e.stopPropagation()}>
-                                {task.name}
-                              </label>
+                              <span className="today-task-name">{task.name}</span>
                               <span
                                 className="today-priority-dot"
                                 style={{ background: priorityColors[task.priority] }}
@@ -881,13 +871,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                 id={`today-task-done-${task.id}`}
                                 onClick={e => e.stopPropagation()}
                               />
-                              <label
-                                className="today-task-name"
-                                htmlFor={`today-task-done-${task.id}`}
-                                onClick={e => e.stopPropagation()}
-                              >
-                                {task.name}
-                              </label>
+                              <span className="today-task-name">{task.name}</span>
                               <span
                                 className="today-priority-dot"
                                 style={{ background: priorityColors[task.priority] }}
