@@ -1038,6 +1038,8 @@ export default function App() {
           events={data.events}
           blockTemplates={blockTemplates}
           onUpdateTask={updateTask}
+          onDeleteTask={deleteTask}
+          onCompleteWithNextAction={handleCompleteWithNextAction}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}

@@ -2320,7 +2320,8 @@ body {
   overflow: hidden;
 }
 
-.agenda-view .task-detail-panel {
+.agenda-view .task-detail-panel,
+.today-body .task-detail-panel {
   width: 300px;
   flex-shrink: 0;
 }
@@ -3322,7 +3323,13 @@ body {
   gap: 10px;
   padding: 11px 0;
   border-bottom: 1px solid var(--border-light);
-  cursor: default;
+  cursor: pointer;
+}
+
+.today-task-item.selected {
+  background: var(--surface2);
+  margin: 0 -16px;
+  padding: 11px 16px;
 }
 
 .today-task-item input[type="checkbox"] {

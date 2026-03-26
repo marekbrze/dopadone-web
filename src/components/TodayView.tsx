@@ -5,6 +5,7 @@ import { EventDetailPanel } from './EventDetailPanel';
 import { ActiveEventPanel } from './ActiveEventPanel';
 import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
+import { TaskDetailPanel } from './TaskDetailPanel';
 
 interface Props {
   areas: Area[];
@@ -15,6 +16,8 @@ interface Props {
   workBlocks: WorkBlock[];
   events: CalendarEvent[];
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
+  onDeleteTask: (id: string) => void;
+  onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
   onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
@@ -121,7 +124,7 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
@@ -136,6 +139,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     localStorage.setItem('dopadone-today-grouping', g);
   };
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
     blockId: string;
@@ -751,17 +755,20 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 {taskGrouping === 'none' && blockUndoneTasks.map(task => (
                         <div
                           key={task.id}
-                          className="today-task-item"
+                          className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
                         >
                           <input
                             type="checkbox"
                             checked={false}
                             onChange={() => onUpdateTask(task.id, { done: true })}
                             id={`today-task-${task.id}`}
+                            onClick={e => e.stopPropagation()}
                           />
                           <label
                             className="today-task-name"
                             htmlFor={`today-task-${task.id}`}
+                            onClick={e => e.stopPropagation()}
                           >
                             {task.name}
                           </label>
@@ -773,7 +780,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           {displayBlock.blockType === 'manual' && (
                             <button
                               className="today-task-remove-btn"
-                              onClick={() => handleRemoveTaskFromBlock(task.id)}
+                              onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                               title="Usuń z bloku"
                             >✕</button>
                           )}
@@ -786,14 +793,19 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
                               <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
                               {lifterGroup.tasks.map(task => (
-                                <div key={task.id} className="today-task-item">
+                                <div
+                                  key={task.id}
+                                  className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                                  onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                                >
                                   <input
                                     type="checkbox"
                                     checked={false}
                                     onChange={() => onUpdateTask(task.id, { done: true })}
                                     id={`today-task-${task.id}`}
+                                    onClick={e => e.stopPropagation()}
                                   />
-                                  <label className="today-task-name" htmlFor={`today-task-${task.id}`}>
+                                  <label className="today-task-name" htmlFor={`today-task-${task.id}`} onClick={e => e.stopPropagation()}>
                                     {task.name}
                                   </label>
                                   <span
@@ -804,7 +816,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                   {displayBlock.blockType === 'manual' && (
                                     <button
                                       className="today-task-remove-btn"
-                                      onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                      onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                       title="Usuń z bloku"
                                     >✕</button>
                                   )}
@@ -820,14 +832,19 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
                           </div>
                           {ctxGroup.tasks.map(task => (
-                            <div key={task.id} className="today-task-item">
+                            <div
+                              key={task.id}
+                              className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
                               <input
                                 type="checkbox"
                                 checked={false}
                                 onChange={() => onUpdateTask(task.id, { done: true })}
                                 id={`today-task-${task.id}`}
+                                onClick={e => e.stopPropagation()}
                               />
-                              <label className="today-task-name" htmlFor={`today-task-${task.id}`}>
+                              <label className="today-task-name" htmlFor={`today-task-${task.id}`} onClick={e => e.stopPropagation()}>
                                 {task.name}
                               </label>
                               <span
@@ -838,7 +855,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               {displayBlock.blockType === 'manual' && (
                                 <button
                                   className="today-task-remove-btn"
-                                  onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                  onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                   title="Usuń z bloku"
                                 >✕</button>
                               )}
@@ -854,17 +871,20 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           {showBlockDone && blockDoneTasks.map(task => (
                             <div
                               key={task.id}
-                              className="today-task-item done"
+                              className={`today-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
                             >
                               <input
                                 type="checkbox"
                                 checked={true}
                                 onChange={() => onUpdateTask(task.id, { done: false })}
                                 id={`today-task-done-${task.id}`}
+                                onClick={e => e.stopPropagation()}
                               />
                               <label
                                 className="today-task-name"
                                 htmlFor={`today-task-done-${task.id}`}
+                                onClick={e => e.stopPropagation()}
                               >
                                 {task.name}
                               </label>
@@ -876,7 +896,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               {displayBlock.blockType === 'manual' && (
                                 <button
                                   className="today-task-remove-btn"
-                                  onClick={() => handleRemoveTaskFromBlock(task.id)}
+                                  onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                   title="Usuń z bloku"
                                 >✕</button>
                               )}
@@ -904,6 +924,21 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
               </div>
             )}
           </section>
+
+          {selectedTaskId && (() => {
+            const task = tasks.find(t => t.id === selectedTaskId);
+            return task ? (
+              <TaskDetailPanel
+                task={task}
+                contexts={contexts}
+                project={projects.find(p => p.id === task.projectId) ?? null}
+                onUpdate={(key, value) => onUpdateTask(selectedTaskId, { [key]: value })}
+                onDelete={() => { onDeleteTask(selectedTaskId); setSelectedTaskId(null); }}
+                onClose={() => setSelectedTaskId(null)}
+                onCompleteWithNextAction={(name) => { onCompleteWithNextAction(task, name); setSelectedTaskId(null); }}
+              />
+            ) : null;
+          })()}
         </div>
       </div>
 
