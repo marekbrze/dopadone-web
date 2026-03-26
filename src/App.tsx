@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote, BlockTemplate } from './types';
 import { loadData, queryAllData, isNewUser, seedFromOnboarding } from './data';
@@ -42,7 +42,7 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'task' | 'settings' | 'inbox-add'>(null);
+  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox' | 'processing'>('today');
@@ -52,6 +52,8 @@ export default function App() {
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
   const [dropTargetRootZone, setDropTargetRootZone] = useState(false);
   const [dropGapTarget, setDropGapTarget] = useState<{ parentProjectId: string | null; insertAfterProjectId: string | null } | null>(null);
+  const [dropTaskGapTarget, setDropTaskGapTarget] = useState<string | null | undefined>(undefined);
+  const [quickAddTaskName, setQuickAddTaskName] = useState('');
   const prevAreasCount = useRef(0);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [blockTemplates, setBlockTemplates] = useState<BlockTemplate[]>(() => {
@@ -239,7 +241,7 @@ export default function App() {
     [data, selectedProjectId]
   );
 
-  const undoneTasks = useMemo(() => tasks.filter(t => !t.done), [tasks]);
+  const undoneTasks = useMemo(() => tasks.filter(t => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [tasks]);
   const doneTasks = useMemo(() => tasks.filter(t => t.done), [tasks]);
 
   const projectNotes = useMemo(
@@ -389,14 +391,17 @@ export default function App() {
   // Tasks
   const addTask = async (name: string) => {
     if (!selectedProjectId) return;
+    const projectTasks = data?.tasks.filter(t => t.projectId === selectedProjectId) ?? [];
+    const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
     let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
-      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order }) as string;
+      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
     } else {
-      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
       await db.tasks.put(task);
     }
+    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
   const addInboxTask = async (name: string): Promise<Task> => {
@@ -647,6 +652,27 @@ export default function App() {
       if (!d) return d;
       const updateMap = new Map(updates.map(u => [u.id, u]));
       return { ...d, projects: d.projects.map(p => updateMap.has(p.id) ? { ...p, ...updateMap.get(p.id) } : p) };
+    });
+  };
+
+  const reorderTask = async (taskId: string, insertAfterTaskId: string | null) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+    const siblings = tasks
+      .filter(t => !t.done && t.id !== taskId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const insertIdx = insertAfterTaskId === null
+      ? 0
+      : siblings.findIndex(t => t.id === insertAfterTaskId) + 1;
+    siblings.splice(insertIdx, 0, task);
+    const updates = siblings.map((t, i) => ({ id: t.id, order: i }));
+    await db.transaction('rw', db.tasks, async () => {
+      for (const u of updates) await db.tasks.update(u.id, { order: u.order });
+    });
+    setData(d => {
+      if (!d) return d;
+      const map = new Map(updates.map(u => [u.id, u.order]));
+      return { ...d, tasks: d.tasks.map(t => map.has(t.id) ? { ...t, order: map.get(t.id)! } : t) };
     });
   };
 
@@ -1221,12 +1247,6 @@ export default function App() {
             ) : (
               <h2 id="column-header-tasks">Zadania</h2>
             )}
-            {projectTab === 'tasks' && (
-              <button
-                onClick={e => { e.stopPropagation(); setModal('task'); }}
-                style={!selectedProjectId ? { visibility: 'hidden' } : {}}
-              >+</button>
-            )}
           </div>
           {projectTab === 'tasks' && (
             <div
@@ -1236,31 +1256,64 @@ export default function App() {
               aria-labelledby="column-header-tasks"
             >
               {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
-              {selectedProjectId && tasks.length === 0 && <p className="empty-hint">Brak zadań w tym projekcie</p>}
+              {selectedProjectId && (
+                <div className="task-quick-add">
+                  <input
+                    className="task-quick-add-input"
+                    type="text"
+                    placeholder="Dodaj zadanie..."
+                    value={quickAddTaskName}
+                    onChange={e => setQuickAddTaskName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && quickAddTaskName.trim()) {
+                        addTask(quickAddTaskName.trim());
+                        setQuickAddTaskName('');
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              {selectedProjectId && dragPayload?.kind === 'task' && (
+                <div
+                  className={`task-gap-zone${dropTaskGapTarget === null ? ' active' : ''}`}
+                  onDragOver={e => { e.preventDefault(); setDropTaskGapTarget(null); }}
+                  onDrop={() => { if (dragPayload.kind === 'task') { reorderTask(dragPayload.taskId, null); } setDropTaskGapTarget(undefined); }}
+                  onDragLeave={() => setDropTaskGapTarget(undefined)}
+                />
+              )}
               {undoneTasks.map(task => {
                 const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
                 return (
-                  <div
-                    key={task.id}
-                    className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
-                    draggable
-                    onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
-                    onDragEnd={() => setDragPayload(null)}
-                    onClick={() => selectTask(task.id)}
-                  >
-                    <div className="task-main">
-                      <input
-                        type="checkbox"
-                        checked={false}
-                        onChange={() => updateTask(task.id, { done: true })}
-                        onClick={e => e.stopPropagation()}
-                      />
-                      <span className="task-name">{task.name}</span>
-                      <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                      {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
-                      {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                  <React.Fragment key={task.id}>
+                    <div
+                      className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
+                      draggable
+                      onDragStart={() => setDragPayload({ kind: 'task', taskId: task.id })}
+                      onDragEnd={() => { setDragPayload(null); setDropTaskGapTarget(undefined); }}
+                      onClick={() => selectTask(task.id)}
+                    >
+                      <div className="task-main">
+                        <input
+                          type="checkbox"
+                          checked={false}
+                          onChange={() => updateTask(task.id, { done: true })}
+                          onClick={e => e.stopPropagation()}
+                        />
+                        <span className="task-name">{task.name}</span>
+                        <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                        {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                        {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                      </div>
                     </div>
-                  </div>
+                    {dragPayload?.kind === 'task' && task.id !== dragPayload.taskId && (
+                      <div
+                        className={`task-gap-zone${dropTaskGapTarget === task.id ? ' active' : ''}`}
+                        onDragOver={e => { e.preventDefault(); setDropTaskGapTarget(task.id); }}
+                        onDrop={() => { if (dragPayload.kind === 'task') { reorderTask(dragPayload.taskId, task.id); } setDropTaskGapTarget(undefined); }}
+                        onDragLeave={() => setDropTaskGapTarget(undefined)}
+                      />
+                    )}
+                  </React.Fragment>
                 );
               })}
               {doneTasks.length > 0 && (
@@ -1372,7 +1425,6 @@ export default function App() {
       {modal === 'lifter' && <AddItemModal title="Nowy podobszar" placeholder="np. Samochód" onAdd={addLifter} onClose={() => setModal(null)} />}
       {modal === 'project' && <AddItemModal title="Nowy projekt" placeholder="np. Remont łazienki" onAdd={n => addProject(n)} onClose={() => setModal(null)} />}
       {modal === 'subproject' && <AddItemModal title="Nowy podprojekt" placeholder="np. Kafelki" onAdd={n => addProject(n, selectedProjectId)} onClose={() => setModal(null)} />}
-      {modal === 'task' && <AddItemModal title="Nowe zadanie" placeholder="np. Kup materiały" onAdd={addTask} onClose={() => setModal(null)} />}
       {modal === 'inbox-add' && <AddItemModal title="Dodaj do Inboxu" placeholder="np. Zadzwoń do dentysty" onAdd={name => addInboxTask(name).then(() => {})} onClose={() => setModal(null)} />}
       {modal === 'settings' && (
         <SettingsModal

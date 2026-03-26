@@ -51,6 +51,7 @@ export interface Task {
   startDate?: string | null;  // "YYYY-MM-DD"
   endDate?: string | null;    // "YYYY-MM-DD"
   duration?: TaskDuration | null;
+  order?: number;
 }
 
 export interface WorkBlock {
