@@ -401,7 +401,6 @@ export default function App() {
       task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
       await db.tasks.put(task);
     }
-    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
   const addInboxTask = async (name: string): Promise<Task> => {
