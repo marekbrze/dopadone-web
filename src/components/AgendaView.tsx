@@ -426,6 +426,27 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     hasMoved: boolean;
   } | null>(null);
   const dragMovedRef = useRef(false);
+  const [eventDragState, setEventDragState] = useState<{
+    eventId: string;
+    offsetMinutes: number;
+    currentMinutes: number;
+    duration: number;
+    startClientY: number;
+    hasMoved: boolean;
+    originalDate: string;
+    targetDate: string;
+  } | null>(null);
+  const eventDragMovedRef = useRef(false);
+  const [resizeDragState, setResizeDragState] = useState<{
+    itemId: string;
+    itemType: 'block' | 'event';
+    originalStartMinutes: number;
+    originalEndMinutes: number;
+    currentEndMinutes: number;
+    startClientY: number;
+    hasMoved: boolean;
+  } | null>(null);
+  const resizeMovedRef = useRef(false);
   const [taskDragId, setTaskDragId] = useState<string | null>(null);
   const [leftPanelSearch, setLeftPanelSearch] = useState('');
   type TaskGrouping = 'area' | 'context';
@@ -464,17 +485,16 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     }
   }, [events, selectedEventId]);
 
-  // Cancel block drag on global mouseup (e.g. released outside columns)
+  // Cancel drags on global mouseup (e.g. released outside columns)
   useEffect(() => {
     const up = () => {
-      if (blockDragState) {
-        setBlockDragState(null);
-        dragMovedRef.current = false;
-      }
+      if (blockDragState) { setBlockDragState(null); dragMovedRef.current = false; }
+      if (eventDragState) { setEventDragState(null); eventDragMovedRef.current = false; }
+      if (resizeDragState) { setResizeDragState(null); resizeMovedRef.current = false; }
     };
     window.addEventListener('mouseup', up);
     return () => window.removeEventListener('mouseup', up);
-  }, [blockDragState]);
+  }, [blockDragState, eventDragState, resizeDragState]);
 
   const isManual = selectedBlock ? isManualBlock(selectedBlock) : false;
 
@@ -654,10 +674,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   };
 
   const handleMouseDown = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
-    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('.agenda-block');
+    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('[data-block-id]');
     if (blockEl) {
-      const blockId = blockEl.dataset.blockId;
-      if (!blockId) return;
+      const blockId = blockEl.dataset.blockId!;
       const block = workBlocks.find(b => b.id === blockId);
       if (!block) return;
       e.preventDefault();
@@ -675,12 +694,52 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       });
       return;
     }
+    const eventEl = (e.target as HTMLElement).closest<HTMLElement>('[data-event-id]');
+    if (eventEl) {
+      const eventId = eventEl.dataset.eventId!;
+      const event = events.find(ev => ev.id === eventId);
+      if (!event || event.allDay) return;
+      e.preventDefault();
+      const minutes = getMinutesFromEvent(e);
+      const start = event.startMinutes ?? 0;
+      setEventDragState({
+        eventId,
+        offsetMinutes: Math.max(0, minutes - start),
+        currentMinutes: start,
+        duration: (event.endMinutes ?? start + 60) - start,
+        startClientY: e.clientY,
+        hasMoved: false,
+        originalDate: date,
+        targetDate: date,
+      });
+      return;
+    }
     e.preventDefault();
     const snapped = getMinutesFromEvent(e);
     setDragState({ date, startMinutes: snapped, currentMinutes: snapped });
   };
 
   const handleMouseMove = (date: string, e: React.MouseEvent<HTMLDivElement>) => {
+    if (resizeDragState) {
+      const delta = e.clientY - resizeDragState.startClientY;
+      const raw = resizeDragState.originalEndMinutes + delta;
+      const snapped = Math.max(
+        resizeDragState.originalStartMinutes + 15,
+        Math.min(snap15(raw), 1440)
+      );
+      const moved = resizeDragState.hasMoved || Math.abs(delta) > 4;
+      if (moved) resizeMovedRef.current = true;
+      setResizeDragState(prev => prev ? { ...prev, currentEndMinutes: snapped, hasMoved: moved } : null);
+      return;
+    }
+    if (eventDragState) {
+      const minutes = getMinutesFromEvent(e);
+      const newStart = Math.max(0, Math.min(snap15(minutes - eventDragState.offsetMinutes), 1440 - eventDragState.duration));
+      const moved = eventDragState.hasMoved || Math.abs(e.clientY - eventDragState.startClientY) > 8;
+      if (moved) eventDragMovedRef.current = true;
+      setEventDragState(prev => prev ? { ...prev, currentMinutes: newStart, targetDate: date, hasMoved: moved } : null);
+      return;
+    }
     if (blockDragState) {
       const minutes = getMinutesFromEvent(e);
       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
@@ -695,6 +754,30 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   };
 
   const finishDrag = (date: string) => {
+    if (resizeDragState) {
+      if (resizeMovedRef.current) {
+        if (resizeDragState.itemType === 'block') {
+          onUpdate(resizeDragState.itemId, { endMinutes: resizeDragState.currentEndMinutes });
+        } else {
+          onUpdateEvent(resizeDragState.itemId, { endMinutes: resizeDragState.currentEndMinutes });
+        }
+      }
+      setResizeDragState(null);
+      resizeMovedRef.current = false;
+      return;
+    }
+    if (eventDragState) {
+      if (eventDragMovedRef.current) {
+        onUpdateEvent(eventDragState.eventId, {
+          startMinutes: eventDragState.currentMinutes,
+          endMinutes: eventDragState.currentMinutes + eventDragState.duration,
+          date: eventDragState.targetDate,
+        });
+      }
+      setEventDragState(null);
+      eventDragMovedRef.current = false;
+      return;
+    }
     if (blockDragState) {
       if (dragMovedRef.current) {
         onUpdate(blockDragState.blockId, {
@@ -968,13 +1051,15 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                   const isDragging = blockDragState?.blockId === block.id && blockDragState!.hasMoved;
                   const isDraggingToThisCol = isDragging && blockDragState!.targetDate === d;
                   const isDraggingAway = isDragging && blockDragState!.targetDate !== d;
+                  const isResizing = resizeDragState?.itemId === block.id && resizeDragState.itemType === 'block';
                   const top = isDraggingToThisCol ? blockDragState!.currentMinutes : block.startMinutes;
-                  const height = Math.max(block.endMinutes - block.startMinutes, 20);
+                  const endMin = isResizing ? resizeDragState!.currentEndMinutes : block.endMinutes;
+                  const height = Math.max(endMin - top, 20);
                   return (
                     <div
                       key={block.id}
                       data-block-id={block.id}
-                      className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}${isDraggingToThisCol ? ' dragging' : ''}${isDraggingAway ? ' drag-ghost' : ''}`}
+                      className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}${isDraggingToThisCol ? ' dragging' : ''}${isDraggingAway ? ' drag-ghost' : ''}${isResizing ? ' resizing' : ''}`}
                       style={{
                         top: `${top}px`,
                         height: `${height}px`,
@@ -992,8 +1077,26 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                       <span className="agenda-block-time">
                         {isDraggingToThisCol
                           ? `${formatTime(blockDragState!.currentMinutes)}–${formatTime(blockDragState!.currentMinutes + blockDragState!.duration)}`
+                          : isResizing
+                          ? `${formatTime(top)}–${formatTime(resizeDragState!.currentEndMinutes)}`
                           : `${formatTime(block.startMinutes)}–${formatTime(block.endMinutes)}`}
                       </span>
+                      <div
+                        className="resize-handle"
+                        onMouseDown={e => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                          setResizeDragState({
+                            itemId: block.id,
+                            itemType: 'block',
+                            originalStartMinutes: block.startMinutes,
+                            originalEndMinutes: block.endMinutes,
+                            currentEndMinutes: block.endMinutes,
+                            startClientY: e.clientY,
+                            hasMoved: false,
+                          });
+                        }}
+                      />
                     </div>
                   );
                 })}
@@ -1025,13 +1128,20 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
 
                 {/* Timed events */}
                 {dayTimedEvents.map(event => {
-                  const start = event.startMinutes ?? 0;
-                  const end = event.endMinutes ?? start + 60;
+                  const isEventStart = event.date === d;
+                  const isEventDragging = eventDragState?.eventId === event.id && eventDragState.hasMoved;
+                  const isDraggingToThisCol = isEventDragging && eventDragState!.targetDate === d;
+                  const isDraggingAway = isEventDragging && eventDragState!.targetDate !== d;
+                  const isResizing = resizeDragState?.itemId === event.id && resizeDragState.itemType === 'event';
+                  const rawEnd = event.endMinutes ?? (event.startMinutes ?? 0) + 60;
+                  const start = isDraggingToThisCol ? eventDragState!.currentMinutes : (event.startMinutes ?? 0);
+                  const end = isResizing ? resizeDragState!.currentEndMinutes : rawEnd;
                   const height = Math.max(end - start, 20);
                   return (
                     <div
                       key={event.id}
-                      className={`agenda-block agenda-event${selectedEventId === event.id ? ' selected' : ''}`}
+                      data-event-id={isEventStart ? event.id : undefined}
+                      className={`agenda-block agenda-event${selectedEventId === event.id ? ' selected' : ''}${isDraggingToThisCol ? ' dragging' : ''}${isDraggingAway ? ' drag-ghost' : ''}${isResizing ? ' resizing' : ''}`}
                       style={{
                         top: `${start}px`,
                         height: `${height}px`,
@@ -1040,6 +1150,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                       }}
                       onClick={e => {
                         e.stopPropagation();
+                        if (eventDragMovedRef.current) { eventDragMovedRef.current = false; return; }
                         setSelectedEventId(event.id);
                         setSelectedBlockId(null);
                         setSelectedTaskId(null);
@@ -1051,9 +1162,51 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                           {formatTime(start)}–{formatTime(end)}
                         </span>
                       )}
+                      {isEventStart && (
+                        <div
+                          className="resize-handle"
+                          onMouseDown={e => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setResizeDragState({
+                              itemId: event.id,
+                              itemType: 'event',
+                              originalStartMinutes: event.startMinutes ?? 0,
+                              originalEndMinutes: rawEnd,
+                              currentEndMinutes: rawEnd,
+                              startClientY: e.clientY,
+                              hasMoved: false,
+                            });
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
+
+                {/* Dragged event preview when moved from another day */}
+                {eventDragState?.targetDate === d && eventDragState.originalDate !== d && eventDragState.hasMoved && (() => {
+                  const event = events.find(ev => ev.id === eventDragState.eventId);
+                  if (!event) return null;
+                  const height = Math.max(eventDragState.duration, 20);
+                  return (
+                    <div
+                      key="event-drag-preview"
+                      className="agenda-block agenda-event dragging"
+                      style={{
+                        top: `${eventDragState.currentMinutes}px`,
+                        height: `${height}px`,
+                        background: EVENT_COLOR + '22',
+                        borderLeft: `3px solid ${EVENT_COLOR}`,
+                      }}
+                    >
+                      <span className="agenda-block-title">◈ {event.title}</span>
+                      <span className="agenda-block-time">
+                        {formatTime(eventDragState.currentMinutes)}–{formatTime(eventDragState.currentMinutes + eventDragState.duration)}
+                      </span>
+                    </div>
+                  );
+                })()}
               </div>
             );
           })}

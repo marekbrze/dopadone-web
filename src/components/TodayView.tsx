@@ -143,6 +143,25 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     hasMoved: boolean;
   } | null>(null);
   const dragMovedRef = useRef(false);
+  const [eventDragState, setEventDragState] = useState<{
+    eventId: string;
+    offsetMinutes: number;
+    currentMinutes: number;
+    duration: number;
+    startClientY: number;
+    hasMoved: boolean;
+  } | null>(null);
+  const eventDragMovedRef = useRef(false);
+  const [resizeDragState, setResizeDragState] = useState<{
+    itemId: string;
+    itemType: 'block' | 'event';
+    originalStartMinutes: number;
+    originalEndMinutes: number;
+    currentEndMinutes: number;
+    startClientY: number;
+    hasMoved: boolean;
+  } | null>(null);
+  const resizeMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
 
@@ -161,6 +180,29 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
+      if (resizeDragState) {
+        if (resizeMovedRef.current) {
+          if (resizeDragState.itemType === 'block') {
+            onUpdateWorkBlock(resizeDragState.itemId, { endMinutes: resizeDragState.currentEndMinutes });
+          } else {
+            onUpdateEvent(resizeDragState.itemId, { endMinutes: resizeDragState.currentEndMinutes });
+          }
+        }
+        setResizeDragState(null);
+        resizeMovedRef.current = false;
+        return;
+      }
+      if (eventDragState) {
+        if (eventDragMovedRef.current) {
+          onUpdateEvent(eventDragState.eventId, {
+            startMinutes: eventDragState.currentMinutes,
+            endMinutes: eventDragState.currentMinutes + eventDragState.duration,
+          });
+        }
+        setEventDragState(null);
+        eventDragMovedRef.current = false;
+        return;
+      }
       if (blockDragState) {
         if (dragMovedRef.current) {
           onUpdateWorkBlock(blockDragState.blockId, {
@@ -182,7 +224,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
-  }, [dragState, blockDragState]);
+  }, [dragState, blockDragState, eventDragState, resizeDragState]);
 
   const todayStr = toDateString(now);
   const todayBlocks = workBlocks
@@ -398,10 +440,9 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 <div
                   className="today-day-col"
                   onMouseDown={e => {
-                    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('.agenda-block');
+                    const blockEl = (e.target as HTMLElement).closest<HTMLElement>('[data-block-id]');
                     if (blockEl) {
-                      const blockId = blockEl.dataset.blockId;
-                      if (!blockId) return;
+                      const blockId = blockEl.dataset.blockId!;
                       const block = workBlocks.find(b => b.id === blockId);
                       if (!block) return;
                       e.preventDefault();
@@ -417,11 +458,49 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       });
                       return;
                     }
+                    const eventEl = (e.target as HTMLElement).closest<HTMLElement>('[data-event-id]');
+                    if (eventEl) {
+                      const eventId = eventEl.dataset.eventId!;
+                      const event = events.find(ev => ev.id === eventId);
+                      if (!event || event.allDay) return;
+                      e.preventDefault();
+                      const minutes = getMinutesFromEvent(e);
+                      const start = event.startMinutes ?? 0;
+                      setEventDragState({
+                        eventId,
+                        offsetMinutes: Math.max(0, minutes - start),
+                        currentMinutes: start,
+                        duration: (event.endMinutes ?? start + 60) - start,
+                        startClientY: e.clientY,
+                        hasMoved: false,
+                      });
+                      return;
+                    }
                     e.preventDefault();
                     const snapped = getMinutesFromEvent(e);
                     setDragState({ startMinutes: snapped, currentMinutes: snapped });
                   }}
                   onMouseMove={e => {
+                    if (resizeDragState) {
+                      const delta = e.clientY - resizeDragState.startClientY;
+                      const raw = resizeDragState.originalEndMinutes + delta;
+                      const snapped = Math.max(
+                        resizeDragState.originalStartMinutes + 15,
+                        Math.min(snap15(raw), 1440)
+                      );
+                      const moved = resizeDragState.hasMoved || Math.abs(delta) > 4;
+                      if (moved) resizeMovedRef.current = true;
+                      setResizeDragState(prev => prev ? { ...prev, currentEndMinutes: snapped, hasMoved: moved } : null);
+                      return;
+                    }
+                    if (eventDragState) {
+                      const minutes = getMinutesFromEvent(e);
+                      const newStart = Math.max(0, Math.min(snap15(minutes - eventDragState.offsetMinutes), 1440 - eventDragState.duration));
+                      const moved = eventDragState.hasMoved || Math.abs(e.clientY - eventDragState.startClientY) > 8;
+                      if (moved) eventDragMovedRef.current = true;
+                      setEventDragState(prev => prev ? { ...prev, currentMinutes: newStart, hasMoved: moved } : null);
+                      return;
+                    }
                     if (blockDragState) {
                       const minutes = getMinutesFromEvent(e);
                       const newStart = Math.max(0, Math.min(snap15(minutes - blockDragState.offsetMinutes), 1440 - blockDragState.duration));
@@ -470,14 +549,16 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                   {todayBlocks.map(block => {
                     const color = getBlockColor(block, areas);
                     const isDragging = blockDragState?.blockId === block.id && blockDragState!.hasMoved;
+                    const isResizing = resizeDragState?.itemId === block.id && resizeDragState.itemType === 'block';
                     const top = isDragging ? blockDragState!.currentMinutes : block.startMinutes;
-                    const height = Math.max(block.endMinutes - block.startMinutes, 20);
+                    const endMin = isResizing ? resizeDragState!.currentEndMinutes : block.endMinutes;
+                    const height = Math.max(endMin - top, 20);
                     const isSelected = block.id === (selectedBlockId ?? currentBlock?.id);
                     return (
                       <div
                         key={block.id}
                         data-block-id={block.id}
-                        className={`agenda-block${isSelected ? ' selected' : ''}${isDragging ? ' dragging' : ''}`}
+                        className={`agenda-block${isSelected ? ' selected' : ''}${isDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
                         style={{
                           top: `${top}px`,
                           height: `${height}px`,
@@ -493,29 +574,54 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         <span className="agenda-block-time">
                           {isDragging
                             ? `${formatTime(blockDragState!.currentMinutes)}–${formatTime(blockDragState!.currentMinutes + blockDragState!.duration)}`
+                            : isResizing
+                            ? `${formatTime(top)}–${formatTime(resizeDragState!.currentEndMinutes)}`
                             : `${formatTime(block.startMinutes)}–${formatTime(block.endMinutes)}`}
                         </span>
+                        <div
+                          className="resize-handle"
+                          onMouseDown={e => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setResizeDragState({
+                              itemId: block.id,
+                              itemType: 'block',
+                              originalStartMinutes: block.startMinutes,
+                              originalEndMinutes: block.endMinutes,
+                              currentEndMinutes: block.endMinutes,
+                              startClientY: e.clientY,
+                              hasMoved: false,
+                            });
+                          }}
+                        />
                       </div>
                     );
                   })}
 
                   {/* Timed events */}
                   {timedEvents.map(event => {
-                    const start = event.startMinutes ?? 0;
-                    const end = event.endMinutes ?? start + 60;
+                    const isEventDragging = eventDragState?.eventId === event.id && eventDragState.hasMoved;
+                    const isResizing = resizeDragState?.itemId === event.id && resizeDragState.itemType === 'event';
+                    const start = isEventDragging ? eventDragState!.currentMinutes : (event.startMinutes ?? 0);
+                    const rawEnd = event.endMinutes ?? (event.startMinutes ?? 0) + 60;
+                    const end = isResizing ? resizeDragState!.currentEndMinutes : rawEnd;
                     const height = Math.max(end - start, 20);
                     const isSelected = selectedEventId === event.id;
                     return (
                       <div
                         key={event.id}
-                        className={`agenda-block agenda-event${isSelected ? ' selected' : ''}`}
+                        data-event-id={event.id}
+                        className={`agenda-block agenda-event${isSelected ? ' selected' : ''}${isEventDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
                         style={{
                           top: `${start}px`,
                           height: `${height}px`,
                           background: EVENT_COLOR + '22',
                           borderLeft: `3px solid ${EVENT_COLOR}`,
                         }}
-                        onClick={() => handleEventClick(event.id)}
+                        onClick={() => {
+                          if (eventDragMovedRef.current) { eventDragMovedRef.current = false; return; }
+                          handleEventClick(event.id);
+                        }}
                       >
                         <span className="agenda-block-title">◈ {event.title}</span>
                         {height >= 35 && (
@@ -523,6 +629,22 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             {formatTime(start)}–{formatTime(end)}
                           </span>
                         )}
+                        <div
+                          className="resize-handle"
+                          onMouseDown={e => {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            setResizeDragState({
+                              itemId: event.id,
+                              itemType: 'event',
+                              originalStartMinutes: event.startMinutes ?? 0,
+                              originalEndMinutes: rawEnd,
+                              currentEndMinutes: rawEnd,
+                              startClientY: e.clientY,
+                              hasMoved: false,
+                            });
+                          }}
+                        />
                       </div>
                     );
                   })}

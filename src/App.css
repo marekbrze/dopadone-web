@@ -2631,6 +2631,42 @@ body {
   pointer-events: none;
 }
 
+.agenda-block.resizing {
+  opacity: 0.85;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(28, 23, 18, 0.2);
+}
+
+.resize-handle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  cursor: ns-resize;
+  z-index: 2;
+  border-radius: 0 0 2px 2px;
+}
+
+.resize-handle::after {
+  content: '';
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.agenda-block:hover .resize-handle::after {
+  opacity: 0.35;
+}
+
 .agenda-block-title {
   font-size: 13px;
   font-weight: 500;
