@@ -170,6 +170,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   } | null>(null);
   const resizeMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
+  const [mobileAgendaOpen, setMobileAgendaOpen] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -406,9 +407,43 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           <div className="today-header-rule" />
         </div>
 
+        {/* Mobile: current block summary bar */}
+        <div className="today-mobile-block-bar">
+          <div
+            className="today-mobile-block-indicator"
+            style={{ background: currentBlock ? getBlockColor(currentBlock, areas) : 'var(--border)' }}
+          />
+          <div className="today-mobile-block-info">
+            {currentBlock ? (
+              <>
+                <span className="today-mobile-block-title">{currentBlock.title}</span>
+                <span className="today-mobile-block-time">
+                  {formatTime(currentBlock.startMinutes)} – {formatTime(currentBlock.endMinutes)}
+                  {isCurrentlyActive && (
+                    <span className="today-mobile-countdown" style={{ color: getCountdownColor(remainingPct) }}>
+                      {' '}· {formatCountdown(remainingSeconds)}
+                    </span>
+                  )}
+                </span>
+              </>
+            ) : (
+              <span className="today-mobile-block-title today-mobile-no-block">Brak aktywnego bloku</span>
+            )}
+          </div>
+          <button
+            className="today-mobile-agenda-btn"
+            onClick={() => setMobileAgendaOpen(true)}
+            aria-label="Otwórz harmonogram"
+          >≡</button>
+        </div>
+
         <div className="today-body">
           {/* LEFT: day timeline */}
-          <aside className="today-agenda">
+          <aside className={`today-agenda${mobileAgendaOpen ? ' mobile-open' : ''}`}>
+            <div className="today-agenda-mobile-close">
+              <span>Harmonogram dnia</span>
+              <button onClick={() => setMobileAgendaOpen(false)}>✕</button>
+            </div>
             <div className="today-agenda-heading">
               Harmonogram dnia
             </div>
