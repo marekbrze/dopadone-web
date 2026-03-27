@@ -4091,3 +4091,330 @@ body {
   /* Task detail panel – pełna szerokość */
   .today-body .task-detail-panel { width: 100%; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AgendaView — Mobile Layout
+   Mobile-only elements: hidden on desktop via display:none,
+   activated in the @media block below.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agenda-week-strip       { display: none; }
+.agenda-mobile-day-wrap  { display: none; }
+.agenda-mobile-tasks-btn { display: none; }
+.agenda-left-panel-mobile-close { display: none; }
+.agenda-mobile-backdrop  { display: none; }
+.agenda-mobile-allday-strip { display: none; }
+
+@media (max-width: 767px) {
+
+  /* ── Hide desktop-only elements ── */
+  .agenda-view-toggle  { display: none; }
+  .agenda-grid-wrap    { display: none; }
+
+  /* Left / right panels hidden by default — shown as drawers/sheets */
+  .agenda-left-panel   { display: none; }
+  .agenda-block-panel  { display: none; }
+  .agenda-view .task-detail-panel { display: none; }
+
+  /* ── Toolbar ── */
+  .agenda-toolbar {
+    padding: 0 8px;
+    gap: 4px;
+    flex-wrap: nowrap;
+  }
+  .agenda-nav-btn,
+  .agenda-today-btn {
+    padding: 5px 10px;
+    font-size: 12px;
+    min-height: 44px;
+  }
+  .agenda-date-label {
+    font-size: 12px;
+    flex: 1;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── Mobile tasks button (toolbar, only for manual blocks) ── */
+  .agenda-mobile-tasks-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    min-height: 44px;
+    font-size: 12px;
+    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: var(--radius);
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.12s;
+  }
+  .agenda-mobile-tasks-btn:active { background: var(--surface2); }
+
+  /* ── Week strip ── */
+  .agenda-week-strip {
+    display: flex;
+    align-items: stretch;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    padding: 4px 6px;
+    gap: 0;
+  }
+  .agenda-week-strip::-webkit-scrollbar { display: none; }
+
+  .agenda-strip-day {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 44px;
+    min-height: 54px;
+    border: none;
+    background: none;
+    border-radius: 8px;
+    cursor: pointer;
+    padding: 4px 2px;
+    gap: 3px;
+    font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+    transition: background 0.12s;
+  }
+  .agenda-strip-day:active { background: var(--surface2); }
+
+  .agenda-strip-day-name {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    line-height: 1;
+  }
+
+  .agenda-strip-day-num {
+    font-size: 17px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .agenda-strip-day.today .agenda-strip-day-name {
+    color: var(--accent);
+  }
+  .agenda-strip-day.today .agenda-strip-day-num {
+    background: var(--accent);
+    color: #faf7f0;
+  }
+  .agenda-strip-day.selected:not(.today) .agenda-strip-day-num {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+
+  /* ── Mobile single-day timeline ── */
+  .agenda-mobile-day-wrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .agenda-mobile-allday-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 4px;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--surface);
+  }
+  .agenda-mobile-allday-strip::-webkit-scrollbar { display: none; }
+
+  .agenda-mobile-timeline-wrap {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    position: relative;
+  }
+
+  .agenda-mobile-timeline {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    min-height: 1440px;
+    position: relative;
+  }
+
+  /* Reuse existing .agenda-time-axis inside mobile timeline */
+  .agenda-mobile-timeline .agenda-time-axis {
+    border-right: 1px solid var(--border);
+    position: relative;
+    min-height: 1440px;
+  }
+
+  /* ── Right panel → bottom sheet ── */
+  .agenda-block-panel.mobile-sheet-open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    max-height: 72dvh;
+    z-index: 200;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    animation: agendaSheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Sheet drag handle visual */
+  .agenda-block-panel.mobile-sheet-open::before {
+    content: '';
+    display: block;
+    width: 36px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 10px auto 0;
+    flex-shrink: 0;
+  }
+
+  @keyframes agendaSheetIn {
+    from { transform: translateY(100%); opacity: 0.5; }
+    to   { transform: translateY(0);    opacity: 1;   }
+  }
+
+  /* TaskDetailPanel → bottom sheet inside AgendaView */
+  .agenda-view .task-detail-panel {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    max-height: 72dvh;
+    z-index: 201;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    background: var(--surface);
+    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    animation: agendaSheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* ── Left panel → full-screen drawer ── */
+  .agenda-left-panel.mobile-open {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    width: 100%;
+    height: 100%;
+    background: var(--surface);
+    border-right: none;
+    animation: agendaDrawerIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes agendaDrawerIn {
+    from { transform: translateY(100%); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+  }
+
+  /* Mobile close header inside left panel drawer */
+  .agenda-left-panel-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .agenda-left-panel-mobile-close button {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 0;
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    transition: color 0.15s;
+  }
+  .agenda-left-panel-mobile-close button:hover { color: var(--text); }
+
+  /* Left panel inputs — 16px to prevent iOS auto-zoom */
+  .agenda-left-panel-search input {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  /* ── Backdrop ── */
+  .agenda-mobile-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    z-index: 199;
+    animation: agendaBackdropIn 0.18s ease;
+  }
+
+  @keyframes agendaBackdropIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* ── Touch targets ── */
+  .agenda-block-task-item {
+    padding: 12px 10px;
+    min-height: 44px;
+  }
+
+  .agenda-block-add-task input {
+    font-size: 16px;
+  }
+
+  /* Block panel in sheet mode — body scrolls */
+  .agenda-block-panel.mobile-sheet-open .agenda-block-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}

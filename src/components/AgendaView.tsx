@@ -161,11 +161,14 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [dropTargetActive, setDropTargetActive] = useState(false);
   const [newBlockTaskName, setNewBlockTaskName] = useState('');
   const [showBlockDone, setShowBlockDone] = useState(false);
+  const [mobileTaskDrawerOpen, setMobileTaskDrawerOpen] = useState(false);
+  const [mobileDetailSheetOpen, setMobileDetailSheetOpen] = useState(false);
   const [nowMinutes, setNowMinutes] = useState(() => {
     const n = new Date();
     return n.getHours() * 60 + n.getMinutes();
   });
   const gridRef = useRef<HTMLDivElement>(null);
+  const mobileTimelineRef = useRef<HTMLDivElement>(null);
 
   // Auto-close panel when selected block is deleted
   useEffect(() => {
@@ -317,12 +320,18 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
 
   // Scroll to current hour on mount
   useEffect(() => {
-    if (gridRef.current) {
-      const now = new Date();
-      const minutes = now.getHours() * 60 + now.getMinutes();
-      gridRef.current.scrollTop = Math.max(0, minutes - 120);
-    }
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    if (gridRef.current) gridRef.current.scrollTop = Math.max(0, minutes - 120);
+    if (mobileTimelineRef.current) mobileTimelineRef.current.scrollTop = Math.max(0, minutes - 120);
   }, []);
+
+  // Lock body scroll when mobile drawers/sheets are open
+  useEffect(() => {
+    const lock = mobileDetailSheetOpen || mobileTaskDrawerOpen;
+    document.body.style.overflow = lock ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [mobileDetailSheetOpen, mobileTaskDrawerOpen]);
 
   // Update current-time indicator every minute
   useEffect(() => {
@@ -546,7 +555,11 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     <div className="agenda-view">
       {/* Left panel — only for manual blocks */}
       {isManual && selectedBlock && (
-        <div className="agenda-left-panel">
+        <div className={`agenda-left-panel${mobileTaskDrawerOpen ? ' mobile-open' : ''}`}>
+          <div className="agenda-left-panel-mobile-close">
+            <span>Wszystkie zadania</span>
+            <button onClick={() => setMobileTaskDrawerOpen(false)}>✕</button>
+          </div>
           <div className="agenda-block-panel-header">
             <span className="agenda-block-panel-title">Wszystkie zadania</span>
           </div>
@@ -659,6 +672,30 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             onClick={() => setViewMode('day')}
           >Dzień</button>
         </div>
+        {isManual && selectedBlock && (
+          <button className="agenda-mobile-tasks-btn" onClick={() => setMobileTaskDrawerOpen(true)}>
+            ☰ Zadania
+          </button>
+        )}
+      </div>
+
+      {/* Mobile week strip — hidden on desktop */}
+      <div className="agenda-week-strip">
+        {getWeekDates(anchorDate).map((d, i) => {
+          const dt = new Date(d + 'T00:00:00');
+          const isToday = d === today;
+          const isSelected = d === anchorDate;
+          return (
+            <button
+              key={d}
+              className={`agenda-strip-day${isToday ? ' today' : ''}${isSelected ? ' selected' : ''}`}
+              onClick={() => setAnchorDate(d)}
+            >
+              <span className="agenda-strip-day-name">{DAY_LABELS[i]}</span>
+              <span className="agenda-strip-day-num">{dt.getDate()}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Grid */}
@@ -692,7 +729,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                   <button
                     key={event.id}
                     className={`agenda-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
-                    onClick={e => { e.stopPropagation(); setSelectedEventId(event.id); setSelectedBlockId(null); setSelectedTaskId(null); }}
+                    onClick={e => { e.stopPropagation(); setSelectedEventId(event.id); setSelectedBlockId(null); setSelectedTaskId(null); setMobileDetailSheetOpen(true); }}
                   >
                     ◈ {event.title}
                   </button>
@@ -778,6 +815,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         if (dragMovedRef.current) { dragMovedRef.current = false; return; }
                         setSelectedBlockId(block.id);
                         setSelectedEventId(null);
+                        setMobileDetailSheetOpen(true);
                       }}
                     >
                       <span className="agenda-block-title">{block.title}</span>
@@ -861,6 +899,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         setSelectedEventId(event.id);
                         setSelectedBlockId(null);
                         setSelectedTaskId(null);
+                        setMobileDetailSheetOpen(true);
                       }}
                     >
                       <span className="agenda-block-title">◈ {event.title}</span>
@@ -920,11 +959,128 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         </div>
       </div>
 
+      {/* Mobile single-day timeline — hidden on desktop */}
+      <div className="agenda-mobile-day-wrap">
+        {(() => {
+          const dayAllDayEvents = events.filter(e => isEventOnDate(e, anchorDate) && e.allDay);
+          return dayAllDayEvents.length > 0 ? (
+            <div className="agenda-mobile-allday-strip">
+              {dayAllDayEvents.map(event => (
+                <button
+                  key={event.id}
+                  className={`agenda-allday-chip${selectedEventId === event.id ? ' selected' : ''}`}
+                  onClick={() => { setSelectedEventId(event.id); setSelectedBlockId(null); setSelectedTaskId(null); setMobileDetailSheetOpen(true); }}
+                >
+                  ◈ {event.title}
+                </button>
+              ))}
+            </div>
+          ) : null;
+        })()}
+        <div className="agenda-mobile-timeline-wrap" ref={mobileTimelineRef}>
+          <div className="agenda-mobile-timeline">
+            <div className="agenda-time-axis">
+              {hours.map(h => (
+                <div key={h} className="agenda-hour-label" style={{ top: `${h * 60}px` }}>
+                  {h.toString().padStart(2, '0')}:00
+                </div>
+              ))}
+            </div>
+            <div
+              className="agenda-day-col"
+              onMouseDown={(e) => handleMouseDown(anchorDate, e)}
+              onMouseMove={(e) => handleMouseMove(anchorDate, e)}
+              onMouseUp={() => finishDrag(anchorDate)}
+            >
+              {hours.map(h => (
+                <React.Fragment key={h}>
+                  <div className="agenda-hour-line" style={{ top: `${h * 60}px` }} />
+                  <div className="agenda-half-hour-line" style={{ top: `${h * 60 + 30}px` }} />
+                </React.Fragment>
+              ))}
+              {anchorDate === today && (
+                <div className="agenda-now-line" style={{ top: `${nowMinutes}px` }} />
+              )}
+              {dragState?.date === anchorDate && dragState.startMinutes !== dragState.currentMinutes && (
+                <div
+                  className="agenda-drag-preview"
+                  style={{
+                    top: `${Math.min(dragState.startMinutes, dragState.currentMinutes)}px`,
+                    height: `${Math.abs(dragState.currentMinutes - dragState.startMinutes)}px`,
+                  }}
+                />
+              )}
+              {workBlocks.filter(b => b.date === anchorDate).map(block => {
+                const color = getBlockColor(block, areas);
+                const isDragging = blockDragState?.blockId === block.id && blockDragState!.hasMoved;
+                const isResizing = resizeDragState?.itemId === block.id && resizeDragState.itemType === 'block';
+                const top = isDragging ? blockDragState!.currentMinutes : block.startMinutes;
+                const endMin = isResizing ? resizeDragState!.currentEndMinutes : block.endMinutes;
+                const height = Math.max(endMin - top, 20);
+                return (
+                  <div
+                    key={block.id}
+                    data-block-id={block.id}
+                    className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}${isDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
+                    style={{ top: `${top}px`, height: `${height}px`, background: color + '33', borderLeft: `3px solid ${color}` }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (dragMovedRef.current) { dragMovedRef.current = false; return; }
+                      setSelectedBlockId(block.id);
+                      setSelectedEventId(null);
+                      setMobileDetailSheetOpen(true);
+                    }}
+                  >
+                    <span className="agenda-block-title">{block.title}</span>
+                    <span className="agenda-block-time">{formatTime(block.startMinutes)}–{formatTime(block.endMinutes)}</span>
+                    <div
+                      className="resize-handle"
+                      onMouseDown={e => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        setResizeDragState({ itemId: block.id, itemType: 'block', originalStartMinutes: block.startMinutes, originalEndMinutes: block.endMinutes, currentEndMinutes: block.endMinutes, startClientY: e.clientY, hasMoved: false });
+                      }}
+                    />
+                  </div>
+                );
+              })}
+              {events.filter(e => isEventOnDate(e, anchorDate) && !e.allDay).map(event => {
+                const isEventDragging = eventDragState?.eventId === event.id && eventDragState.hasMoved;
+                const isResizing = resizeDragState?.itemId === event.id && resizeDragState.itemType === 'event';
+                const rawEnd = event.endMinutes ?? (event.startMinutes ?? 0) + 60;
+                const start = isEventDragging ? eventDragState!.currentMinutes : (event.startMinutes ?? 0);
+                const end = isResizing ? resizeDragState!.currentEndMinutes : rawEnd;
+                const height = Math.max(end - start, 20);
+                return (
+                  <div
+                    key={event.id}
+                    data-event-id={event.id}
+                    className={`agenda-block agenda-event${selectedEventId === event.id ? ' selected' : ''}${isEventDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
+                    style={{ top: `${start}px`, height: `${height}px`, background: EVENT_COLOR + '22', borderLeft: `3px solid ${EVENT_COLOR}` }}
+                    onClick={e => {
+                      e.stopPropagation();
+                      if (eventDragMovedRef.current) { eventDragMovedRef.current = false; return; }
+                      setSelectedEventId(event.id);
+                      setSelectedBlockId(null);
+                      setSelectedTaskId(null);
+                      setMobileDetailSheetOpen(true);
+                    }}
+                  >
+                    <span className="agenda-block-title">◈ {event.title}</span>
+                    {height >= 35 && <span className="agenda-block-time">{formatTime(start)}–{formatTime(end)}</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+
       </div>{/* end .agenda-main */}
 
       {selectedBlock && (
         <div
-          className={`agenda-block-panel${dropTargetActive ? ' drop-target-active' : ''}`}
+          className={`agenda-block-panel${dropTargetActive ? ' drop-target-active' : ''}${mobileDetailSheetOpen && selectedBlockId ? ' mobile-sheet-open' : ''}`}
           onDragOver={isManual ? (e) => { e.preventDefault(); setDropTargetActive(true); } : undefined}
           onDragLeave={isManual ? (e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetActive(false);
@@ -938,7 +1094,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           <div className="agenda-block-panel-header">
             <div className="agenda-block-panel-header-top">
               <span className="agenda-block-panel-title">{selectedBlock.title}</span>
-              <button className="agenda-block-panel-close" onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); }}>✕</button>
+              <button className="agenda-block-panel-close" onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); setMobileDetailSheetOpen(false); }}>✕</button>
             </div>
             <div className="agenda-block-panel-actions">
               <button onClick={() => onDuplicate(selectedBlock.id)}>Duplikuj</button>
@@ -1095,12 +1251,12 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
       {selectedEventId && (() => {
         const event = events.find(e => e.id === selectedEventId);
         return event ? (
-          <div className="agenda-block-panel">
+          <div className={`agenda-block-panel${mobileDetailSheetOpen && selectedEventId ? ' mobile-sheet-open' : ''}`}>
             <div className="agenda-block-panel-header">
               <span className="agenda-block-panel-title">◈ {event.title}</span>
               <div className="agenda-block-panel-actions">
                 <button onClick={() => setEditingEvent(event)}>Edytuj</button>
-                <button onClick={() => setSelectedEventId(null)}>✕</button>
+                <button onClick={() => { setSelectedEventId(null); setMobileDetailSheetOpen(false); }}>✕</button>
               </div>
             </div>
             <div className="agenda-block-panel-body" style={{ padding: 0 }}>
@@ -1131,6 +1287,14 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           />
         ) : null;
       })()}
+
+      {/* Mobile backdrop */}
+      {(mobileTaskDrawerOpen || mobileDetailSheetOpen) && (
+        <div
+          className="agenda-mobile-backdrop"
+          onClick={() => { setMobileTaskDrawerOpen(false); setMobileDetailSheetOpen(false); }}
+        />
+      )}
 
       {/* Modal: create all-day event (click on all-day row) */}
       {pendingAllDayDate && (
