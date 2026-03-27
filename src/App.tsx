@@ -21,6 +21,8 @@ import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
+import { useVersionCheck } from './hooks/useVersionCheck';
+import { UpdateBanner } from './components/UpdateBanner';
 import './App.css';
 
 function newId() {
@@ -61,6 +63,7 @@ export default function App() {
   });
   const [showTour, setShowTour] = useState(false);
   const [dataInitialized, setDataInitialized] = useState(false);
+  const { updateAvailable } = useVersionCheck();
 
   const applyInitialData = useCallback((d: AppState) => {
     setData(d);
@@ -902,6 +905,7 @@ export default function App() {
 
   return (
     <div className="app">
+      {updateAvailable && <UpdateBanner />}
       <header className="app-header">
         <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu">
           <span /><span /><span />
