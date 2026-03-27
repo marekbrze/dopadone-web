@@ -224,37 +224,40 @@ function ProjectPicker({ projects, areas, lifters, onAssign }: { projects: Proje
         Przypisz...
       </button>
       {open && (
-        <div className="inbox-project-dropdown">
-          <input
-            ref={searchRef}
-            className="inbox-project-search"
-            placeholder="Szukaj projektu..."
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Escape') close(); }}
-          />
-          <div className="inbox-project-list">
-            {groups.length === 0
-              ? <div className="inbox-project-option-empty">Brak wyników</div>
-              : groups.map(group => (
-                <div key={`${group.areaId}-${group.lifterId ?? ''}`}>
-                  <div className="inbox-project-group-header">
-                    {group.areaName}{group.lifterName ? ` / ${group.lifterName}` : ''}
-                  </div>
-                  {group.projects.map(p => (
-                    <div
-                      key={p.id}
-                      className="inbox-project-option"
-                      onMouseDown={() => { onAssign(p.id); close(); }}
-                    >
-                      {p.name}
+        <>
+          <div className="inbox-picker-backdrop" onMouseDown={close} />
+          <div className="inbox-project-dropdown">
+            <input
+              ref={searchRef}
+              className="inbox-project-search"
+              placeholder="Szukaj projektu..."
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Escape') close(); }}
+            />
+            <div className="inbox-project-list">
+              {groups.length === 0
+                ? <div className="inbox-project-option-empty">Brak wyników</div>
+                : groups.map(group => (
+                  <div key={`${group.areaId}-${group.lifterId ?? ''}`}>
+                    <div className="inbox-project-group-header">
+                      {group.areaName}{group.lifterName ? ` / ${group.lifterName}` : ''}
                     </div>
-                  ))}
-                </div>
-              ))
-            }
+                    {group.projects.map(p => (
+                      <div
+                        key={p.id}
+                        className="inbox-project-option"
+                        onMouseDown={() => { onAssign(p.id); close(); }}
+                      >
+                        {p.name}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              }
+            </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

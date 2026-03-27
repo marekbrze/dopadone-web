@@ -2173,6 +2173,124 @@ body {
 
 .inbox-done-toggle:hover { color: var(--text); }
 
+.inbox-picker-backdrop {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .inbox-main {
+    padding: 20px 16px 32px;
+  }
+
+  .inbox-header {
+    margin-bottom: 16px;
+  }
+
+  .inbox-title {
+    font-size: 20px;
+  }
+
+  .inbox-add-input {
+    padding: 12px 14px;
+    font-size: 16px; /* Zapobiega auto-zoomowi iOS przy focus */
+  }
+
+  .inbox-add-btn {
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+
+  .inbox-task-row {
+    padding: 12px 8px;
+    gap: 12px;
+    min-height: 44px;
+  }
+
+  .inbox-task-checkbox {
+    width: 20px;
+    height: 20px;
+  }
+
+  .inbox-task-name {
+    font-size: 15px;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  .inbox-project-picker-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    max-width: 110px;
+  }
+
+  /* Project picker jako bottom sheet na mobile */
+  .inbox-project-dropdown {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    max-width: 100%;
+    max-height: 60vh;
+    border-radius: 12px 12px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    z-index: 200;
+    animation: inboxSheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes inboxSheetIn {
+    from { transform: translateY(100%); opacity: 0.5; }
+    to   { transform: translateY(0);    opacity: 1;   }
+  }
+
+  .inbox-project-list {
+    max-height: calc(60vh - 56px);
+  }
+
+  .inbox-project-search {
+    padding: 14px 16px;
+    font-size: 16px; /* Zapobiega auto-zoomowi iOS */
+  }
+
+  .inbox-project-option {
+    padding: 14px 16px;
+    font-size: 15px;
+  }
+
+  .inbox-project-group-header {
+    padding: 6px 16px 5px;
+  }
+
+  .inbox-empty {
+    font-size: 15px;
+    padding: 32px 0;
+  }
+
+  .inbox-done-toggle {
+    font-size: 14px;
+    padding: 8px 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .inbox-picker-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0, 0, 0, 0.4);
+    animation: inboxBackdropIn 0.18s ease;
+  }
+
+  @keyframes inboxBackdropIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+}
+
 /* ── Block: done section (shared by AgendaView & TodayView) ─────── */
 
 .block-done-section {
