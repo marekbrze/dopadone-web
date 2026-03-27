@@ -283,6 +283,22 @@ export function SettingsModal({
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="settings-modal" onClick={e => e.stopPropagation()}>
+        <div className="settings-mobile-nav">
+          <select
+            className="settings-mobile-select"
+            value={activeCategory}
+            onChange={e => setActiveCategory(e.target.value as typeof activeCategory)}
+          >
+            <option value="obszary">Obszary</option>
+            <option value="konteksty">Konteksty</option>
+            <option value="projekty">Projekty</option>
+            <option value="szablony">Szablony bloków</option>
+            <option value="backup">Kopia zapasowa</option>
+            <option value="sync">Synchronizacja</option>
+          </select>
+          <button className="settings-mobile-close-btn" onClick={onClose}>✕</button>
+        </div>
+
         <div className="settings-sidebar">
           <div className="settings-sidebar-title">Ustawienia</div>
           <button
