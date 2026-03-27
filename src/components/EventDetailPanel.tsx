@@ -28,11 +28,15 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
   const [projectSearch, setProjectSearch] = useState('');
   const [projectPickerOpen, setProjectPickerOpen] = useState(false);
   const projectPickerRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<'actions' | 'notes'>('actions');
+  const [notesDraft, setNotesDraft] = useState(event.notes ?? '');
 
-  // Sync title when event changes
+  // Sync title and notes when event changes
   useEffect(() => {
     setTitle(event.title);
-  }, [event.id]);
+    setNotesDraft(event.notes ?? '');
+    setActiveTab('actions');
+  }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close project picker on outside click
   useEffect(() => {
@@ -220,8 +224,18 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
         </div>
       </div>
 
-      <div className="event-detail-section">
-        <div className="event-detail-section-heading">Action points</div>
+      <div className="agenda-panel-tabs event-panel-tabs">
+        <button
+          className={`agenda-panel-tab${activeTab === 'actions' ? ' active' : ''}`}
+          onClick={() => setActiveTab('actions')}
+        >Action Points</button>
+        <button
+          className={`agenda-panel-tab${activeTab === 'notes' ? ' active' : ''}`}
+          onClick={() => setActiveTab('notes')}
+        >Notatki</button>
+      </div>
+
+      {activeTab === 'actions' && (
         <div className="event-action-points">
           {eventTasks.map(task => (
             <div key={task.id} className={`event-task-item${task.done ? ' done' : ''}`}>
@@ -253,7 +267,19 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
             >+</button>
           </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === 'notes' && (
+        <div className="agenda-panel-notes-wrap">
+          <textarea
+            className="agenda-panel-notes-textarea"
+            placeholder="Notatki do eventu…"
+            value={notesDraft}
+            onChange={e => setNotesDraft(e.target.value)}
+            onBlur={() => onUpdate({ notes: notesDraft })}
+          />
+        </div>
+      )}
 
       <div className="event-detail-footer">
         <button className="event-delete-btn" onClick={onDelete}>

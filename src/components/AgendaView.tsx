@@ -163,6 +163,8 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [showBlockDone, setShowBlockDone] = useState(false);
   const [mobileTaskDrawerOpen, setMobileTaskDrawerOpen] = useState(false);
   const [mobileDetailSheetOpen, setMobileDetailSheetOpen] = useState(false);
+  const [blockPanelTab, setBlockPanelTab] = useState<'actions' | 'notes'>('actions');
+  const [blockNotesDraft, setBlockNotesDraft] = useState('');
   const [nowMinutes, setNowMinutes] = useState(() => {
     const n = new Date();
     return n.getHours() * 60 + n.getMinutes();
@@ -178,8 +180,12 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     }
   }, [workBlocks, selectedBlockId]);
 
-  // Reset done section when switching blocks
-  useEffect(() => { setShowBlockDone(false); }, [selectedBlockId]);
+  // Reset done section and tab when switching blocks
+  useEffect(() => {
+    setShowBlockDone(false);
+    setBlockPanelTab('actions');
+    setBlockNotesDraft(selectedBlock?.notes ?? '');
+  }, [selectedBlockId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear selected task if it no longer exists
   useEffect(() => {
@@ -1101,7 +1107,28 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               <button onClick={() => setEditingBlock(selectedBlock)}>Edytuj blok</button>
             </div>
           </div>
-          {isManual && (
+          <div className="agenda-panel-tabs">
+            <button
+              className={`agenda-panel-tab${blockPanelTab === 'actions' ? ' active' : ''}`}
+              onClick={() => setBlockPanelTab('actions')}
+            >Action Points</button>
+            <button
+              className={`agenda-panel-tab${blockPanelTab === 'notes' ? ' active' : ''}`}
+              onClick={() => setBlockPanelTab('notes')}
+            >Notatki</button>
+          </div>
+          {blockPanelTab === 'notes' ? (
+            <div className="agenda-panel-notes-wrap">
+              <textarea
+                className="agenda-panel-notes-textarea"
+                placeholder="Notatki do bloku…"
+                value={blockNotesDraft}
+                onChange={e => setBlockNotesDraft(e.target.value)}
+                onBlur={() => onUpdate(selectedBlock.id, { notes: blockNotesDraft })}
+              />
+            </div>
+          ) : null}
+          {blockPanelTab === 'actions' && isManual && (
             <div className="agenda-block-add-task">
               <input
                 type="text"
@@ -1117,7 +1144,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               />
             </div>
           )}
-          <div className="agenda-block-panel-body">
+          {blockPanelTab === 'actions' && <div className="agenda-block-panel-body">
             {pinnedDurationOverflow && (
               <div className="block-duration-warning">
                 ⚠ Suma czasów zadań ({pinnedTasksTotalDuration >= 60 ? `${Math.floor(pinnedTasksTotalDuration / 60)}h${pinnedTasksTotalDuration % 60 > 0 ? ` ${pinnedTasksTotalDuration % 60}m` : ''}` : `${pinnedTasksTotalDuration}m`}) przekracza długość bloku ({selectedBlockDuration}m)
@@ -1244,7 +1271,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 )}
               </>
             )}
-          </div>
+          </div>}
         </div>
       )}
 

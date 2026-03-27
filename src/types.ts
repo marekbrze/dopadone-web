@@ -67,6 +67,7 @@ export interface WorkBlock {
   projectIds: string[];
   contextIds: string[];
   color?: string;
+  notes?: string;
 }
 
 export interface BlockTemplate {
@@ -88,6 +89,7 @@ export interface CalendarEvent {
   endMinutes?: number;       // undefined when allDay
   projectId: string | null;  // null → tasks go to inbox
   taskIds: string[];         // action point task IDs
+  notes?: string;
 }
 
 export interface ProjectNote {
