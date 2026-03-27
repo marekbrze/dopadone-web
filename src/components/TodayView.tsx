@@ -172,19 +172,32 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const [mobileAgendaOpen, setMobileAgendaOpen] = useState(false);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const touchStartRef = useRef<{ y: number; minutes: number } | null>(null);
 
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1_000);
     return () => clearInterval(id);
   }, []);
 
-  // Scroll timeline to current hour on mount
+  // Scroll timeline to center on current time — on mount and when mobile drawer opens
+  const scrollToNow = () => {
+    if (!timelineRef.current) return;
+    const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+    const containerHeight = timelineRef.current.clientHeight;
+    const offset = Math.max(0, nowMin - Math.floor(containerHeight / 2));
+    timelineRef.current.scrollTop = offset;
+  };
+
   useEffect(() => {
-    if (timelineRef.current) {
-      const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-      timelineRef.current.scrollTop = Math.max(0, nowMin - 120);
+    scrollToNow();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (mobileAgendaOpen) {
+      // rAF ensures the drawer is visible (display:flex) before measuring clientHeight
+      requestAnimationFrame(() => scrollToNow());
     }
-  }, []);
+  }, [mobileAgendaOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleGlobalMouseUp = () => {
@@ -392,6 +405,12 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     return Math.max(0, Math.min(snap15(y), 24 * 60 - 15));
   };
 
+  const getMinutesFromTouch = (touch: { clientY: number }, el: HTMLElement): number => {
+    const rect = el.getBoundingClientRect();
+    const y = touch.clientY - rect.top;
+    return Math.max(0, Math.min(snap15(y), 24 * 60 - 15));
+  };
+
   return (
     <>
       <div className="today-view">
@@ -563,6 +582,23 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     const finalEnd = endMin - startMin < 15 ? startMin + 60 : endMin;
                     setPendingSlot({ startMinutes: startMin, endMinutes: finalEnd });
                     setDragState(null);
+                  }}
+                  onTouchStart={e => {
+                    const touch = e.touches[0];
+                    const minutes = getMinutesFromTouch(touch, e.currentTarget);
+                    touchStartRef.current = { y: touch.clientY, minutes };
+                  }}
+                  onTouchEnd={e => {
+                    const start = touchStartRef.current;
+                    if (!start) return;
+                    const touch = e.changedTouches[0];
+                    const moved = Math.abs(touch.clientY - start.y) > 12;
+                    touchStartRef.current = null;
+                    if (moved) return; // scroll — ignore
+                    // Tap: open create-slot modal at tapped time
+                    const tappedEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                    if (tappedEl && (tappedEl.closest('[data-block-id]') || tappedEl.closest('[data-event-id]'))) return;
+                    setPendingSlot({ startMinutes: start.minutes, endMinutes: Math.min(start.minutes + 60, 1440) });
                   }}
                 >
                   {/* Hour lines */}
