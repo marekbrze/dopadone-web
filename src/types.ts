@@ -51,6 +51,7 @@ export interface Task {
   startDate?: string | null;    // "YYYY-MM-DD"
   endDate?: string | null;      // "YYYY-MM-DD"
   plannedDate?: string | null;  // "YYYY-MM-DD" — dzień, na który zadanie jest zaplanowane
+  isNext?: boolean;             // true = następne/dowolnie — przetworzone, bez konkretnej daty
   duration?: TaskDuration | null;
   order?: number;
 }

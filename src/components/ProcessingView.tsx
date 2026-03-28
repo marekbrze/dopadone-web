@@ -49,6 +49,7 @@ function isProjectStartInFuture(project: Project | null | undefined, today: stri
 
 function needsDateStep(task: Task, projects: Project[], today: string): boolean {
   if (task.plannedDate) return false;
+  if (task.isNext) return false;
   const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
   return !isProjectStartInFuture(project, today);
 }
@@ -283,9 +284,12 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     });
   }, [onUpdateTask, tasks, resetStepState, initPendingFromTask]);
 
-  const pickDate = useCallback((date: string) => {
+  const pickDate = useCallback((opt: DateOption) => {
     if (!currentStep) return;
-    onUpdateTask(currentStep.taskId, { plannedDate: date }).then(() => {
+    const updates: Partial<Task> = opt.isNext
+      ? { isNext: true, plannedDate: null }
+      : { plannedDate: opt.date as string, isNext: false };
+    onUpdateTask(currentStep.taskId, updates).then(() => {
       markStepCompleted(currentStep.taskId, 'date');
       advanceStep(allSteps, currentStepIndex);
     });
@@ -459,7 +463,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           }
         } else if (currentStep.kind === 'date') {
           const opt = dateOptions.find(o => o.key === pendingOptionKey);
-          if (opt) pickDate(opt.date);
+          if (opt) pickDate(opt);
         }
         return;
       }
@@ -1165,12 +1169,14 @@ function firstOfNextMonth(today: string): string {
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4'];
 const QUARTER_MONTHS = [0, 3, 6, 9];
 
-function getDateOptions(today: string): { key: string; label: string; date: string }[] {
+type DateOption = { key: string; label: string; date: string | null; isNext?: boolean };
+
+function getDateOptions(today: string): DateOption[] {
   const d = new Date(today + 'T00:00:00');
   const year = d.getFullYear();
   const currentQuarter = Math.floor(d.getMonth() / 3);
 
-  const opts: { key: string; label: string; date: string }[] = [
+  const opts: DateOption[] = [
     { key: '1', label: 'Dziś',              date: today },
     { key: '2', label: 'Jutro',             date: addDays(today, 1) },
     { key: '3', label: 'Następny tydzień',  date: nextMonday(today) },
@@ -1187,12 +1193,13 @@ function getDateOptions(today: string): { key: string; label: string; date: stri
   }
 
   opts.push({ key: String(keyIdx), label: `${year + 1}`, date: `${year + 1}-01-01` });
+  opts.push({ key: 'n', label: 'Następne / Dowolnie', date: null, isNext: true });
 
   return opts;
 }
 
 interface DateStepPanelProps {
-  options: { key: string; label: string; date: string }[];
+  options: DateOption[];
   pendingKey: string | null;
   today: string;
   onSelect: (key: string) => void;
@@ -1206,11 +1213,11 @@ function DateStepPanel({ options, pendingKey, today, onSelect, onSkip }: DateSte
       <div className="proc-step-hint">Wybierz klawiszem lub klikiem, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
       <div className="proc-options-grid">
         {options.map(opt => {
-          const hint = opt.date !== today && opt.date !== addDays(today, 1) ? formatPlannedDate(opt.date, today) : null;
+          const hint = opt.date && opt.date !== today && opt.date !== addDays(today, 1) ? formatPlannedDate(opt.date, today) : null;
           return (
             <button
               key={opt.key}
-              className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}`}
+              className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}${opt.isNext ? ' proc-option-next' : ''}`}
               onClick={() => onSelect(opt.key)}
             >
               <span className="proc-option-label">{opt.label}</span>

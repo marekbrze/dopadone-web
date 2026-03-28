@@ -634,6 +634,25 @@
   color: var(--accent);
 }
 
+.proc-option-card.proc-option-next {
+  border-style: dashed;
+  color: var(--text-muted);
+}
+
+.proc-option-card.proc-option-next .proc-option-label {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.proc-option-card.proc-option-next.highlighted {
+  border-style: dashed;
+  color: var(--accent);
+}
+
+.proc-option-card.proc-option-next.highlighted .proc-option-label {
+  color: var(--accent);
+}
+
 .proc-option-label {
   font-size: 15px;
   font-weight: 400;

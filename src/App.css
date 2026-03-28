@@ -1246,6 +1246,22 @@ body {
   margin-top: 4px;
 }
 
+.detail-next-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.detail-next-label {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-style: italic;
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
 .detail-checkbox-row {
   display: flex;
   align-items: center;

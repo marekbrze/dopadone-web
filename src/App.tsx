@@ -274,6 +274,7 @@ export default function App() {
       if (t.done) return false;
       if (t.projectId === null || t.duration == null || t.contextId === null) return true;
       if (!t.plannedDate) {
+        if (t.isNext) return false;
         const project = data.projects.find(p => p.id === t.projectId);
         if (project?.startDate) {
           const s = project.startDate;

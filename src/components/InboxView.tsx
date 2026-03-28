@@ -284,8 +284,9 @@ function InboxTaskRow({ task, projects, areas, lifters, today, selected, onSelec
       <span className="inbox-task-name">{task.name}</span>
       <PlannedDatePicker
         date={task.plannedDate}
+        isNext={task.isNext}
         today={today}
-        onChange={date => onUpdateTask(task.id, { plannedDate: date })}
+        onChange={(date, isNext) => onUpdateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
       />
       <ProjectPicker projects={projects} areas={areas} lifters={lifters} onAssign={onAssign} />
     </div>

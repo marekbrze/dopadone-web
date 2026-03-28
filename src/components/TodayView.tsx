@@ -1105,8 +1105,9 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               {project && <span className="today-planned-project">{project.name}</span>}
                               <PlannedDatePicker
                                 date={task.plannedDate}
+                                isNext={task.isNext}
                                 today={todayStr}
-                                onChange={date => onUpdateTask(task.id, { plannedDate: date })}
+                                onChange={(date, isNext) => onUpdateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
                               />
                               <span
                                 className="today-priority-dot"

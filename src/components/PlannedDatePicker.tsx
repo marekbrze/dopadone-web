@@ -4,7 +4,8 @@ import './PlannedDatePicker.css';
 
 interface Props {
   date: string | null | undefined;
-  onChange: (date: string | null) => void;
+  isNext?: boolean;
+  onChange: (date: string | null, isNext?: boolean) => void;
   today: string; // "YYYY-MM-DD"
 }
 
@@ -27,7 +28,7 @@ export function formatPlannedDate(date: string, today: string): string {
   return `${day} ${month} ${d.getFullYear()}`;
 }
 
-export function PlannedDatePicker({ date, onChange, today }: Props) {
+export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
   const [open, setOpen] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customDate, setCustomDate] = useState('');
@@ -63,8 +64,8 @@ export function PlannedDatePicker({ date, onChange, today }: Props) {
     };
   }, [open]);
 
-  const pick = (newDate: string | null) => {
-    onChange(newDate);
+  const pick = (newDate: string | null, newIsNext?: boolean) => {
+    onChange(newDate, newIsNext);
     setOpen(false);
   };
 
@@ -82,13 +83,15 @@ export function PlannedDatePicker({ date, onChange, today }: Props) {
     <div className="pdp-root" onClick={e => e.stopPropagation()}>
       <button
         ref={btnRef}
-        className={`pdp-chip${hasDate ? ' has-date' : ''}${isOverdue ? ' overdue' : ''}`}
+        className={`pdp-chip${isNext ? ' is-next' : hasDate ? ' has-date' : ''}${isOverdue ? ' overdue' : ''}`}
         onClick={handleOpen}
-        title={hasDate ? `Zaplanowane: ${date}` : 'Ustaw datę planowania'}
+        title={isNext ? 'Następne / Dowolnie' : hasDate ? `Zaplanowane: ${date}` : 'Ustaw datę planowania'}
       >
-        {hasDate
-          ? formatPlannedDate(date!, today)
-          : <span className="pdp-no-date">—</span>
+        {isNext
+          ? <span className="pdp-next-label">następne</span>
+          : hasDate
+            ? formatPlannedDate(date!, today)
+            : <span className="pdp-no-date">—</span>
         }
       </button>
 
@@ -97,8 +100,8 @@ export function PlannedDatePicker({ date, onChange, today }: Props) {
           {options.map(opt => (
             <button
               key={opt.date}
-              className={`pdp-option${date === opt.date ? ' active' : ''}`}
-              onMouseDown={e => { e.preventDefault(); pick(opt.date); }}
+              className={`pdp-option${date === opt.date && !isNext ? ' active' : ''}`}
+              onMouseDown={e => { e.preventDefault(); pick(opt.date, false); }}
             >
               <span className="pdp-option-label">{opt.label}</span>
               {opt.label !== 'Dziś' && opt.label !== 'Jutro' && (
@@ -117,14 +120,14 @@ export function PlannedDatePicker({ date, onChange, today }: Props) {
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => {
                   e.stopPropagation();
-                  if (e.key === 'Enter' && customDate) pick(customDate);
+                  if (e.key === 'Enter' && customDate) pick(customDate, false);
                   if (e.key === 'Escape') setShowCustomInput(false);
                 }}
               />
               {customDate && (
                 <button
                   className="pdp-custom-confirm"
-                  onMouseDown={e => { e.preventDefault(); pick(customDate); }}
+                  onMouseDown={e => { e.preventDefault(); pick(customDate, false); }}
                 >
                   OK
                 </button>
@@ -138,12 +141,18 @@ export function PlannedDatePicker({ date, onChange, today }: Props) {
               Inna data…
             </button>
           )}
-          {hasDate && (
+          <button
+            className={`pdp-option pdp-option-next${isNext ? ' active' : ''}`}
+            onMouseDown={e => { e.preventDefault(); pick(null, true); }}
+          >
+            Następne / Dowolnie
+          </button>
+          {(hasDate || isNext) && (
             <button
               className="pdp-option pdp-option-remove"
-              onMouseDown={e => { e.preventDefault(); pick(null); }}
+              onMouseDown={e => { e.preventDefault(); pick(null, false); }}
             >
-              Usuń datę
+              {isNext ? 'Usuń "następne"' : 'Usuń datę'}
             </button>
           )}
         </div>,

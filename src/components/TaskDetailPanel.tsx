@@ -142,6 +142,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     }
     setPlannedDateError('');
     onUpdate('plannedDate', date);
+    if (date && task.isNext) onUpdate('isNext', false);
   };
 
   return (
@@ -307,6 +308,16 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
 
         <div className="detail-field">
           <label>Data planowania</label>
+          {task.isNext && !task.plannedDate && (
+            <div className="detail-next-badge">
+              <span className="detail-next-label">następne / dowolnie</span>
+              <button
+                className="close-btn"
+                onClick={() => onUpdate('isNext', false)}
+                title="Usuń 'następne'"
+              >✕</button>
+            </div>
+          )}
           <div className="detail-date-row">
             <input
               type="date"

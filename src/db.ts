@@ -32,6 +32,16 @@ export class DopadoneDB extends Dexie {
 
     if (cloud) {
       // @id: Dexie Cloud generates IDs — required for cross-device sync
+      this.version(6).stores({
+        areas:        '@id, name',
+        lifters:      '@id, areaId',
+        projects:     '@id, areaId, lifterId, parentProjectId',
+        tasks:        '@id, projectId, contextId, done',
+        contexts:     '@id, name',
+        workBlocks:   '@id, date',
+        events:       '@id, date',
+        projectNotes: '@id, projectId',
+      });
       this.version(5).stores({
         areas:        '@id, name',
         lifters:      '@id, areaId',
@@ -79,6 +89,16 @@ export class DopadoneDB extends Dexie {
       });
     } else {
       // Legacy schema for existing local databases
+      this.version(8).stores({
+        areas:        'id, name',
+        lifters:      'id, areaId',
+        projects:     'id, areaId, lifterId, parentProjectId',
+        tasks:        'id, projectId, contextId, done',
+        contexts:     'id, name',
+        workBlocks:   'id, date',
+        events:       'id, date',
+        projectNotes: 'id, projectId',
+      });
       this.version(7).stores({
         areas:        'id, name',
         lifters:      'id, areaId',

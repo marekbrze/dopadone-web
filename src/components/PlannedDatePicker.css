@@ -103,6 +103,23 @@
   padding: 6px 12px;
 }
 
+.pdp-option-next {
+  border-top: 1px solid var(--border-light);
+  font-size: 12px;
+  padding: 6px 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.pdp-option-next:hover {
+  background: var(--surface2);
+}
+
+.pdp-option-next.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
 .pdp-option-remove {
   border-top: 1px solid var(--border-light);
   color: #a33a2a;
@@ -112,6 +129,17 @@
 
 .pdp-option-remove:hover {
   background: rgba(163, 58, 42, 0.06);
+}
+
+.pdp-chip.is-next {
+  color: var(--text-muted);
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+  font-style: italic;
+}
+
+.pdp-next-label {
+  font-style: italic;
+  font-size: 12px;
 }
 
 .pdp-custom-row {
