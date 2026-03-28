@@ -984,7 +984,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     </div>
                   )}
                 </div>
-                {plannedTasks.length > 0 && !selectedTaskId && (
+                {plannedTasks.length > 0 && (
                   <div className="today-planned-section">
                     <button
                       className="today-planned-toggle"
