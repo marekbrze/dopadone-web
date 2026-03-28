@@ -1,0 +1,156 @@
+.pdp-root {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.pdp-chip {
+  font-size: 11px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  padding: 1px 6px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.6;
+  transition: border-color 0.1s, color 0.1s, background 0.1s;
+  letter-spacing: 0.01em;
+}
+
+.pdp-chip:hover {
+  border-color: var(--border);
+  color: var(--text-muted);
+  background: var(--surface2);
+}
+
+.pdp-chip.has-date {
+  color: var(--text-muted);
+  border-color: var(--border);
+  background: var(--surface2);
+}
+
+.pdp-chip.has-date:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pdp-chip.overdue {
+  color: #a33a2a;
+  border-color: rgba(163, 58, 42, 0.4);
+  background: rgba(163, 58, 42, 0.06);
+}
+
+.pdp-chip.overdue:hover {
+  border-color: #a33a2a;
+}
+
+.pdp-no-date {
+  opacity: 0.4;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* ── Dropdown ──────────────────────────────────────────── */
+.pdp-dropdown {
+  position: fixed;
+  z-index: 9999;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14), 0 1px 4px rgba(0, 0, 0, 0.08);
+  min-width: 170px;
+  overflow: hidden;
+  font-family: 'IBM Plex Sans', sans-serif;
+}
+
+.pdp-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 7px 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  gap: 8px;
+}
+
+.pdp-option:hover {
+  background: var(--surface2);
+}
+
+.pdp-option.active .pdp-option-label {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.pdp-option-hint {
+  font-size: 11px;
+  color: var(--text-faint);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.pdp-option-other {
+  border-top: 1px solid var(--border-light);
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.pdp-option-remove {
+  border-top: 1px solid var(--border-light);
+  color: #a33a2a;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.pdp-option-remove:hover {
+  background: rgba(163, 58, 42, 0.06);
+}
+
+.pdp-custom-row {
+  display: flex;
+  align-items: center;
+  padding: 6px 8px;
+  gap: 6px;
+  border-top: 1px solid var(--border-light);
+}
+
+.pdp-custom-input {
+  flex: 1;
+  font-size: 12px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 3px 5px;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 0;
+}
+
+.pdp-custom-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.pdp-custom-confirm {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: var(--accent);
+  color: white;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', sans-serif;
+  white-space: nowrap;
+}
+
+.pdp-custom-confirm:hover {
+  background: var(--accent-soft);
+}

@@ -6,6 +6,7 @@ import { ActiveEventPanel } from './ActiveEventPanel';
 import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
 import { TaskDetailPanel } from './TaskDetailPanel';
+import { PlannedDatePicker } from './PlannedDatePicker';
 
 interface Props {
   areas: Area[];
@@ -1102,6 +1103,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               />
                               <span className="today-task-name">{task.name}</span>
                               {project && <span className="today-planned-project">{project.name}</span>}
+                              <PlannedDatePicker
+                                date={task.plannedDate}
+                                today={todayStr}
+                                onChange={date => onUpdateTask(task.id, { plannedDate: date })}
+                              />
                               <span
                                 className="today-priority-dot"
                                 style={{ background: priorityColors[task.priority] }}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Task, Project, Context, TaskDuration, Area, Lifter } from '../types';
+import { addDays, formatPlannedDate } from './PlannedDatePicker';
 import './ProcessingView.css';
 
 interface ProcessingViewProps {
@@ -16,7 +17,7 @@ interface ProcessingViewProps {
 
 type ProjectPanelMode = 'list' | 'new-project' | 'convert';
 
-type ProcessingStepKind = 'project' | 'duration' | 'context';
+type ProcessingStepKind = 'project' | 'duration' | 'context' | 'date';
 type ProcessingScreen = 'summary' | 'processing' | 'done';
 
 interface ProcessingStep {
@@ -37,7 +38,14 @@ const DURATION_OPTIONS: { key: string; value: TaskDuration; label: string }[] = 
 
 const OPTION_KEYS = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'];
 
-function buildSession(tasks: Task[]): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
+function isProjectStartInFuture(project: Project | null | undefined, today: string): boolean {
+  if (!project?.startDate) return false;
+  const s = project.startDate;
+  const padded = s.length === 4 ? s + '-01-01' : s.length === 7 ? s + '-01' : s;
+  return padded > today;
+}
+
+function buildSession(tasks: Task[], projects: Project[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
   const eligible = tasks.filter(t =>
     !t.done && (t.projectId === null || t.duration == null || t.contextId === null)
   );
@@ -52,6 +60,13 @@ function buildSession(tasks: Task[]): { sessionTaskIds: string[]; allSteps: Proc
     if (task.projectId === null) allSteps.push({ taskId: task.id, kind: 'project' });
     if (task.duration == null)   allSteps.push({ taskId: task.id, kind: 'duration' });
     if (task.contextId === null) allSteps.push({ taskId: task.id, kind: 'context' });
+    // Add date step if no plannedDate and project (if any) doesn't start in the future
+    if (!task.plannedDate) {
+      const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
+      if (!isProjectStartInFuture(project, today)) {
+        allSteps.push({ taskId: task.id, kind: 'date' });
+      }
+    }
   }
 
   return { sessionTaskIds, allSteps };
@@ -92,11 +107,21 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   const projectInputRef = useRef<HTMLInputElement>(null);
   const projectListRef = useRef<HTMLDivElement>(null);
 
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
   // Summary stats (live from props)
   const inboxCount = useMemo(() => tasks.filter(t => !t.done && t.projectId === null).length, [tasks]);
   const noDurationCount = useMemo(() => tasks.filter(t => !t.done && t.duration == null).length, [tasks]);
   const noContextCount = useMemo(() => tasks.filter(t => !t.done && t.contextId === null).length, [tasks]);
-  const nothingToDo = inboxCount === 0 && noDurationCount === 0 && noContextCount === 0;
+  const noDateCount = useMemo(() => {
+    const eligible = tasks.filter(t => !t.done && (t.projectId === null || t.duration == null || t.contextId === null));
+    return eligible.filter(t => {
+      if (t.plannedDate) return false;
+      const project = t.projectId ? projects.find(p => p.id === t.projectId) : null;
+      return !isProjectStartInFuture(project, today);
+    }).length;
+  }, [tasks, projects, today]);
+  const nothingToDo = inboxCount === 0 && noDurationCount === 0 && noContextCount === 0 && noDateCount === 0;
 
   const currentStep = allSteps[currentStepIndex] ?? null;
   const currentTask = useMemo(
@@ -178,7 +203,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   }, [tasks, resetStepState, initPendingFromTask]);
 
   const startSession = useCallback(() => {
-    const { sessionTaskIds: ids, allSteps: steps } = buildSession(tasks);
+    const { sessionTaskIds: ids, allSteps: steps } = buildSession(tasks, projects, today);
     if (steps.length === 0) return;
     setSessionTaskIds(ids);
     setAllSteps(steps);
@@ -192,7 +217,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
       initPendingFromTask(firstTask, firstStep.kind);
     }
     setScreen('processing');
-  }, [tasks, resetStepState, initPendingFromTask]);
+  }, [tasks, projects, today, resetStepState, initPendingFromTask]);
 
   const jumpToTask = useCallback((taskId: string, steps: ProcessingStep[]) => {
     const idx = steps.findIndex(s => s.taskId === taskId);
@@ -222,6 +247,15 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     return () => clearInterval(id);
   }, [screen, timerSeconds]);
 
+  // Auto-skip date step if the task's project has a future startDate
+  useEffect(() => {
+    if (screen !== 'processing' || !currentStep || currentStep.kind !== 'date' || !currentTask) return;
+    const project = currentTask.projectId ? projects.find(p => p.id === currentTask.projectId) : null;
+    if (project && isProjectStartInFuture(project, today)) {
+      advanceStep(allSteps, currentStepIndex);
+    }
+  }, [screen, currentStep, currentTask, projects, today, advanceStep, allSteps, currentStepIndex]);
+
   // Mark current task as done
   const markTaskDone = useCallback((taskId: string, steps: ProcessingStep[], idx: number) => {
     onUpdateTask(taskId, { done: true }).then(() => {
@@ -244,6 +278,14 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
       }
     });
   }, [onUpdateTask, tasks, resetStepState, initPendingFromTask]);
+
+  const pickDate = useCallback((date: string) => {
+    if (!currentStep) return;
+    onUpdateTask(currentStep.taskId, { plannedDate: date }).then(() => {
+      markStepCompleted(currentStep.taskId, 'date');
+      advanceStep(allSteps, currentStepIndex);
+    });
+  }, [currentStep, onUpdateTask, markStepCompleted, advanceStep, allSteps, currentStepIndex]);
 
   const handleCreateProject = useCallback(async (name: string, areaId: string, lifterId: string | null) => {
     if (!currentStep) return;
@@ -371,6 +413,20 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
         return;
       }
 
+      // Date step
+      if (currentStep.kind === 'date') {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (e.key === 'ArrowLeft') { e.preventDefault(); goBack(allSteps, currentStepIndex); return; }
+        if (e.key === 'Escape') { e.preventDefault(); advanceStep(allSteps, currentStepIndex); return; }
+        if (e.key === 'd') { e.preventDefault(); markTaskDone(currentStep.taskId, allSteps, currentStepIndex); return; }
+        if (e.key === '1') { e.preventDefault(); pickDate(today); return; }
+        if (e.key === '2') { e.preventDefault(); pickDate(addDays(today, 1)); return; }
+        if (e.key === '3') { e.preventDefault(); pickDate(addDays(today, 7)); return; }
+        if (e.key === '4') { e.preventDefault(); pickDate(addDays(today, 30)); return; }
+        return;
+      }
+
       // Duration or Context step
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -436,8 +492,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   }, [
     screen, currentStep, currentStepIndex, allSteps,
     filteredProjects, projectCursorIndex, projectPanelMode, pendingOptionKey,
-    contexts, nothingToDo,
-    onUpdateTask, markStepCompleted, advanceStep, goBack, startSession, markTaskDone,
+    contexts, nothingToDo, today,
+    onUpdateTask, markStepCompleted, advanceStep, goBack, startSession, markTaskDone, pickDate,
   ]);
 
   // Reset project cursor when query changes
@@ -469,6 +525,10 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
                   <div className="proc-stat-number">{noContextCount}</div>
                   <div className="proc-stat-label">Bez kontekstu</div>
                 </div>
+                <div className={`proc-stat-card${noDateCount === 0 ? ' zero' : ''}`}>
+                  <div className="proc-stat-number">{noDateCount}</div>
+                  <div className="proc-stat-label">Bez daty</div>
+                </div>
               </div>
               <button className="proc-start-btn" onClick={startSession}>
                 Rozpocznij <kbd>↵</kbd>
@@ -499,8 +559,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   if (!currentTask || !currentStep) return null;
 
   const taskStepsInSession = allSteps.filter(s => s.taskId === currentStep.taskId);
-  const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', duration: 'Czas', context: 'Kontekst' };
-  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', duration: 'Czas', context: 'Kontekst' };
+  const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', duration: 'Czas', context: 'Kontekst', date: 'Data' };
+  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', duration: 'Czas', context: 'Kontekst', date: 'Data' };
 
   const doneTaskCount = sessionTaskIds.filter(id => isTaskFullyProcessed(id, allSteps, completedSteps)).length;
   const progressPct = sessionTaskIds.length > 0 ? (doneTaskCount / sessionTaskIds.length) * 100 : 0;
@@ -671,6 +731,14 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
                   });
                 }
               }}
+              onSkip={() => advanceStep(allSteps, currentStepIndex)}
+            />
+          )}
+
+          {currentStep.kind === 'date' && (
+            <DateStepPanel
+              today={today}
+              onPick={pickDate}
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
             />
           )}
@@ -990,6 +1058,49 @@ function OptionStepPanel({ options, pendingKey, onSelect, onConfirm, onSkip }: O
             <span className="proc-option-key">{opt.key}</span>
           </button>
         ))}
+      </div>
+      <button className="proc-skip-btn" onClick={onSkip}>
+        Pomiń <kbd>Esc</kbd>
+      </button>
+    </div>
+  );
+}
+
+// ── Date step panel ───────────────────────────────────────────────────────────
+
+const DATE_OPTIONS = [
+  { key: '1', label: 'Dziś',       daysOffset: 0 },
+  { key: '2', label: 'Jutro',      daysOffset: 1 },
+  { key: '3', label: 'Za tydzień', daysOffset: 7 },
+  { key: '4', label: 'Za miesiąc', daysOffset: 30 },
+];
+
+interface DateStepPanelProps {
+  today: string;
+  onPick: (date: string) => void;
+  onSkip: () => void;
+}
+
+function DateStepPanel({ today, onPick, onSkip }: DateStepPanelProps) {
+  return (
+    <div className="proc-option-step proc-date-step">
+      <div className="proc-step-hint">Kiedy to zrobisz? Kliknij lub użyj klawiszy · pomiń <kbd>Esc</kbd></div>
+      <div className="proc-options-grid">
+        {DATE_OPTIONS.map(opt => {
+          const date = addDays(today, opt.daysOffset);
+          const hint = opt.daysOffset > 1 ? formatPlannedDate(date, today) : null;
+          return (
+            <button
+              key={opt.key}
+              className="proc-option-card"
+              onClick={() => onPick(date)}
+            >
+              <span className="proc-option-label">{opt.label}</span>
+              {hint && <span className="proc-option-date-hint">{hint}</span>}
+              <span className="proc-option-key">{opt.key}</span>
+            </button>
+          );
+        })}
       </div>
       <button className="proc-skip-btn" onClick={onSkip}>
         Pomiń <kbd>Esc</kbd>

@@ -786,3 +786,16 @@
 .processing-tab {
   position: relative;
 }
+
+/* ── Date step ── */
+.proc-date-step .proc-options-grid {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.proc-option-date-hint {
+  font-size: 10px;
+  color: var(--text-faint);
+  margin-top: 2px;
+  display: block;
+  text-align: center;
+}

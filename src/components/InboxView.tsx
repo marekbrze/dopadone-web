@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Task, Project, Context, Area, Lifter } from '../types';
+import { PlannedDatePicker } from './PlannedDatePicker';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -21,6 +22,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
   const [showDone, setShowDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [assignConfirm, setAssignConfirm] = useState<{ taskId: string; projectId: string; projectName: string; projectEndDate: string; taskEndDate: string } | null>(null);
+  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
   const undone = tasks.filter(t => !t.done);
   const done = tasks.filter(t => t.done);
@@ -82,10 +84,12 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
               projects={projects}
               areas={areas}
               lifters={lifters}
+              today={today}
               selected={selectedTaskId === task.id}
               onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
               onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
               onAssign={projectId => handleAssign(task, projectId)}
+              onUpdateTask={onUpdateTask}
             />
           ))}
         </div>
@@ -107,10 +111,12 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
                     projects={projects}
                     areas={areas}
                     lifters={lifters}
+                    today={today}
                     selected={selectedTaskId === task.id}
                     onSelect={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
                     onToggleDone={() => onUpdateTask(task.id, { done: !task.done })}
                     onAssign={projectId => handleAssign(task, projectId)}
+                    onUpdateTask={onUpdateTask}
                   />
                 ))}
               </div>
@@ -153,10 +159,12 @@ interface RowProps {
   projects: Project[];
   areas: Area[];
   lifters: Lifter[];
+  today: string;
   selected: boolean;
   onSelect: () => void;
   onToggleDone: () => void;
   onAssign: (projectId: string) => void;
+  onUpdateTask: (id: string, updates: Partial<Task>) => void;
 }
 
 type InboxProjectGroup = {
@@ -263,7 +271,7 @@ function ProjectPicker({ projects, areas, lifters, onAssign }: { projects: Proje
   );
 }
 
-function InboxTaskRow({ task, projects, areas, lifters, selected, onSelect, onToggleDone, onAssign }: RowProps) {
+function InboxTaskRow({ task, projects, areas, lifters, today, selected, onSelect, onToggleDone, onAssign, onUpdateTask }: RowProps) {
   return (
     <div className={`inbox-task-row${selected ? ' selected' : ''}`} onClick={onSelect}>
       <input
@@ -274,6 +282,11 @@ function InboxTaskRow({ task, projects, areas, lifters, selected, onSelect, onTo
         className="inbox-task-checkbox"
       />
       <span className="inbox-task-name">{task.name}</span>
+      <PlannedDatePicker
+        date={task.plannedDate}
+        today={today}
+        onChange={date => onUpdateTask(task.id, { plannedDate: date })}
+      />
       <ProjectPicker projects={projects} areas={areas} lifters={lifters} onAssign={onAssign} />
     </div>
   );
