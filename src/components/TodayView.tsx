@@ -175,6 +175,10 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const resizeMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const [mobileAgendaOpen, setMobileAgendaOpen] = useState(false);
+  const [agendaWidth, setAgendaWidth] = useState(220);
+  const agendaPanelResizing = useRef(false);
+  const agendaPanelResizeStartX = useRef(0);
+  const agendaPanelResizeStartWidth = useRef(0);
   const timelineRef = useRef<HTMLDivElement>(null);
   const touchStartRef = useRef<{ y: number; minutes: number } | null>(null);
 
@@ -204,7 +208,20 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   }, [mobileAgendaOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!agendaPanelResizing.current) return;
+      const delta = e.clientX - agendaPanelResizeStartX.current;
+      const newWidth = Math.max(160, Math.min(400, agendaPanelResizeStartWidth.current + delta));
+      setAgendaWidth(newWidth);
+    };
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+
     const handleGlobalMouseUp = () => {
+      if (agendaPanelResizing.current) {
+        agendaPanelResizing.current = false;
+        document.body.style.cursor = '';
+        return;
+      }
       if (resizeDragState) {
         if (resizeMovedRef.current) {
           if (resizeDragState.itemType === 'block') {
@@ -248,7 +265,10 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
       }
     };
     document.addEventListener('mouseup', handleGlobalMouseUp);
-    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleGlobalMouseMove);
+      document.removeEventListener('mouseup', handleGlobalMouseUp);
+    };
   }, [dragState, blockDragState, eventDragState, resizeDragState]);
 
   const todayStr = toDateString(now);
@@ -491,7 +511,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 
         <div className="today-body">
           {/* LEFT: day timeline */}
-          <aside className={`today-agenda${mobileAgendaOpen ? ' mobile-open' : ''}`}>
+          <aside className={`today-agenda${mobileAgendaOpen ? ' mobile-open' : ''}`} style={{ width: agendaWidth }}>
             <div className="today-agenda-mobile-close">
               <span>Harmonogram dnia</span>
               <button onClick={() => setMobileAgendaOpen(false)}>✕</button>
@@ -763,6 +783,18 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
               </div>
             </div>
           </aside>
+
+          {/* Resize handle between agenda and active panel */}
+          <div
+            className="today-agenda-resize-handle"
+            onMouseDown={e => {
+              e.preventDefault();
+              agendaPanelResizing.current = true;
+              agendaPanelResizeStartX.current = e.clientX;
+              agendaPanelResizeStartWidth.current = agendaWidth;
+              document.body.style.cursor = 'col-resize';
+            }}
+          />
 
           {/* RIGHT: active block panel OR event detail */}
           <section className="today-active-panel">

@@ -3418,13 +3418,29 @@ body {
 /* Left panel: day timeline */
 
 .today-agenda {
-  width: 220px;
   flex-shrink: 0;
   border-right: 1px solid var(--border);
   background: var(--surface);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.today-agenda-resize-handle {
+  width: 5px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 1;
+  margin-left: -1px;
+  transition: background 0.15s;
+}
+
+.today-agenda-resize-handle:hover,
+.today-agenda-resize-handle:active {
+  background: var(--accent);
+  opacity: 0.2;
 }
 
 .today-agenda-heading {
@@ -4299,6 +4315,9 @@ body {
 
   /* Ukryj desktop heading gdy drawer otwarty (mobile-close go zastępuje) */
   .today-agenda.mobile-open .today-agenda-heading { display: none; }
+
+  /* Ukryj handle resize na mobile */
+  .today-agenda-resize-handle { display: none; }
 
   /* Active panel – pełna szerokość */
   .today-active-panel {
