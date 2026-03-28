@@ -335,6 +335,14 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
               >✕</button>
             )}
           </div>
+          {!task.isNext && !task.plannedDate && (
+            <button
+              className="detail-next-set-btn"
+              onClick={() => onUpdate('isNext', true)}
+            >
+              Ustaw jako następne
+            </button>
+          )}
           {plannedDateError && <span className="detail-date-error">{plannedDateError}</span>}
         </div>
 

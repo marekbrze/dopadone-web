@@ -1246,6 +1246,24 @@ body {
   margin-top: 4px;
 }
 
+.detail-next-set-btn {
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  font-style: italic;
+}
+
+.detail-next-set-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+
 .detail-next-badge {
   display: flex;
   align-items: center;
