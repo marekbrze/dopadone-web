@@ -45,9 +45,20 @@ function isProjectStartInFuture(project: Project | null | undefined, today: stri
   return padded > today;
 }
 
+function needsDateStep(task: Task, projects: Project[], today: string): boolean {
+  if (task.plannedDate) return false;
+  const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
+  return !isProjectStartInFuture(project, today);
+}
+
 function buildSession(tasks: Task[], projects: Project[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
   const eligible = tasks.filter(t =>
-    !t.done && (t.projectId === null || t.duration == null || t.contextId === null)
+    !t.done && (
+      t.projectId === null ||
+      t.duration == null ||
+      t.contextId === null ||
+      needsDateStep(t, projects, today)
+    )
   );
   const inboxFirst = [
     ...eligible.filter(t => t.projectId === null),
@@ -60,13 +71,7 @@ function buildSession(tasks: Task[], projects: Project[], today: string): { sess
     if (task.projectId === null) allSteps.push({ taskId: task.id, kind: 'project' });
     if (task.duration == null)   allSteps.push({ taskId: task.id, kind: 'duration' });
     if (task.contextId === null) allSteps.push({ taskId: task.id, kind: 'context' });
-    // Add date step if no plannedDate and project (if any) doesn't start in the future
-    if (!task.plannedDate) {
-      const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
-      if (!isProjectStartInFuture(project, today)) {
-        allSteps.push({ taskId: task.id, kind: 'date' });
-      }
-    }
+    if (needsDateStep(task, projects, today)) allSteps.push({ taskId: task.id, kind: 'date' });
   }
 
   return { sessionTaskIds, allSteps };
@@ -113,14 +118,10 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   const inboxCount = useMemo(() => tasks.filter(t => !t.done && t.projectId === null).length, [tasks]);
   const noDurationCount = useMemo(() => tasks.filter(t => !t.done && t.duration == null).length, [tasks]);
   const noContextCount = useMemo(() => tasks.filter(t => !t.done && t.contextId === null).length, [tasks]);
-  const noDateCount = useMemo(() => {
-    const eligible = tasks.filter(t => !t.done && (t.projectId === null || t.duration == null || t.contextId === null));
-    return eligible.filter(t => {
-      if (t.plannedDate) return false;
-      const project = t.projectId ? projects.find(p => p.id === t.projectId) : null;
-      return !isProjectStartInFuture(project, today);
-    }).length;
-  }, [tasks, projects, today]);
+  const noDateCount = useMemo(
+    () => tasks.filter(t => !t.done && needsDateStep(t, projects, today)).length,
+    [tasks, projects, today]
+  );
   const nothingToDo = inboxCount === 0 && noDurationCount === 0 && noContextCount === 0 && noDateCount === 0;
 
   const currentStep = allSteps[currentStepIndex] ?? null;
