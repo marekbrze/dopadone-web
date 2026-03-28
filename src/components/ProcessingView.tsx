@@ -1144,11 +1144,34 @@ function OptionStepPanel({ options, pendingKey, onSelect, onConfirm, onSkip }: O
 
 // ── Date step panel ───────────────────────────────────────────────────────────
 
-const DATE_OPTIONS = [
-  { key: '1', label: 'Dziś',       daysOffset: 0 },
-  { key: '2', label: 'Jutro',      daysOffset: 1 },
-  { key: '3', label: 'Za tydzień', daysOffset: 7 },
-  { key: '4', label: 'Za miesiąc', daysOffset: 30 },
+function nextMonday(today: string): string {
+  const d = new Date(today + 'T00:00:00');
+  const day = d.getDay(); // 0=Sun, 1=Mon, ...
+  const daysUntilMonday = day === 0 ? 1 : 8 - day;
+  d.setDate(d.getDate() + daysUntilMonday);
+  return d.toISOString().slice(0, 10);
+}
+
+function firstOfNextMonth(today: string): string {
+  const d = new Date(today + 'T00:00:00');
+  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().slice(0, 10);
+}
+
+function firstOfNextQuarter(today: string): string {
+  const d = new Date(today + 'T00:00:00');
+  const currentQuarter = Math.floor(d.getMonth() / 3);
+  const nextQuarterMonth = (currentQuarter + 1) * 3;
+  const year = nextQuarterMonth >= 12 ? d.getFullYear() + 1 : d.getFullYear();
+  const month = nextQuarterMonth >= 12 ? 0 : nextQuarterMonth;
+  return new Date(year, month, 1).toISOString().slice(0, 10);
+}
+
+const DATE_OPTIONS: { key: string; label: string; getDate: (today: string) => string }[] = [
+  { key: '1', label: 'Dziś',              getDate: today => today },
+  { key: '2', label: 'Jutro',             getDate: today => addDays(today, 1) },
+  { key: '3', label: 'Następny tydzień',  getDate: today => nextMonday(today) },
+  { key: '4', label: 'Następny miesiąc',  getDate: today => firstOfNextMonth(today) },
+  { key: '5', label: 'Następny kwartał',  getDate: today => firstOfNextQuarter(today) },
 ];
 
 interface DateStepPanelProps {
@@ -1163,8 +1186,8 @@ function DateStepPanel({ today, onPick, onSkip }: DateStepPanelProps) {
       <div className="proc-step-hint">Kiedy to zrobisz? Kliknij lub użyj klawiszy · pomiń <kbd>Esc</kbd></div>
       <div className="proc-options-grid">
         {DATE_OPTIONS.map(opt => {
-          const date = addDays(today, opt.daysOffset);
-          const hint = opt.daysOffset > 1 ? formatPlannedDate(date, today) : null;
+          const date = opt.getDate(today);
+          const hint = date !== today && date !== addDays(today, 1) ? formatPlannedDate(date, today) : null;
           return (
             <button
               key={opt.key}
