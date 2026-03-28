@@ -749,7 +749,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               onSelect={setPendingOptionKey}
               onConfirm={() => {
                 const opt = dateOptions.find(o => o.key === pendingOptionKey);
-                if (opt) pickDate(opt.date);
+                if (opt) pickDate(opt);
               }}
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
             />
