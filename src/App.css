@@ -3753,6 +3753,16 @@ body {
   margin-left: auto;
 }
 
+/* ── Quick-add + done section inside today empty state ──────────────────── */
+
+.today-empty-wrapper .inbox-add-row {
+  margin: 8px 32px 0;
+}
+
+.today-empty-wrapper .inbox-done-section {
+  margin: 4px 32px 0;
+}
+
 /* ── EventDetailPanel ─────────────────────────────────────────────────────── */
 
 .event-detail-panel {
