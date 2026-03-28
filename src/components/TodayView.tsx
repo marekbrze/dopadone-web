@@ -417,7 +417,8 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const handleAddPlannedTask = async () => {
     const name = newPlannedTaskName.trim();
     if (!name) return;
-    await onAddInboxTask(name);
+    const id = await onAddInboxTask(name);
+    await onUpdateTask(id, { plannedDate: todayStr });
     setNewPlannedTaskName('');
   };
 
