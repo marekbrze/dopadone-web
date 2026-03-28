@@ -1028,6 +1028,21 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     </div>
                   )}
                 </div>
+                <div className="inbox-add-row">
+                  <input
+                    type="text"
+                    className="inbox-add-input"
+                    placeholder="Dodaj zadanie do Inboxu..."
+                    value={newPlannedTaskName}
+                    onChange={e => setNewPlannedTaskName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddPlannedTask(); }}
+                  />
+                  <button
+                    className="inbox-add-btn"
+                    onClick={handleAddPlannedTask}
+                    disabled={!newPlannedTaskName.trim()}
+                  >Dodaj</button>
+                </div>
                 {plannedTasks.length > 0 && (
                   <div className="today-planned-section">
                     <button
@@ -1067,21 +1082,6 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     )}
                   </div>
                 )}
-                <div className="inbox-add-row">
-                  <input
-                    type="text"
-                    className="inbox-add-input"
-                    placeholder="Dodaj zadanie do Inboxu..."
-                    value={newPlannedTaskName}
-                    onChange={e => setNewPlannedTaskName(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') handleAddPlannedTask(); }}
-                  />
-                  <button
-                    className="inbox-add-btn"
-                    onClick={handleAddPlannedTask}
-                    disabled={!newPlannedTaskName.trim()}
-                  >Dodaj</button>
-                </div>
                 {plannedDoneTasks.length > 0 && (
                   <div className="inbox-done-section">
                     <button

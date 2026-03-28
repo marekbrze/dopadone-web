@@ -3756,7 +3756,7 @@ body {
 /* ── Quick-add + done section inside today empty state ──────────────────── */
 
 .today-empty-wrapper .inbox-add-row {
-  margin: 8px 32px 0;
+  margin: 16px 32px 8px;
 }
 
 .today-empty-wrapper .inbox-done-section {
