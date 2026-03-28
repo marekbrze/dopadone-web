@@ -417,21 +417,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
         return;
       }
 
-      // Date step
-      if (currentStep.kind === 'date') {
-        const tag = (e.target as HTMLElement).tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-        if (e.key === 'ArrowLeft') { e.preventDefault(); goBack(allSteps, currentStepIndex); return; }
-        if (e.key === 'Escape') { e.preventDefault(); advanceStep(allSteps, currentStepIndex); return; }
-        if (e.key === 'd') { e.preventDefault(); markTaskDone(currentStep.taskId, allSteps, currentStepIndex); return; }
-        if (e.key === '1') { e.preventDefault(); pickDate(today); return; }
-        if (e.key === '2') { e.preventDefault(); pickDate(addDays(today, 1)); return; }
-        if (e.key === '3') { e.preventDefault(); pickDate(addDays(today, 7)); return; }
-        if (e.key === '4') { e.preventDefault(); pickDate(addDays(today, 30)); return; }
-        return;
-      }
-
-      // Duration or Context step
+      // Duration, Context or Date step
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
