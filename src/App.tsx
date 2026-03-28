@@ -1133,6 +1133,7 @@ export default function App() {
           onCreateProject={addProjectForProcessing}
           onConvertToProject={convertTaskToProject}
           onCreateLifter={addLifterForProcessing}
+          onNavigateToToday={() => setCurrentView('today')}
         />
       )}
 

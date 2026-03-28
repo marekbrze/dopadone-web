@@ -14,6 +14,7 @@ interface ProcessingViewProps {
   onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
   onConvertToProject: (taskId: string, projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
   onCreateLifter: (name: string, areaId: string) => Promise<Lifter>;
+  onNavigateToToday: () => void;
 }
 
 type ProjectPanelMode = 'list' | 'new-project' | 'convert';
@@ -91,7 +92,7 @@ function contextKeyForId(contextId: string | null | undefined, contexts: Context
 
 const TIMER_DURATION = 120; // 2 minutes in seconds
 
-export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onDeleteTask, onCreateProject, onConvertToProject, onCreateLifter }: ProcessingViewProps) {
+export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onDeleteTask, onCreateProject, onConvertToProject, onCreateLifter, onNavigateToToday }: ProcessingViewProps) {
   const [screen, setScreen] = useState<ProcessingScreen>('summary');
   const [sessionTaskIds, setSessionTaskIds] = useState<string[]>([]);
   const [allSteps, setAllSteps] = useState<ProcessingStep[]>([]);
@@ -549,7 +550,10 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
         <div className="proc-done">
           <div className="proc-done-icon">✓</div>
           <div className="proc-done-title">Przetworzono {processedCount} {processedCount === 1 ? 'zadanie' : processedCount < 5 ? 'zadania' : 'zadań'}</div>
-          <button className="proc-start-btn" onClick={() => setScreen('summary')}>
+          <button className="proc-start-btn" onClick={onNavigateToToday}>
+            Przejdź do Dziś
+          </button>
+          <button className="proc-skip-btn" onClick={() => setScreen('summary')}>
             Wróć do podsumowania
           </button>
         </div>
