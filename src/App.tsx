@@ -267,10 +267,24 @@ export default function App() {
     [data]
   );
 
-  const processingBadgeCount = useMemo(
-    () => data ? data.tasks.filter(t => !t.done && (t.projectId === null || t.duration == null || t.contextId === null)).length : 0,
-    [data]
-  );
+  const processingBadgeCount = useMemo(() => {
+    if (!data) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    return data.tasks.filter(t => {
+      if (t.done) return false;
+      if (t.projectId === null || t.duration == null || t.contextId === null) return true;
+      if (!t.plannedDate) {
+        const project = data.projects.find(p => p.id === t.projectId);
+        if (project?.startDate) {
+          const s = project.startDate;
+          const padded = s.length === 4 ? s + '-01-01' : s.length === 7 ? s + '-01' : s;
+          if (padded > today) return false;
+        }
+        return true;
+      }
+      return false;
+    }).length;
+  }, [data]);
 
   const contextsMap = useMemo(
     () => data ? new Map(data.contexts.map(c => [c.id, c])) : new Map(),
@@ -362,6 +376,18 @@ export default function App() {
       proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order };
       await db.projects.put(proj);
     }
+  };
+
+  const addLifterForProcessing = async (name: string, areaId: string): Promise<Lifter> => {
+    let lifter: Lifter;
+    if (isCloudSchema()) {
+      const id = await db.lifters.add({ name, areaId }) as string;
+      lifter = { id, name, areaId };
+    } else {
+      lifter = { id: newId(), name, areaId };
+      await db.lifters.put(lifter);
+    }
+    return lifter;
   };
 
   const addProjectForProcessing = async (name: string, areaId: string, lifterId: string | null): Promise<Project> => {
@@ -1106,6 +1132,7 @@ export default function App() {
           onDeleteTask={deleteTask}
           onCreateProject={addProjectForProcessing}
           onConvertToProject={convertTaskToProject}
+          onCreateLifter={addLifterForProcessing}
         />
       )}
 

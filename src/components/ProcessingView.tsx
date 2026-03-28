@@ -13,6 +13,7 @@ interface ProcessingViewProps {
   onDeleteTask: (id: string) => Promise<void>;
   onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
   onConvertToProject: (taskId: string, projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
+  onCreateLifter: (name: string, areaId: string) => Promise<Lifter>;
 }
 
 type ProjectPanelMode = 'list' | 'new-project' | 'convert';
@@ -90,7 +91,7 @@ function contextKeyForId(contextId: string | null | undefined, contexts: Context
 
 const TIMER_DURATION = 120; // 2 minutes in seconds
 
-export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onDeleteTask, onCreateProject, onConvertToProject }: ProcessingViewProps) {
+export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUpdateTask, onDeleteTask, onCreateProject, onConvertToProject, onCreateLifter }: ProcessingViewProps) {
   const [screen, setScreen] = useState<ProcessingScreen>('summary');
   const [sessionTaskIds, setSessionTaskIds] = useState<string[]>([]);
   const [allSteps, setAllSteps] = useState<ProcessingStep[]>([]);
@@ -693,6 +694,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
               onCreateProject={handleCreateProject}
               onConvertToProject={handleConvertToProject}
+              onCreateLifter={onCreateLifter}
               taskName={currentTask.name}
               mode={projectPanelMode}
               onModeChange={setProjectPanelMode}
@@ -795,18 +797,23 @@ interface ProjectStepPanelProps {
   onSkip: () => void;
   onCreateProject: (name: string, areaId: string, lifterId: string | null) => Promise<void>;
   onConvertToProject: (projectName: string, areaId: string, lifterId: string | null, subtaskNames: string[]) => Promise<void>;
+  onCreateLifter: (name: string, areaId: string) => Promise<Lifter>;
   taskName: string;
   mode: ProjectPanelMode;
   onModeChange: (mode: ProjectPanelMode) => void;
 }
 
-function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip, onCreateProject, onConvertToProject, taskName, mode, onModeChange }: ProjectStepPanelProps) {
+function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip, onCreateProject, onConvertToProject, onCreateLifter, taskName, mode, onModeChange }: ProjectStepPanelProps) {
   const [newProjName, setNewProjName] = useState('');
   const [newProjAreaId, setNewProjAreaId] = useState('');
   const [newProjLifterId, setNewProjLifterId] = useState<string | null>(null);
+  const [newProjCreatingLifter, setNewProjCreatingLifter] = useState(false);
+  const [newProjNewLifterName, setNewProjNewLifterName] = useState('');
   const [convProjName, setConvProjName] = useState('');
   const [convAreaId, setConvAreaId] = useState('');
   const [convLifterId, setConvLifterId] = useState<string | null>(null);
+  const [convCreatingLifter, setConvCreatingLifter] = useState(false);
+  const [convNewLifterName, setConvNewLifterName] = useState('');
   const [convSubtasks, setConvSubtasks] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -876,7 +883,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
             <select
               className="proc-form-select"
               value={newProjAreaId}
-              onChange={e => { setNewProjAreaId(e.target.value); setNewProjLifterId(null); }}
+              onChange={e => { setNewProjAreaId(e.target.value); setNewProjLifterId(null); setNewProjCreatingLifter(false); setNewProjNewLifterName(''); }}
             >
               {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
@@ -893,6 +900,40 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
                 {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
+          )}
+          {newProjCreatingLifter ? (
+            <div className="proc-form-row proc-form-row--new-lifter">
+              <input
+                className="proc-form-input"
+                placeholder="Nazwa podobszaru"
+                value={newProjNewLifterName}
+                onChange={e => setNewProjNewLifterName(e.target.value)}
+                autoFocus
+                onKeyDown={async e => {
+                  if (e.key === 'Escape') { e.stopPropagation(); setNewProjCreatingLifter(false); setNewProjNewLifterName(''); }
+                  if (e.key === 'Enter' && newProjNewLifterName.trim()) {
+                    e.stopPropagation();
+                    const lifter = await onCreateLifter(newProjNewLifterName.trim(), newProjAreaId);
+                    setNewProjLifterId(lifter.id);
+                    setNewProjCreatingLifter(false);
+                    setNewProjNewLifterName('');
+                  }
+                }}
+              />
+              <button
+                className="proc-form-confirm proc-form-confirm--sm"
+                disabled={!newProjNewLifterName.trim()}
+                onClick={async () => {
+                  const lifter = await onCreateLifter(newProjNewLifterName.trim(), newProjAreaId);
+                  setNewProjLifterId(lifter.id);
+                  setNewProjCreatingLifter(false);
+                  setNewProjNewLifterName('');
+                }}
+              >Utwórz</button>
+              <button className="proc-skip-btn" onClick={() => { setNewProjCreatingLifter(false); setNewProjNewLifterName(''); }}>Anuluj</button>
+            </div>
+          ) : (
+            <button className="proc-new-lifter-btn" onClick={() => setNewProjCreatingLifter(true)}>+ Nowy podobszar</button>
           )}
           <div className="proc-form-actions">
             <button className="proc-form-confirm" onClick={submitNewProject} disabled={!newProjName.trim() || isSubmitting}>
@@ -926,7 +967,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
             <select
               className="proc-form-select"
               value={convAreaId}
-              onChange={e => { setConvAreaId(e.target.value); setConvLifterId(null); }}
+              onChange={e => { setConvAreaId(e.target.value); setConvLifterId(null); setConvCreatingLifter(false); setConvNewLifterName(''); }}
             >
               {areas.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
@@ -943,6 +984,40 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
                 {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
+          )}
+          {convCreatingLifter ? (
+            <div className="proc-form-row proc-form-row--new-lifter">
+              <input
+                className="proc-form-input"
+                placeholder="Nazwa podobszaru"
+                value={convNewLifterName}
+                onChange={e => setConvNewLifterName(e.target.value)}
+                autoFocus
+                onKeyDown={async e => {
+                  if (e.key === 'Escape') { e.stopPropagation(); setConvCreatingLifter(false); setConvNewLifterName(''); }
+                  if (e.key === 'Enter' && convNewLifterName.trim()) {
+                    e.stopPropagation();
+                    const lifter = await onCreateLifter(convNewLifterName.trim(), convAreaId);
+                    setConvLifterId(lifter.id);
+                    setConvCreatingLifter(false);
+                    setConvNewLifterName('');
+                  }
+                }}
+              />
+              <button
+                className="proc-form-confirm proc-form-confirm--sm"
+                disabled={!convNewLifterName.trim()}
+                onClick={async () => {
+                  const lifter = await onCreateLifter(convNewLifterName.trim(), convAreaId);
+                  setConvLifterId(lifter.id);
+                  setConvCreatingLifter(false);
+                  setConvNewLifterName('');
+                }}
+              >Utwórz</button>
+              <button className="proc-skip-btn" onClick={() => { setConvCreatingLifter(false); setConvNewLifterName(''); }}>Anuluj</button>
+            </div>
+          ) : (
+            <button className="proc-new-lifter-btn" onClick={() => setConvCreatingLifter(true)}>+ Nowy podobszar</button>
           )}
           <div className="proc-form-row proc-form-row--col">
             <label className="proc-form-label">Zadania projektu (jedno na linię)</label>

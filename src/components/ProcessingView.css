@@ -537,6 +537,43 @@
 .proc-form-confirm:hover:not(:disabled) { opacity: 0.82; }
 .proc-form-confirm:disabled { opacity: 0.3; cursor: not-allowed; }
 
+.proc-form-confirm--sm {
+  padding: 6px 14px;
+  font-size: 11px;
+}
+
+.proc-form-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  padding: 6px 10px;
+  flex: 1;
+  outline: none;
+}
+.proc-form-input:focus { border-color: var(--accent); }
+
+.proc-form-row--new-lifter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 84px;
+}
+
+.proc-new-lifter-btn {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  padding: 2px 0 2px 84px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.15s;
+}
+.proc-new-lifter-btn:hover { color: var(--accent); }
+
 /* ── Option step (duration / context) ── */
 .proc-option-step {
   display: flex;
