@@ -1214,7 +1214,7 @@ interface DateStepPanelProps {
   onSkip: () => void;
 }
 
-function DateStepPanel({ options, pendingKey, today, onSelect, onConfirm, onSkip }: DateStepPanelProps) {
+function DateStepPanel({ options, pendingKey, today, onSelect, onSkip }: DateStepPanelProps) {
   return (
     <div className="proc-option-step proc-date-step">
       <div className="proc-step-hint">Wybierz klawiszem lub klikiem, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
