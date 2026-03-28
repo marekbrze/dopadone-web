@@ -390,6 +390,17 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     ? todayBlocks.find(b => b.startMinutes > nowMinutes)
     : null;
 
+  const nextEvent = currentEvent === null
+    ? timedEvents.find(e => (e.startMinutes ?? 0) > nowMinutes)
+    : null;
+
+  const secondsUntilNextBlock = nextBlock
+    ? Math.max(0, nextBlock.startMinutes * 60 - nowSeconds)
+    : null;
+  const secondsUntilNextEvent = nextEvent
+    ? Math.max(0, (nextEvent.startMinutes ?? 0) * 60 - nowSeconds)
+    : null;
+
   const plannedTasks = React.useMemo(
     () => tasks.filter(t => !t.done && t.plannedDate != null && t.plannedDate <= todayStr),
     [tasks, todayStr]
@@ -978,9 +989,28 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       ? 'Żaden blok nie jest teraz aktywny.'
                       : 'Nie masz zaplanowanych bloków na dziś.'}
                   </div>
-                  {nextBlock && (
+                  {(nextBlock || nextEvent) && (
                     <div className="today-active-empty-sub">
-                      Następny: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
+                      {nextBlock && (
+                        <div>
+                          Następny blok: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
+                          {secondsUntilNextBlock != null && (
+                            <span className="today-block-countdown" style={{ marginLeft: 8, color: 'var(--text-faint)' }}>
+                              za {formatCountdown(secondsUntilNextBlock)}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {nextEvent && (
+                        <div>
+                          Następne wydarzenie: <strong>{nextEvent.title}</strong> o {formatTime(nextEvent.startMinutes ?? 0)}
+                          {secondsUntilNextEvent != null && (
+                            <span className="today-block-countdown" style={{ marginLeft: 8, color: 'var(--text-faint)' }}>
+                              za {formatCountdown(secondsUntilNextEvent)}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
