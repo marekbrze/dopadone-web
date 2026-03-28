@@ -140,6 +140,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   };
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [plannedExpanded, setPlannedExpanded] = useState(true);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
     blockId: string;
@@ -388,6 +389,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const nextBlock = currentBlock === null
     ? todayBlocks.find(b => b.startMinutes > nowMinutes)
     : null;
+
+  const plannedTasks = React.useMemo(
+    () => tasks.filter(t => !t.done && t.plannedDate != null && t.plannedDate <= todayStr),
+    [tasks, todayStr]
+  );
 
   const handleBlockClick = (blockId: string) => {
     setSelectedBlockId(prev => prev === blockId ? null : blockId);
@@ -964,16 +970,57 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 </div>
               </>
             ) : (
-              <div className="today-active-empty-state">
-                <div className="today-active-empty-icon">◎</div>
-                <div className="today-active-empty-msg">
-                  {todayBlocks.length > 0
-                    ? 'Żaden blok nie jest teraz aktywny.'
-                    : 'Nie masz zaplanowanych bloków na dziś.'}
+              <div className="today-empty-wrapper">
+                <div className="today-active-empty-state">
+                  <div className="today-active-empty-icon">◎</div>
+                  <div className="today-active-empty-msg">
+                    {todayBlocks.length > 0
+                      ? 'Żaden blok nie jest teraz aktywny.'
+                      : 'Nie masz zaplanowanych bloków na dziś.'}
+                  </div>
+                  {nextBlock && (
+                    <div className="today-active-empty-sub">
+                      Następny: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
+                    </div>
+                  )}
                 </div>
-                {nextBlock && (
-                  <div className="today-active-empty-sub">
-                    Następny: <strong>{nextBlock.title}</strong> o {formatTime(nextBlock.startMinutes)}
+                {plannedTasks.length > 0 && !selectedTaskId && (
+                  <div className="today-planned-section">
+                    <button
+                      className="today-planned-toggle"
+                      onClick={() => setPlannedExpanded(v => !v)}
+                    >
+                      {plannedExpanded ? '▾' : '▸'} Zaplanowane na dziś
+                      <span className="today-tasks-count"> ({plannedTasks.length})</span>
+                    </button>
+                    {plannedExpanded && (
+                      <div className="today-planned-list">
+                        {plannedTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className="today-task-item"
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={false}
+                                onChange={() => onUpdateTask(task.id, { done: true })}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <span className="today-task-name">{task.name}</span>
+                              {project && <span className="today-planned-project">{project.name}</span>}
+                              <span
+                                className="today-priority-dot"
+                                style={{ background: priorityColors[task.priority] }}
+                                title={task.priority}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

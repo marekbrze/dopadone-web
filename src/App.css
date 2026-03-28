@@ -3703,6 +3703,56 @@ body {
   font-weight: 500;
 }
 
+/* ── Empty state + planned tasks wrapper ────────────────────────────────── */
+
+.today-empty-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.today-empty-wrapper .today-active-empty-state {
+  flex: 0 0 auto;
+}
+
+/* ── Planned-today section ──────────────────────────────────────────────── */
+
+.today-planned-section {
+  border-top: 1px solid var(--border);
+  padding: 0 32px 16px;
+}
+
+.today-planned-toggle {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  padding: 14px 0 8px;
+  font-family: inherit;
+  width: 100%;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.today-planned-toggle:hover { color: var(--accent); }
+
+.today-planned-project {
+  font-size: 11px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-left: auto;
+}
+
 /* ── EventDetailPanel ─────────────────────────────────────────────────────── */
 
 .event-detail-panel {

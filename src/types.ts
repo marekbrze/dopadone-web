@@ -48,8 +48,9 @@ export interface Task {
   effort: Effort | null;
   contextId: string | null;
   blocking: boolean;
-  startDate?: string | null;  // "YYYY-MM-DD"
-  endDate?: string | null;    // "YYYY-MM-DD"
+  startDate?: string | null;    // "YYYY-MM-DD"
+  endDate?: string | null;      // "YYYY-MM-DD"
+  plannedDate?: string | null;  // "YYYY-MM-DD" — dzień, na który zadanie jest zaplanowane
   duration?: TaskDuration | null;
   order?: number;
 }

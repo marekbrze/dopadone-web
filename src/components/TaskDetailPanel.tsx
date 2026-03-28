@@ -56,6 +56,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
   const [nextAction, setNextAction] = useState('');
   const [startDateError, setStartDateError] = useState('');
   const [endDateError, setEndDateError] = useState('');
+  const [plannedDateError, setPlannedDateError] = useState('');
 
   const projectStartMin = normalizeProjectStartDate(project?.startDate);
   const projectEndMax = project?.endDate ?? null;
@@ -66,6 +67,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     setNextAction('');
     setStartDateError('');
     setEndDateError('');
+    setPlannedDateError('');
   }, [task.id]);
 
   const handleKeydown = useCallback((e: KeyboardEvent) => {
@@ -106,6 +108,9 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     }
     setStartDateError('');
     onUpdate('startDate', date);
+    if (date && task.plannedDate && task.plannedDate < date) {
+      setPlannedDateError('Data planowania jest teraz wcześniejsza niż data rozpoczęcia — zaktualizuj ją.');
+    }
   };
 
   const handleEndDateChange = (val: string) => {
@@ -120,6 +125,23 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     }
     setEndDateError('');
     onUpdate('endDate', date);
+    if (date && task.plannedDate && task.plannedDate > date) {
+      setPlannedDateError('Data planowania jest teraz późniejsza niż data zakończenia — zaktualizuj ją.');
+    }
+  };
+
+  const handlePlannedDateChange = (val: string) => {
+    const date = val || null;
+    if (date && task.startDate && date < task.startDate) {
+      setPlannedDateError('Data planowania nie może być wcześniejsza niż data rozpoczęcia zadania');
+      return;
+    }
+    if (date && task.endDate && date > task.endDate) {
+      setPlannedDateError('Data planowania nie może być późniejsza niż data zakończenia zadania');
+      return;
+    }
+    setPlannedDateError('');
+    onUpdate('plannedDate', date);
   };
 
   return (
@@ -253,7 +275,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
             {task.startDate && (
               <button
                 className="close-btn"
-                onClick={() => { setStartDateError(''); onUpdate('startDate', null); }}
+                onClick={() => { setStartDateError(''); setPlannedDateError(''); onUpdate('startDate', null); }}
                 title="Wyczyść datę rozpoczęcia"
               >✕</button>
             )}
@@ -275,12 +297,34 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
             {task.endDate && (
               <button
                 className="close-btn"
-                onClick={() => { setEndDateError(''); onUpdate('endDate', null); }}
+                onClick={() => { setEndDateError(''); setPlannedDateError(''); onUpdate('endDate', null); }}
                 title="Wyczyść datę zakończenia"
               >✕</button>
             )}
           </div>
           {endDateError && <span className="detail-date-error">{endDateError}</span>}
+        </div>
+
+        <div className="detail-field">
+          <label>Data planowania</label>
+          <div className="detail-date-row">
+            <input
+              type="date"
+              className="detail-date-input"
+              value={task.plannedDate ?? ''}
+              min={task.startDate ?? undefined}
+              max={task.endDate ?? undefined}
+              onChange={e => handlePlannedDateChange(e.target.value)}
+            />
+            {task.plannedDate && (
+              <button
+                className="close-btn"
+                onClick={() => { setPlannedDateError(''); onUpdate('plannedDate', null); }}
+                title="Wyczyść datę planowania"
+              >✕</button>
+            )}
+          </div>
+          {plannedDateError && <span className="detail-date-error">{plannedDateError}</span>}
         </div>
 
         <div className="detail-field">
