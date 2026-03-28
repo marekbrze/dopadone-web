@@ -1056,6 +1056,7 @@ export default function App() {
           onAddNote={addNoteForProject}
           onUpdateNote={updateNote}
           onDeleteNote={deleteNote}
+          onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
         />
       )}
 

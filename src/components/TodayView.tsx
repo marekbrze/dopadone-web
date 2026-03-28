@@ -31,6 +31,7 @@ interface Props {
   onAddNote: (projectId: string, data: { title?: string; content: string }) => Promise<void>;
   onUpdateNote: (id: string, updates: Partial<ProjectNote>) => Promise<void>;
   onDeleteNote: (id: string) => Promise<void>;
+  onAddInboxTask: (name: string) => Promise<string>;
 }
 
 function toDateString(d: Date): string {
@@ -141,6 +142,8 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [plannedExpanded, setPlannedExpanded] = useState(true);
+  const [newPlannedTaskName, setNewPlannedTaskName] = useState('');
+  const [showPlannedDone, setShowPlannedDone] = useState(false);
   const [dragState, setDragState] = useState<{ startMinutes: number; currentMinutes: number } | null>(null);
   const [blockDragState, setBlockDragState] = useState<{
     blockId: string;
@@ -405,6 +408,18 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     () => tasks.filter(t => !t.done && t.plannedDate != null && t.plannedDate <= todayStr),
     [tasks, todayStr]
   );
+
+  const plannedDoneTasks = React.useMemo(
+    () => tasks.filter(t => t.done && t.plannedDate != null && t.plannedDate <= todayStr),
+    [tasks, todayStr]
+  );
+
+  const handleAddPlannedTask = async () => {
+    const name = newPlannedTaskName.trim();
+    if (!name) return;
+    await onAddInboxTask(name);
+    setNewPlannedTaskName('');
+  };
 
   const handleBlockClick = (blockId: string) => {
     setSelectedBlockId(prev => prev === blockId ? null : blockId);
@@ -1035,6 +1050,59 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                 type="checkbox"
                                 checked={false}
                                 onChange={() => onUpdateTask(task.id, { done: true })}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <span className="today-task-name">{task.name}</span>
+                              {project && <span className="today-planned-project">{project.name}</span>}
+                              <span
+                                className="today-priority-dot"
+                                style={{ background: priorityColors[task.priority] }}
+                                title={task.priority}
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="inbox-add-row">
+                  <input
+                    type="text"
+                    className="inbox-add-input"
+                    placeholder="Dodaj zadanie do Inboxu..."
+                    value={newPlannedTaskName}
+                    onChange={e => setNewPlannedTaskName(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') handleAddPlannedTask(); }}
+                  />
+                  <button
+                    className="inbox-add-btn"
+                    onClick={handleAddPlannedTask}
+                    disabled={!newPlannedTaskName.trim()}
+                  >Dodaj</button>
+                </div>
+                {plannedDoneTasks.length > 0 && (
+                  <div className="inbox-done-section">
+                    <button
+                      className="inbox-done-toggle"
+                      onClick={() => setShowPlannedDone(v => !v)}
+                    >
+                      {showPlannedDone ? '▾' : '▸'} Ukończone ({plannedDoneTasks.length})
+                    </button>
+                    {showPlannedDone && (
+                      <div className="inbox-list inbox-list-done">
+                        {plannedDoneTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className={`today-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={() => onUpdateTask(task.id, { done: false })}
                                 onClick={e => e.stopPropagation()}
                               />
                               <span className="today-task-name">{task.name}</span>
