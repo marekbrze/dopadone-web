@@ -985,9 +985,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 <div className="today-active-empty-state">
                   <div className="today-active-empty-icon">◎</div>
                   <div className="today-active-empty-msg">
-                    {todayBlocks.length > 0
-                      ? 'Żaden blok nie jest teraz aktywny.'
-                      : 'Nie masz zaplanowanych bloków na dziś.'}
+                    Żaden blok nie jest teraz aktywny.
                   </div>
                   {(nextBlock || nextEvent) && (
                     <div className="today-active-empty-sub">
