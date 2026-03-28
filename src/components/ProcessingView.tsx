@@ -1225,10 +1225,7 @@ function DateStepPanel({ options, pendingKey, today, onSelect, onConfirm, onSkip
             <button
               key={opt.key}
               className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}`}
-              onMouseEnter={() => onSelect(opt.key)}
-              onClick={() => {
-                if (pendingKey === opt.key) { onConfirm(); } else { onSelect(opt.key); }
-              }}
+              onClick={() => onSelect(opt.key)}
             >
               <span className="proc-option-label">{opt.label}</span>
               {hint && <span className="proc-option-date-hint">{hint}</span>}
