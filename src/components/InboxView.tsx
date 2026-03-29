@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Task, Project, Context, Area, Lifter } from '../types';
-import { PlannedDatePicker } from './PlannedDatePicker';
+import { PlannedDatePicker, localDateStr } from './PlannedDatePicker';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -22,7 +22,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
   const [showDone, setShowDone] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [assignConfirm, setAssignConfirm] = useState<{ taskId: string; projectId: string; projectName: string; projectEndDate: string; taskEndDate: string } | null>(null);
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => localDateStr(), []);
 
   const undone = tasks.filter(t => !t.done);
   const done = tasks.filter(t => t.done);

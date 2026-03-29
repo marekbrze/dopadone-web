@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Task, Project, Context, TaskDuration, Area, Lifter } from '../types';
-import { addDays, formatPlannedDate } from './PlannedDatePicker';
+import { addDays, formatPlannedDate, localDateStr } from './PlannedDatePicker';
 import './ProcessingView.css';
 
 interface ProcessingViewProps {
@@ -115,7 +115,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   const projectInputRef = useRef<HTMLInputElement>(null);
   const projectListRef = useRef<HTMLDivElement>(null);
 
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const today = useMemo(() => localDateStr(), []);
   const dateOptions = useMemo(() => getDateOptions(today), [today]);
 
   // Summary stats (live from props)
@@ -1158,12 +1158,12 @@ function nextMonday(today: string): string {
   const day = d.getDay(); // 0=Sun, 1=Mon, ...
   const daysUntilMonday = day === 0 ? 1 : 8 - day;
   d.setDate(d.getDate() + daysUntilMonday);
-  return d.toISOString().slice(0, 10);
+  return localDateStr(d);
 }
 
 function firstOfNextMonth(today: string): string {
   const d = new Date(today + 'T00:00:00');
-  return new Date(d.getFullYear(), d.getMonth() + 1, 1).toISOString().slice(0, 10);
+  return localDateStr(new Date(d.getFullYear(), d.getMonth() + 1, 1));
 }
 
 const QUARTER_LABELS = ['Q1', 'Q2', 'Q3', 'Q4'];
@@ -1188,7 +1188,7 @@ function getDateOptions(today: string): DateOption[] {
     opts.push({
       key: String(keyIdx++),
       label: `${QUARTER_LABELS[q]} ${year}`,
-      date: new Date(year, QUARTER_MONTHS[q], 1).toISOString().slice(0, 10),
+      date: localDateStr(new Date(year, QUARTER_MONTHS[q], 1)),
     });
   }
 
