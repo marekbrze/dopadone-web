@@ -254,10 +254,47 @@ export default function App() {
     [data, selectedProjectId]
   );
 
-  const selectedTask = useMemo(
-    () => tasks.find(t => t.id === selectedTaskId) ?? null,
-    [tasks, selectedTaskId]
-  );
+  const isAggregatedView = !selectedProjectId && !!selectedLifterId;
+
+  const aggregatedTasksByProject = useMemo(() => {
+    if (!isAggregatedView || !data) return [];
+    const projectsInLifter = data.projects
+      .filter(p => p.lifterId === selectedLifterId && p.areaId === selectedAreaId && (!p.archived || showArchivedProjects))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const groups: { project: Project; undone: Task[]; done: Task[] }[] = [];
+    for (const project of projectsInLifter) {
+      const projectTasks = data.tasks.filter(t => t.projectId === project.id);
+      if (projectTasks.length === 0) continue;
+      const undone = projectTasks.filter(t => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const done = projectTasks.filter(t => t.done);
+      groups.push({ project, undone, done });
+    }
+    return groups;
+  }, [isAggregatedView, data, selectedLifterId, selectedAreaId, showArchivedProjects]);
+
+  const aggregatedNotesByProject = useMemo(() => {
+    if (!isAggregatedView || !data) return [];
+    const projectsInLifter = data.projects
+      .filter(p => p.lifterId === selectedLifterId && p.areaId === selectedAreaId && (!p.archived || showArchivedProjects))
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const groups: { project: Project; notes: ProjectNote[] }[] = [];
+    for (const project of projectsInLifter) {
+      const notes = (data.projectNotes ?? []).filter(n => n.projectId === project.id);
+      if (notes.length === 0) continue;
+      groups.push({ project, notes });
+    }
+    return groups;
+  }, [isAggregatedView, data, selectedLifterId, selectedAreaId, showArchivedProjects]);
+
+  const selectedTask = useMemo(() => {
+    if (!selectedTaskId) return null;
+    const fromTasks = tasks.find(t => t.id === selectedTaskId);
+    if (fromTasks) return fromTasks;
+    if (isAggregatedView && data) {
+      return data.tasks.find(t => t.id === selectedTaskId) ?? null;
+    }
+    return null;
+  }, [tasks, selectedTaskId, isAggregatedView, data]);
 
   const selectedArea = useMemo(
     () => data ? data.areas.find(a => a.id === selectedAreaId) : undefined,
@@ -316,10 +353,7 @@ export default function App() {
     const firstLifter = data.lifters.find(l => l.areaId === id);
     const lifterId = firstLifter?.id ?? null;
     setSelectedLifterId(lifterId);
-    const firstProject = data.projects.find(p =>
-      p.areaId === id && p.lifterId === lifterId && p.parentProjectId === null
-    );
-    setSelectedProjectId(firstProject?.id ?? null);
+    setSelectedProjectId(null);
     setSelectedTaskId(null);
     setEditingLifterId(null);
     setEditingProjectId(null);
@@ -327,10 +361,7 @@ export default function App() {
 
   const selectLifter = (id: string) => {
     setSelectedLifterId(id);
-    const firstProject = data.projects.find(p =>
-      p.areaId === selectedAreaId && p.lifterId === id && p.parentProjectId === null
-    );
-    setSelectedProjectId(firstProject?.id ?? null);
+    setSelectedProjectId(null);
     setSelectedTaskId(null);
     setEditingLifterId(null);
     setEditingProjectId(null);
@@ -1259,7 +1290,7 @@ export default function App() {
               projects={rootProjects}
               allProjects={visibleProjects}
               selectedProjectId={selectedProjectId}
-              onSelect={id => { setSelectedProjectId(id); setSelectedTaskId(null); setProjectTab('tasks'); }}
+              onSelect={id => { setSelectedProjectId(prev => prev === id ? null : id); setSelectedTaskId(null); setProjectTab('tasks'); }}
               onDelete={deleteProject}
               onArchive={archiveProject}
               onEdit={openProjectEdit}
@@ -1293,7 +1324,7 @@ export default function App() {
             onClick={() => toggleColumn('tasks')}
             onKeyDown={e => handleColumnKeydown(e, 'tasks')}
           >
-            {selectedProjectId ? (
+            {(selectedProjectId || isAggregatedView) ? (
               <div className="column-tabs" onClick={e => e.stopPropagation()}>
                 <button
                   className={`column-tab ${projectTab === 'tasks' ? 'active' : ''}`}
@@ -1315,7 +1346,7 @@ export default function App() {
               role="region"
               aria-labelledby="column-header-tasks"
             >
-              {!selectedProjectId && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
+              {!selectedProjectId && !isAggregatedView && <p className="empty-hint">Wybierz projekt, aby zobaczyć zadania</p>}
               {selectedProjectId && (
                 <div className="task-quick-add">
                   <input
@@ -1412,6 +1443,50 @@ export default function App() {
                   })}
                 </div>
               )}
+              {isAggregatedView && (
+                <>
+                  {aggregatedTasksByProject.length === 0 && (
+                    <p className="empty-hint">Brak zadań w projektach tego podobszaru</p>
+                  )}
+                  {aggregatedTasksByProject.map(({ project, undone, done }) => (
+                    <div key={project.id} className="aggregated-project-group">
+                      <div
+                        className="aggregated-project-header"
+                        onClick={() => { setSelectedProjectId(project.id); setProjectTab('tasks'); }}
+                      >
+                        <span>{project.name}</span>
+                        <span className="aggregated-task-count">{undone.length}</span>
+                      </div>
+                      {undone.map(task => {
+                        const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
+                        return (
+                          <div
+                            key={task.id}
+                            className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
+                            onClick={() => selectTask(task.id)}
+                          >
+                            <div className="task-main">
+                              <input
+                                type="checkbox"
+                                checked={false}
+                                onChange={() => updateTask(task.id, { done: true })}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <span className="task-name">{task.name}</span>
+                              <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                              {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                              {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {done.length > 0 && (
+                        <div className="aggregated-done-count">Ukończone: {done.length}</div>
+                      )}
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
           {projectTab === 'notes' && selectedProjectId && (
@@ -1423,6 +1498,42 @@ export default function App() {
                 onUpdate={updateNote}
                 onDelete={deleteNote}
               />
+            </div>
+          )}
+          {projectTab === 'notes' && isAggregatedView && (
+            <div className="column-body column-body-notes" role="region">
+              <div className="aggregated-notes">
+                {aggregatedNotesByProject.length === 0 && (
+                  <p className="empty-hint">Brak notatek w projektach tego podobszaru</p>
+                )}
+                {aggregatedNotesByProject.map(({ project, notes }) => (
+                  <div key={project.id} className="aggregated-project-group">
+                    <div
+                      className="aggregated-project-header"
+                      onClick={() => { setSelectedProjectId(project.id); setProjectTab('notes'); }}
+                    >
+                      <span>{project.name}</span>
+                      <span className="aggregated-task-count">{notes.length}</span>
+                    </div>
+                    {[...notes]
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map(note => (
+                        <div key={note.id} className="aggregated-note-card">
+                          {note.title && <div className="aggregated-note-title">{note.title}</div>}
+                          <div className="aggregated-note-preview">
+                            {note.content.replace(/[#*`>_]/g, '').trim().slice(0, 120)}
+                            {note.content.length > 120 ? '…' : ''}
+                          </div>
+                          <div className="aggregated-note-meta">
+                            {new Date(note.updatedAt).toLocaleDateString('pl-PL', {
+                              day: 'numeric', month: 'short', year: 'numeric',
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>
