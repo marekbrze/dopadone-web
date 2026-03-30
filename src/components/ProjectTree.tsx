@@ -61,7 +61,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
               onDragLeave={e => onProjectDragLeave?.(e, project.id)}
             >
               <div
-                className={`project-item ${isSelected ? 'selected' : ''}`}
+                className={`project-item${isSelected ? ' selected' : ''}${project.archived ? ' archived' : ''}`}
                 style={{ paddingLeft: `${12 + depth * 16}px` }}
                 draggable
                 onDragStart={() => onProjectDragStart?.(project.id)}
@@ -69,6 +69,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onClick={() => onSelect(project.id)}
               >
                 {children.length > 0 && <span className="tree-icon">▸</span>}
+                {project.archived && <span className="archived-label">archiwum</span>}
                 <span>{project.name}</span>
               </div>
               <RowMenuButton

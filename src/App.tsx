@@ -23,6 +23,7 @@ import { completeMigrationIfPending } from './utils/cloudMigration';
 import { isCloudSchema } from './db';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
+import { AmbientSoundWidget } from './components/AmbientSoundWidget';
 import './App.css';
 
 function newId() {
@@ -47,6 +48,7 @@ export default function App() {
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
+  const [showArchivedProjects, setShowArchivedProjects] = useState(false);
   const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox' | 'processing'>('today');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
@@ -222,14 +224,14 @@ export default function App() {
     () => data
       ? data.projects
           .filter(p => {
-            if (p.archived) return false;
+            if (p.archived && !showArchivedProjects) return false;
             if (p.areaId !== selectedAreaId) return false;
             if (selectedLifterId) return p.lifterId === selectedLifterId;
             return true;
           })
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
       : [],
-    [data, selectedAreaId, selectedLifterId]
+    [data, selectedAreaId, selectedLifterId, showArchivedProjects]
   );
 
   const rootProjects = useMemo(() => {
@@ -979,6 +981,7 @@ export default function App() {
           >Kanban</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
+        <AmbientSoundWidget />
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia" data-tour="settings">
           ⚙ Ustawienia
         </button>
@@ -1041,6 +1044,13 @@ export default function App() {
             </button>
           ))}
           <button className="area-tab add-tab" onClick={() => setModal('area')}>+ Obszar</button>
+          <button
+            className={`area-tab archived-toggle-btn${showArchivedProjects ? ' active' : ''}`}
+            onClick={() => setShowArchivedProjects(v => !v)}
+            title={showArchivedProjects ? 'Ukryj zarchiwizowane' : 'Pokaż zarchiwizowane'}
+          >
+            📦 Archiwum
+          </button>
         </nav>
       )}
 

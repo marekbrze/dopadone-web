@@ -118,6 +118,15 @@ body {
 
 .area-tab.add-tab:hover { color: var(--text-muted); }
 
+.archived-toggle-btn {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 12px;
+  opacity: 0.6;
+}
+.archived-toggle-btn:hover { opacity: 0.9; color: var(--text-muted); }
+.archived-toggle-btn.active { opacity: 1; color: var(--text); font-weight: 600; }
+
 /* Settings button */
 .settings-btn {
   margin-left: auto;
@@ -322,6 +331,25 @@ body {
   padding-left: 10px;
   color: var(--accent);
   font-weight: 500;
+}
+
+.project-item.archived {
+  opacity: 0.45;
+  font-style: italic;
+}
+.project-item.archived:hover { opacity: 0.7; }
+.project-item.archived.selected { opacity: 1; }
+
+.archived-label {
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  background: var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  flex-shrink: 0;
 }
 
 .tree-icon {
