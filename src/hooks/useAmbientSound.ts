@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 
-export type SoundId = 'white-noise' | 'pink-noise' | 'brown-noise' | 'rain' | 'forest';
+export type SoundId = 'white-noise' | 'pink-noise' | 'brown-noise' | 'rain' | 'forest' | 'cafe';
 type SoundType = 'generated' | 'file';
 
 export const SOUNDS: { id: SoundId; label: string; type: SoundType }[] = [
@@ -9,6 +9,7 @@ export const SOUNDS: { id: SoundId; label: string; type: SoundType }[] = [
   { id: 'brown-noise', label: 'Szum brązowy', type: 'generated' },
   { id: 'rain',        label: 'Deszcz', type: 'file' },
   { id: 'forest',      label: 'Las', type: 'file' },
+  { id: 'cafe',        label: 'Kawiarnia', type: 'file' },
 ];
 
 const LS_SOUND_ID = 'dopadone-ambient-sound-id';
