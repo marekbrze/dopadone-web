@@ -35,6 +35,12 @@ const priorityColors: Record<Task['priority'], string> = {
   high: '#a33a2a',
 };
 
+const energyLabels: Record<string, string> = {
+  low: 'Niski',
+  medium: 'Średni',
+  high: 'Wysoki',
+};
+
 export default function App() {
   const [data, setData] = useState<AppState | null>(null);
   const [selectedAreaId, setSelectedAreaId] = useState<string>('');
@@ -1377,7 +1383,7 @@ export default function App() {
                         />
                         <span className="task-name">{task.name}</span>
                         <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                        {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                        {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
                         {ctx && <span className="tag context-tag">{ctx.icon}</span>}
                       </div>
                     </div>
@@ -1420,7 +1426,7 @@ export default function App() {
                           />
                           <span className="task-name">{task.name}</span>
                           <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                          {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                          {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
                           {ctx && <span className="tag context-tag">{ctx.icon}</span>}
                         </div>
                       </div>
@@ -1459,7 +1465,7 @@ export default function App() {
                               />
                               <span className="task-name">{task.name}</span>
                               <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                              {task.effort && <span className="tag effort-tag">{task.effort.toUpperCase()}</span>}
+                              {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
                               {ctx && <span className="tag context-tag">{ctx.icon}</span>}
                             </div>
                           </div>

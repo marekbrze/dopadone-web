@@ -28,7 +28,7 @@ export interface Project {
   archivedAt?: string | null;  // ISO 8601
 }
 
-export type Effort = 'xs' | 's' | 'm' | 'l' | 'xl';
+export type Effort = 'low' | 'medium' | 'high';
 
 export type TaskDuration = 5 | 10 | 15 | 25 | 45 | 60 | 90 | 120;
 

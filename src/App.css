@@ -417,7 +417,37 @@ body {
   flex-shrink: 0;
 }
 
-/* ── Effort pills ────────────────────────────────────────── */
+/* ── Energy pills ────────────────────────────────────────── */
+
+.energy-pills {
+  display: flex;
+  gap: 4px;
+}
+
+.energy-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.energy-pill:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+/* ── Duration pills (reuse old effort-pill class) ────────── */
 
 .effort-pills {
   display: flex;
@@ -473,10 +503,28 @@ body {
   padding: 1px 6px;
 }
 
-.effort-tag {
-  background: rgba(92, 74, 56, 0.08);
-  color: var(--accent-soft);
-  border: 1px solid rgba(92, 74, 56, 0.20);
+.energy-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.energy-tag--low {
+  background: rgba(90, 122, 94, 0.08);
+  color: #5a7a5e;
+  border: 1px solid rgba(90, 122, 94, 0.22);
+}
+
+.energy-tag--medium {
+  background: rgba(160, 120, 48, 0.08);
+  color: #a07830;
+  border: 1px solid rgba(160, 120, 48, 0.22);
+}
+
+.energy-tag--high {
+  background: rgba(163, 58, 42, 0.08);
+  color: #a33a2a;
+  border: 1px solid rgba(163, 58, 42, 0.22);
 }
 
 .context-tag {

@@ -20,13 +20,36 @@ const DURATIONS: { value: TaskDuration; label: string }[] = [
   { value: 120, label: '2h' },
 ];
 
-const EFFORTS: { value: Effort; label: string }[] = [
-  { value: 'xs', label: 'XS' },
-  { value: 's', label: 'S' },
-  { value: 'm', label: 'M' },
-  { value: 'l', label: 'L' },
-  { value: 'xl', label: 'XL' },
+const ENERGY_LEVELS: { value: Effort; label: string; color: string; bars: number }[] = [
+  { value: 'low',    label: 'Niski',   color: '#5a7a5e', bars: 1 },
+  { value: 'medium', label: 'Średni',  color: '#a07830', bars: 2 },
+  { value: 'high',   label: 'Wysoki',  color: '#a33a2a', bars: 3 },
 ];
+
+function BatteryIcon({ bars, color, size = 16 }: { bars: number; color: string; size?: number }) {
+  const h = size * 0.625;
+  const bodyW = size * 0.75;
+  const barW = (bodyW - 4) / 3 - 1;
+  const barH = h - 4;
+  return (
+    <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`} style={{ display: 'block' }}>
+      <rect x="0.5" y="0.5" width={bodyW} height={h - 1} rx="1.5" stroke={color} fill="none" strokeWidth="1" />
+      <rect x={bodyW + 0.5} y={h * 0.25} width={size - bodyW - 1} height={h * 0.5} rx="0.75" fill={color} opacity="0.5" />
+      {[0, 1, 2].map(i => (
+        <rect
+          key={i}
+          x={2 + i * (barW + 1)}
+          y="2"
+          width={barW}
+          height={barH}
+          rx="0.5"
+          fill={i < bars ? color : 'currentColor'}
+          opacity={i < bars ? 1 : 0.1}
+        />
+      ))}
+    </svg>
+  );
+}
 
 const priorityColors: Record<Task['priority'], string> = {
   low: '#5a7a5e',
@@ -207,17 +230,22 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
         </div>
 
         <div className="detail-field">
-          <label>Nakład pracy</label>
-          <div className="effort-pills">
-            {EFFORTS.map(e => (
-              <button
-                key={e.value}
-                className={`effort-pill ${task.effort === e.value ? 'active' : ''}`}
-                onClick={() => onUpdate('effort', task.effort === e.value ? null : e.value)}
-              >
-                {e.label}
-              </button>
-            ))}
+          <label>Poziom energii</label>
+          <div className="energy-pills">
+            {ENERGY_LEVELS.map(e => {
+              const isActive = task.effort === e.value;
+              return (
+                <button
+                  key={e.value}
+                  className={`energy-pill ${isActive ? 'active' : ''}`}
+                  style={isActive ? { borderColor: e.color, background: e.color + '14', color: e.color } : undefined}
+                  onClick={() => onUpdate('effort', isActive ? null : e.value)}
+                >
+                  <BatteryIcon bars={e.bars} color={isActive ? e.color : 'var(--text-muted)'} size={14} />
+                  <span>{e.label}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
 

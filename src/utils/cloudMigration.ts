@@ -1,5 +1,13 @@
 import { db } from '../db'
-import type { Area, Lifter, Project, Task, Context } from '../types'
+import type { Area, Effort, Lifter, Project, Task, Context } from '../types'
+
+function migrateEffort(raw: unknown): Effort | null {
+  if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
+  if (raw === 'xs' || raw === 's') return 'low';
+  if (raw === 'm') return 'medium';
+  if (raw === 'l' || raw === 'xl') return 'high';
+  return null;
+}
 
 const MIGRATION_KEY = 'dopadone-migration-data'
 
@@ -90,7 +98,7 @@ export async function completeMigrationIfPending(): Promise<void> {
         done: task.done,
         priority: task.priority,
         notes: task.notes,
-        effort: task.effort,
+        effort: migrateEffort(task.effort),
         contextId: task.contextId ? (contextIdMap.get(task.contextId) ?? task.contextId) : null,
         blocking: task.blocking ?? false,
       })

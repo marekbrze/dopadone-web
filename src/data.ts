@@ -1,7 +1,15 @@
-import type { AppState } from './types'
+import type { AppState, Effort } from './types'
 import { db, isCloudSchema } from './db'
 
 const STORAGE_KEY = 'dopadone-data'
+
+function migrateEffort(raw: unknown): Effort | null {
+  if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
+  if (raw === 'xs' || raw === 's') return 'low';
+  if (raw === 'm') return 'medium';
+  if (raw === 'l' || raw === 'xl') return 'high';
+  return null;
+}
 
 export const defaultData: AppState = {
   areas: [
@@ -37,7 +45,7 @@ async function migrateFromLocalStorage(): Promise<AppState | null> {
     if (!Array.isArray(state.events)) state.events = []
     state.tasks = state.tasks.map(t => ({
       ...t,
-      effort: t.effort ?? null,
+      effort: migrateEffort(t.effort),
       contextId: t.contextId ?? null,
       blocking: t.blocking ?? false,
     }))
