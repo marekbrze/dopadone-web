@@ -1,0 +1,176 @@
+/* ── Ambient Sound Widget ──────────────────────────────────── */
+
+.ambient-widget {
+  position: relative;
+  flex-shrink: 0;
+  margin-right: 8px;
+}
+
+/* Main toggle button — mirrors .settings-btn from App.css */
+.ambient-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.ambient-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+.ambient-btn--playing {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+.ambient-btn-icon {
+  font-size: 12px;
+  line-height: 1;
+}
+
+/* Panel */
+.ambient-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(28, 23, 18, 0.12);
+  padding: 10px;
+  z-index: 200;
+}
+
+/* Sound list */
+.ambient-sound-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 10px;
+}
+
+.ambient-sound-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  padding: 6px 8px;
+  text-align: left;
+  transition: background 0.1s, color 0.1s;
+}
+
+.ambient-sound-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.ambient-sound-btn--active {
+  background: var(--surface2);
+  color: var(--text);
+}
+
+.ambient-sound-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+
+.ambient-sound-btn--active .ambient-sound-indicator {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Volume */
+.ambient-volume {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.ambient-volume-label {
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.ambient-volume-slider {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 3px;
+}
+
+/* Stop button */
+.ambient-stop-btn {
+  width: 100%;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) - 1px);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 5px 8px;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.ambient-stop-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+/* Mobile: hide text label, show icon only */
+@media (max-width: 900px) {
+  .ambient-btn-label {
+    display: none;
+  }
+
+  .ambient-btn {
+    padding: 5px 8px;
+  }
+
+  .ambient-panel {
+    right: 0;
+  }
+}
+
+@media (max-width: 767px) {
+  .ambient-widget {
+    display: none;
+  }
+}
