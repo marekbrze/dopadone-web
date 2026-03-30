@@ -1207,7 +1207,7 @@ interface DateStepPanelProps {
   onSkip: () => void;
 }
 
-function DateStepPanel({ options, pendingKey, today, onSelect, onSkip }: DateStepPanelProps) {
+function DateStepPanel({ options, pendingKey, today, onSelect, onConfirm, onSkip }: DateStepPanelProps) {
   return (
     <div className="proc-option-step proc-date-step">
       <div className="proc-step-hint">Wybierz klawiszem lub klikiem, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
@@ -1218,7 +1218,14 @@ function DateStepPanel({ options, pendingKey, today, onSelect, onSkip }: DateSte
             <button
               key={opt.key}
               className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}${opt.isNext ? ' proc-option-next' : ''}`}
-              onClick={() => onSelect(opt.key)}
+              onMouseEnter={() => onSelect(opt.key)}
+              onClick={() => {
+                if (pendingKey === opt.key) {
+                  onConfirm();
+                } else {
+                  onSelect(opt.key);
+                }
+              }}
             >
               <span className="proc-option-label">{opt.label}</span>
               {hint && <span className="proc-option-date-hint">{hint}</span>}
