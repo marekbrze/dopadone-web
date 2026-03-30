@@ -316,7 +316,7 @@ export default function App() {
     const today = new Date().toISOString().slice(0, 10);
     return data.tasks.filter(t => {
       if (t.done) return false;
-      if (t.projectId === null || t.duration == null || t.contextId === null) return true;
+      if (t.projectId === null || t.duration == null || t.effort == null || t.contextId === null) return true;
       if (!t.plannedDate) {
         if (t.isNext) return false;
         const project = data.projects.find(p => p.id === t.projectId);
