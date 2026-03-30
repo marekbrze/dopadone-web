@@ -769,6 +769,15 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
                   });
                 }
               }}
+              onConfirmKey={key => {
+                const opt = ENERGY_OPTIONS.find(o => o.key === key);
+                if (opt) {
+                  onUpdateTask(currentStep.taskId, { effort: opt.value }).then(() => {
+                    markStepCompleted(currentStep.taskId, 'energy');
+                    advanceStep(allSteps, currentStepIndex);
+                  });
+                }
+              }}
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
             />
           )}
@@ -1209,6 +1218,7 @@ interface EnergyStepPanelProps {
   pendingKey: string | null;
   onSelect: (key: string) => void;
   onConfirm: () => void;
+  onConfirmKey: (key: string) => void;
   onSkip: () => void;
 }
 
@@ -1237,10 +1247,10 @@ function EnergyBatteryIcon({ bars, color, size = 28 }: { bars: number; color: st
   );
 }
 
-function EnergyStepPanel({ options, pendingKey, onSelect, onConfirm, onSkip }: EnergyStepPanelProps) {
+function EnergyStepPanel({ options, pendingKey, onSelect, onConfirm, onConfirmKey, onSkip }: EnergyStepPanelProps) {
   return (
     <div className="proc-option-step">
-      <div className="proc-step-hint">Wybierz poziom energii <kbd>1</kbd>–<kbd>3</kbd>, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
+      <div className="proc-step-hint">Kliknij lub wybierz <kbd>1</kbd>–<kbd>3</kbd>, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
       <div className="proc-options-grid proc-energy-grid">
         {options.map(opt => {
           const isHighlighted = pendingKey === opt.key;
@@ -1250,13 +1260,7 @@ function EnergyStepPanel({ options, pendingKey, onSelect, onConfirm, onSkip }: E
               className={`proc-option-card proc-energy-card${isHighlighted ? ' highlighted' : ''}`}
               style={isHighlighted ? { borderColor: opt.color, background: opt.color + '14' } : undefined}
               onMouseEnter={() => onSelect(opt.key)}
-              onClick={() => {
-                if (pendingKey === opt.key) {
-                  onConfirm();
-                } else {
-                  onSelect(opt.key);
-                }
-              }}
+              onClick={() => onConfirmKey(opt.key)}
             >
               <EnergyBatteryIcon bars={opt.value === 'low' ? 1 : opt.value === 'medium' ? 2 : 3} color={isHighlighted ? opt.color : 'var(--text-muted)'} />
               <span className="proc-option-label" style={isHighlighted ? { color: opt.color } : undefined}>{opt.label}</span>
