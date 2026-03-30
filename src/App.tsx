@@ -12,7 +12,6 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { ProjectDetailPanel } from './components/ProjectDetailPanel';
-import { DoingView } from './components/DoingView';
 import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
@@ -49,7 +48,7 @@ export default function App() {
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'do' | 'agenda' | 'inbox' | 'processing'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing'>('today');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
@@ -1006,10 +1005,6 @@ export default function App() {
             onClick={() => setCurrentView('agenda')}
             data-tour="agenda"
           >Kalendarz</button>
-          <button
-            className={`view-tab ${currentView === 'do' ? 'active' : ''}`}
-            onClick={() => setCurrentView('do')}
-          >Kanban</button>
         </div>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <AmbientSoundWidget />
@@ -1053,10 +1048,6 @@ export default function App() {
                 className={`mobile-nav-item ${currentView === 'agenda' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('agenda'); setMobileNavOpen(false); }}
               >Kalendarz</button>
-              <button
-                className={`mobile-nav-item ${currentView === 'do' ? 'active' : ''}`}
-                onClick={() => { setCurrentView('do'); setMobileNavOpen(false); }}
-              >Kanban</button>
             </nav>
           </div>
         </div>
@@ -1154,16 +1145,6 @@ export default function App() {
           onAddNote={addNoteForProject}
           onUpdateNote={updateNote}
           onDeleteNote={deleteNote}
-        />
-      )}
-
-      {currentView === 'do' && (
-        <DoingView
-          tasks={data.tasks}
-          contexts={data.contexts}
-          onUpdateTask={updateTask}
-          onDeleteTask={deleteTask}
-          onCompleteWithNextAction={handleCompleteWithNextAction}
         />
       )}
 
