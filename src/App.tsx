@@ -1150,6 +1150,10 @@ export default function App() {
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}
           onAddEventTask={addEventTask}
+          projectNotes={data.projectNotes}
+          onAddNote={addNoteForProject}
+          onUpdateNote={updateNote}
+          onDeleteNote={deleteNote}
         />
       )}
 

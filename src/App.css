@@ -2622,7 +2622,7 @@ body {
 }
 
 .agenda-block-panel {
-  width: 280px;
+  width: 560px;
   flex-shrink: 0;
   border-left: 1px solid var(--border);
   background: var(--surface);
@@ -2797,6 +2797,155 @@ body {
   overflow-y: auto;
   padding: 10px;
 }
+
+/* ── Split view: tasks left / project notes right ─────────────────────────── */
+
+.agenda-block-panel-split {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agenda-block-panel-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  min-width: 0;
+}
+
+.agenda-block-panel-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.agenda-block-notes-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 8px 12px 6px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.agenda-block-notes-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.block-notes-project-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.block-notes-project-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 0;
+}
+
+.block-note-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.block-note-title {
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text);
+}
+
+.block-note-content {
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.block-note-content p { margin: 0 0 4px; }
+.block-note-content p:last-child { margin-bottom: 0; }
+.block-note-content ul, .block-note-content ol { margin: 0 0 4px; padding-left: 18px; }
+.block-note-content h1, .block-note-content h2, .block-note-content h3 { margin: 4px 0 2px; font-size: 13px; }
+
+.block-note-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.block-note-delete {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 11px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.block-note-card:hover .block-note-delete { opacity: 1; }
+.block-note-delete:hover { color: var(--text); }
+
+.block-note-add {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.block-note-add-input {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 8px;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+.block-note-add-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.block-note-add-btn {
+  align-self: flex-end;
+  padding: 3px 10px;
+  font-size: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.block-note-add-btn:hover:not(:disabled) { background: var(--surface2); }
+.block-note-add-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* ─────────────────────────────────────────────────────────────────────────── */
 
 .agenda-block-panel-empty {
   font-size: 13px;
@@ -4789,5 +4938,21 @@ body {
     flex: 1;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Split view on mobile: stack vertically */
+  .agenda-block-panel.mobile-sheet-open .agenda-block-panel-split {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .agenda-block-panel.mobile-sheet-open .agenda-block-panel-left {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    flex: none;
+  }
+
+  .agenda-block-panel.mobile-sheet-open .agenda-block-panel-right {
+    flex: none;
   }
 }

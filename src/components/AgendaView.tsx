@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent, BlockTemplate } from '../types';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent, BlockTemplate, ProjectNote } from '../types';
+import { renderMarkdown } from '../utils/renderMarkdown';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { EventDetailPanel } from './EventDetailPanel';
 import { EventModal } from './EventModal';
@@ -27,6 +28,10 @@ interface Props {
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
+  projectNotes: ProjectNote[];
+  onAddNote: (projectId: string, data: { title?: string; content: string }) => Promise<void>;
+  onUpdateNote: (id: string, updates: Partial<ProjectNote>) => Promise<void>;
+  onDeleteNote: (id: string) => Promise<void>;
 }
 
 function toDateString(d: Date): string {
@@ -109,7 +114,7 @@ function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, blockTemplates = [], onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, blockTemplates = [], onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, projectNotes, onAddNote, onDeleteNote }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
@@ -163,8 +168,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const [showBlockDone, setShowBlockDone] = useState(false);
   const [mobileTaskDrawerOpen, setMobileTaskDrawerOpen] = useState(false);
   const [mobileDetailSheetOpen, setMobileDetailSheetOpen] = useState(false);
-  const [blockPanelTab, setBlockPanelTab] = useState<'actions' | 'notes'>('actions');
-  const [blockNotesDraft, setBlockNotesDraft] = useState('');
   const [nowMinutes, setNowMinutes] = useState(() => {
     const n = new Date();
     return n.getHours() * 60 + n.getMinutes();
@@ -183,8 +186,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   // Reset done section and tab when switching blocks
   useEffect(() => {
     setShowBlockDone(false);
-    setBlockPanelTab('actions');
-    setBlockNotesDraft(selectedBlock?.notes ?? '');
   }, [selectedBlockId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Clear selected task if it no longer exists
@@ -232,6 +233,25 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const pinnedTasksTotalDuration = pinnedTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const selectedBlockDuration = selectedBlock ? selectedBlock.endMinutes - selectedBlock.startMinutes : 0;
   const pinnedDurationOverflow = isManual && pinnedTasksTotalDuration > 0 && pinnedTasksTotalDuration > selectedBlockDuration;
+
+  const blockProjectNoteGroups = useMemo(() => {
+    if (!selectedBlock) return [];
+    const blockTasks = isManual
+      ? pinnedTasks
+      : [...matchingTasks, ...matchingDoneTasks];
+    const projectIds = [...new Set(blockTasks.map(t => t.projectId).filter((id): id is string => id !== null))];
+    return projectIds
+      .map(pid => {
+        const project = projects.find(p => p.id === pid);
+        if (!project) return null;
+        const notes = projectNotes.filter(n => n.projectId === pid);
+        return { project, notes };
+      })
+      .filter((g): g is { project: Project; notes: ProjectNote[] } => g !== null)
+      .sort((a, b) => a.project.name.localeCompare(b.project.name));
+  }, [selectedBlock, isManual, pinnedTasks, matchingTasks, matchingDoneTasks, projects, projectNotes]);
+
+  const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
 
   const allUndoneTasks = (isManual && selectedBlock)
     ? tasks.filter(t =>
@@ -1107,171 +1127,212 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               <button onClick={() => setEditingBlock(selectedBlock)}>Edytuj blok</button>
             </div>
           </div>
-          <div className="agenda-panel-tabs">
-            <button
-              className={`agenda-panel-tab${blockPanelTab === 'actions' ? ' active' : ''}`}
-              onClick={() => setBlockPanelTab('actions')}
-            >Action Points</button>
-            <button
-              className={`agenda-panel-tab${blockPanelTab === 'notes' ? ' active' : ''}`}
-              onClick={() => setBlockPanelTab('notes')}
-            >Notatki</button>
-          </div>
-          {blockPanelTab === 'notes' ? (
-            <div className="agenda-panel-notes-wrap">
-              <textarea
-                className="agenda-panel-notes-textarea"
-                placeholder="Notatki do bloku…"
-                value={blockNotesDraft}
-                onChange={e => setBlockNotesDraft(e.target.value)}
-                onBlur={() => onUpdate(selectedBlock.id, { notes: blockNotesDraft })}
-              />
-            </div>
-          ) : null}
-          {blockPanelTab === 'actions' && isManual && (
-            <div className="agenda-block-add-task">
-              <input
-                type="text"
-                placeholder="Dodaj zadanie do bloku..."
-                value={newBlockTaskName}
-                onChange={e => setNewBlockTaskName(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && newBlockTaskName.trim()) {
-                    handleAddNewTaskToBlock(newBlockTaskName.trim());
-                    setNewBlockTaskName('');
-                  }
-                }}
-              />
-            </div>
-          )}
-          {blockPanelTab === 'actions' && <div className="agenda-block-panel-body">
-            {pinnedDurationOverflow && (
-              <div className="block-duration-warning">
-                ⚠ Suma czasów zadań ({pinnedTasksTotalDuration >= 60 ? `${Math.floor(pinnedTasksTotalDuration / 60)}h${pinnedTasksTotalDuration % 60 > 0 ? ` ${pinnedTasksTotalDuration % 60}m` : ''}` : `${pinnedTasksTotalDuration}m`}) przekracza długość bloku ({selectedBlockDuration}m)
+          <div className="agenda-block-panel-split">
+            {/* Left half: tasks */}
+            <div className="agenda-block-panel-left">
+              {isManual && (
+                <div className="agenda-block-add-task">
+                  <input
+                    type="text"
+                    placeholder="Dodaj zadanie do bloku..."
+                    value={newBlockTaskName}
+                    onChange={e => setNewBlockTaskName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' && newBlockTaskName.trim()) {
+                        handleAddNewTaskToBlock(newBlockTaskName.trim());
+                        setNewBlockTaskName('');
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              <div className="agenda-block-panel-body">
+                {pinnedDurationOverflow && (
+                  <div className="block-duration-warning">
+                    ⚠ Suma czasów zadań ({pinnedTasksTotalDuration >= 60 ? `${Math.floor(pinnedTasksTotalDuration / 60)}h${pinnedTasksTotalDuration % 60 > 0 ? ` ${pinnedTasksTotalDuration % 60}m` : ''}` : `${pinnedTasksTotalDuration}m`}) przekracza długość bloku ({selectedBlockDuration}m)
+                  </div>
+                )}
+                {isManual ? (
+                  <>
+                    {pinnedUndoneTasks.length === 0 && pinnedDoneTasks.length === 0
+                      ? <p className="agenda-block-panel-empty">Przeciągnij zadania z lewego panelu lub wpisz nowe powyżej.</p>
+                      : pinnedUndoneTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className={`agenda-block-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.done}
+                                onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: !task.done }); }}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <div className="agenda-block-task-info">
+                                <span className="agenda-block-task-name">{task.name}</span>
+                                {project && <span className="agenda-block-task-project">{project.name}</span>}
+                              </div>
+                              <button
+                                className="agenda-right-task-remove-btn"
+                                onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                title="Usuń z bloku"
+                              >✕</button>
+                            </div>
+                          );
+                        })
+                    }
+                    {pinnedDoneTasks.length > 0 && (
+                      <div className="block-done-section">
+                        <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
+                          {showBlockDone ? '▾' : '▸'} Ukończone ({pinnedDoneTasks.length})
+                        </button>
+                        {showBlockDone && pinnedDoneTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className={`agenda-block-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: false }); }}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <div className="agenda-block-task-info">
+                                <span className="agenda-block-task-name">{task.name}</span>
+                                {project && <span className="agenda-block-task-project">{project.name}</span>}
+                              </div>
+                              <button
+                                className="agenda-right-task-remove-btn"
+                                onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                title="Usuń z bloku"
+                              >✕</button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {matchingTasks.length === 0 && matchingDoneTasks.length === 0
+                      ? <p className="agenda-block-panel-empty">Brak zadań pasujących do filtrów bloku.</p>
+                      : matchingTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className={`agenda-block-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={task.done}
+                                onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: !task.done }); }}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <div className="agenda-block-task-info">
+                                <span className="agenda-block-task-name">{task.name}</span>
+                                {project && <span className="agenda-block-task-project">{project.name}</span>}
+                              </div>
+                            </div>
+                          );
+                        })
+                    }
+                    {matchingDoneTasks.length > 0 && (
+                      <div className="block-done-section">
+                        <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
+                          {showBlockDone ? '▾' : '▸'} Ukończone ({matchingDoneTasks.length})
+                        </button>
+                        {showBlockDone && matchingDoneTasks.map(task => {
+                          const project = projects.find(p => p.id === task.projectId);
+                          return (
+                            <div
+                              key={task.id}
+                              className={`agenda-block-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
+                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={true}
+                                onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: false }); }}
+                                onClick={e => e.stopPropagation()}
+                              />
+                              <div className="agenda-block-task-info">
+                                <span className="agenda-block-task-name">{task.name}</span>
+                                {project && <span className="agenda-block-task-project">{project.name}</span>}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-            )}
-            {isManual ? (
-              <>
-                {pinnedUndoneTasks.length === 0 && pinnedDoneTasks.length === 0
-                  ? <p className="agenda-block-panel-empty">Przeciągnij zadania z lewego panelu lub wpisz nowe powyżej.</p>
-                  : pinnedUndoneTasks.map(task => {
-                      const project = projects.find(p => p.id === task.projectId);
-                      return (
-                        <div
-                          key={task.id}
-                          className={`agenda-block-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
-                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={task.done}
-                            onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: !task.done }); }}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <div className="agenda-block-task-info">
-                            <span className="agenda-block-task-name">{task.name}</span>
-                            {project && <span className="agenda-block-task-project">{project.name}</span>}
+            </div>
+            {/* Right half: project notes */}
+            <div className="agenda-block-panel-right">
+              <div className="agenda-block-notes-header">Notatki projektów</div>
+              <div className="agenda-block-notes-body">
+                {blockProjectNoteGroups.length === 0 ? (
+                  <p className="agenda-block-panel-empty">Brak projektów z zadaniami w tym bloku.</p>
+                ) : blockProjectNoteGroups.map(({ project, notes }) => (
+                  <div key={project.id} className="block-notes-project-group">
+                    <div className="block-notes-project-header">
+                      <span>{project.name}</span>
+                    </div>
+                    {[...notes]
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map(note => (
+                        <div key={note.id} className="block-note-card">
+                          {note.title && <div className="block-note-title">{note.title}</div>}
+                          <div className="block-note-content">{renderMarkdown(note.content)}</div>
+                          <div className="block-note-meta">
+                            {new Date(note.updatedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
+                            <button
+                              className="block-note-delete"
+                              onClick={() => onDeleteNote(note.id)}
+                              title="Usuń notatkę"
+                            >✕</button>
                           </div>
-                          <button
-                            className="agenda-right-task-remove-btn"
-                            onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                            title="Usuń z bloku"
-                          >✕</button>
                         </div>
-                      );
-                    })
-                }
-                {pinnedDoneTasks.length > 0 && (
-                  <div className="block-done-section">
-                    <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
-                      {showBlockDone ? '▾' : '▸'} Ukończone ({pinnedDoneTasks.length})
-                    </button>
-                    {showBlockDone && pinnedDoneTasks.map(task => {
-                      const project = projects.find(p => p.id === task.projectId);
-                      return (
-                        <div
-                          key={task.id}
-                          className={`agenda-block-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
-                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={true}
-                            onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: false }); }}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <div className="agenda-block-task-info">
-                            <span className="agenda-block-task-name">{task.name}</span>
-                            {project && <span className="agenda-block-task-project">{project.name}</span>}
-                          </div>
-                          <button
-                            className="agenda-right-task-remove-btn"
-                            onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                            title="Usuń z bloku"
-                          >✕</button>
-                        </div>
-                      );
-                    })}
+                      ))
+                    }
+                    <div className="block-note-add">
+                      <textarea
+                        className="block-note-add-input"
+                        placeholder={`Dodaj notatkę do „${project.name}"…`}
+                        value={noteInputs[project.id] ?? ''}
+                        onChange={e => setNoteInputs(prev => ({ ...prev, [project.id]: e.target.value }))}
+                        onKeyDown={async e => {
+                          if (e.key === 'Enter' && e.ctrlKey && (noteInputs[project.id] ?? '').trim()) {
+                            await onAddNote(project.id, { content: noteInputs[project.id].trim() });
+                            setNoteInputs(prev => ({ ...prev, [project.id]: '' }));
+                          }
+                        }}
+                        rows={2}
+                      />
+                      <button
+                        className="block-note-add-btn"
+                        disabled={!(noteInputs[project.id] ?? '').trim()}
+                        onClick={async () => {
+                          const content = (noteInputs[project.id] ?? '').trim();
+                          if (!content) return;
+                          await onAddNote(project.id, { content });
+                          setNoteInputs(prev => ({ ...prev, [project.id]: '' }));
+                        }}
+                      >Dodaj</button>
+                    </div>
                   </div>
-                )}
-              </>
-            ) : (
-              <>
-                {matchingTasks.length === 0 && matchingDoneTasks.length === 0
-                  ? <p className="agenda-block-panel-empty">Brak zadań pasujących do filtrów bloku.</p>
-                  : matchingTasks.map(task => {
-                      const project = projects.find(p => p.id === task.projectId);
-                      return (
-                        <div
-                          key={task.id}
-                          className={`agenda-block-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
-                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={task.done}
-                            onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: !task.done }); }}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <div className="agenda-block-task-info">
-                            <span className="agenda-block-task-name">{task.name}</span>
-                            {project && <span className="agenda-block-task-project">{project.name}</span>}
-                          </div>
-                        </div>
-                      );
-                    })
-                }
-                {matchingDoneTasks.length > 0 && (
-                  <div className="block-done-section">
-                    <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
-                      {showBlockDone ? '▾' : '▸'} Ukończone ({matchingDoneTasks.length})
-                    </button>
-                    {showBlockDone && matchingDoneTasks.map(task => {
-                      const project = projects.find(p => p.id === task.projectId);
-                      return (
-                        <div
-                          key={task.id}
-                          className={`agenda-block-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
-                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={true}
-                            onChange={e => { e.stopPropagation(); onUpdateTask(task.id, { done: false }); }}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <div className="agenda-block-task-info">
-                            <span className="agenda-block-task-name">{task.name}</span>
-                            {project && <span className="agenda-block-task-project">{project.name}</span>}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            )}
-          </div>}
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
