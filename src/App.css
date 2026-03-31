@@ -1418,6 +1418,34 @@ body {
   color: var(--text-faint);
 }
 
+.task-danger-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: auto;
+}
+
+.split-task-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.split-task-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--text);
+}
+
 .delete-task-btn {
   background: transparent;
   border: 1px solid rgba(155, 50, 38, 0.25);
@@ -1431,8 +1459,6 @@ body {
   text-transform: uppercase;
   padding: 7px 14px;
   transition: background 0.15s, border-color 0.15s;
-  margin-top: auto;
-  align-self: flex-start;
 }
 
 .delete-task-btn:hover {

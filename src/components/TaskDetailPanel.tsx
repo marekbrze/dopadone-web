@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, Context, Effort, Project, TaskDuration } from '../types';
+import { SplitTaskModal } from './SplitTaskModal';
 
 function normalizeProjectStartDate(startDate: string | null | undefined): string | null {
   if (!startDate) return null;
@@ -71,15 +72,17 @@ interface Props {
   onDelete: () => void;
   onClose: () => void;
   onCompleteWithNextAction: (nextActionName: string) => void;
+  onSplit?: (names: string[]) => Promise<void>;
 }
 
-export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, onClose, onCompleteWithNextAction }: Props) {
+export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, onClose, onCompleteWithNextAction, onSplit }: Props) {
   const [localName, setLocalName] = useState(task.name);
   const [localNotes, setLocalNotes] = useState(task.notes);
   const [nextAction, setNextAction] = useState('');
   const [startDateError, setStartDateError] = useState('');
   const [endDateError, setEndDateError] = useState('');
   const [plannedDateError, setPlannedDateError] = useState('');
+  const [showSplitModal, setShowSplitModal] = useState(false);
 
   const projectStartMin = normalizeProjectStartDate(project?.startDate);
   const projectEndMax = project?.endDate ?? null;
@@ -392,8 +395,25 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
           </button>
         </div>
 
-        <button className="delete-task-btn" onClick={onDelete}>Usuń zadanie</button>
+        <div className="task-danger-row">
+          {onSplit && (
+            <button className="split-task-btn" onClick={() => setShowSplitModal(true)}>
+              Rozbij
+            </button>
+          )}
+          <button className="delete-task-btn" onClick={onDelete}>Usuń zadanie</button>
+        </div>
       </div>
+      {showSplitModal && (
+        <SplitTaskModal
+          taskName={task.name}
+          onConfirm={async (names) => {
+            setShowSplitModal(false);
+            await onSplit!(names);
+          }}
+          onClose={() => setShowSplitModal(false)}
+        />
+      )}
     </div>
   );
 }

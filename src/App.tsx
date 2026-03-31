@@ -488,6 +488,24 @@ export default function App() {
     setData(d => d ? ({ ...d, tasks: d.tasks.filter(t => t.id !== taskId) }) : d);
   };
 
+  const splitTask = async (task: Task, names: string[]) => {
+    if (!task.projectId) return;
+    const projectTasks = data?.tasks.filter(t => t.projectId === task.projectId) ?? [];
+    const baseOrder = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) : 0;
+    await db.transaction('rw', db.tasks, async () => {
+      for (let i = 0; i < names.length; i++) {
+        const base = { name: names[i], projectId: task.projectId, done: false as const, priority: task.priority, notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null, order: baseOrder + i + 1 };
+        if (isCloudSchema()) {
+          await db.tasks.add(base);
+        } else {
+          await db.tasks.put({ ...base, id: newId() });
+        }
+      }
+      await db.tasks.delete(task.id);
+    });
+    setData(d => d ? ({ ...d, tasks: d.tasks.filter(t => t.id !== task.id) }) : d);
+  };
+
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     await db.tasks.update(taskId, updates);
     setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }) : d);
@@ -1539,6 +1557,7 @@ export default function App() {
             onDelete={() => { deleteTask(selectedTask.id); setSelectedTaskId(null); }}
             onClose={() => setSelectedTaskId(null)}
             onCompleteWithNextAction={(name) => handleCompleteWithNextAction(selectedTask, name)}
+            onSplit={async (names) => { await splitTask(selectedTask, names); setSelectedTaskId(null); }}
           />
         )}
         {!selectedTask && editingLifterId && (() => {
