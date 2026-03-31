@@ -23,6 +23,7 @@ interface Props {
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
+  onSplitTask?: (task: Task, names: string[]) => Promise<void>;
   onAddInboxTask: (name: string) => Promise<string>;
   onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
@@ -118,7 +119,7 @@ function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project
   });
 }
 
-export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, blockTemplates = [], onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, projectNotes, onAddNote, onDeleteNote }: Props) {
+export function AgendaView({ areas, lifters, projects, contexts, tasks, workBlocks, events, blockTemplates = [], onAdd, onUpdate, onDelete, onDuplicate, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddInboxTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, projectNotes, onAddNote, onDeleteNote }: Props) {
   const today = toDateString(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'day'>('week');
   const [anchorDate, setAnchorDate] = useState(today);
@@ -1376,6 +1377,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
             onDelete={() => { onDeleteTask(task.id); setSelectedTaskId(null); }}
             onClose={() => setSelectedTaskId(null)}
             onCompleteWithNextAction={name => onCompleteWithNextAction(task, name)}
+            onSplit={onSplitTask ? async (names) => { await onSplitTask(task, names); setSelectedTaskId(null); } : undefined}
           />
         ) : null;
       })()}

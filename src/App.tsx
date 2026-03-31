@@ -494,7 +494,7 @@ export default function App() {
     const baseOrder = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) : 0;
     await db.transaction('rw', db.tasks, async () => {
       for (let i = 0; i < names.length; i++) {
-        const base = { name: names[i], projectId: task.projectId, done: false as const, priority: task.priority, notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null, order: baseOrder + i + 1 };
+        const base = { name: names[i], projectId: task.projectId, done: false as const, priority: 4 as const, notes: '', effort: null, contextId: null, blocking: false, duration: null, order: baseOrder + i + 1 };
         if (isCloudSchema()) {
           await db.tasks.add(base);
         } else {
@@ -1160,6 +1160,7 @@ export default function App() {
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
+          onSplitTask={async (task, names) => { await splitTask(task, names); }}
           onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
