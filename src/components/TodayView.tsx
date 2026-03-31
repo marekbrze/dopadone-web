@@ -892,166 +892,170 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     </div>
                   </div>
                 </div>
-                <div className="today-active-tasks">
-                  {blockUndoneTasks.length === 0 && blockDoneTasks.length === 0 ? (
-                    <div className="today-active-empty">
-                      Brak zadań przypisanych do tego bloku.
-                    </div>
-                  ) : (
-                    <>
-                      <div className="today-tasks-section-label">
-                        Zadania
-                        <span className="today-tasks-count">
-                          {blockDoneTasks.length}/{blockUndoneTasks.length + blockDoneTasks.length}
-                        </span>
+                <div className="today-active-split">
+                  <div className="today-active-tasks">
+                    {blockUndoneTasks.length === 0 && blockDoneTasks.length === 0 ? (
+                      <div className="today-active-empty">
+                        Brak zadań przypisanych do tego bloku.
                       </div>
-                      {blockDurationOverflow && (
-                        <div className="block-duration-warning">
-                          ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
+                    ) : (
+                      <>
+                        <div className="today-tasks-section-label">
+                          Zadania
+                          <span className="today-tasks-count">
+                            {blockDoneTasks.length}/{blockUndoneTasks.length + blockDoneTasks.length}
+                          </span>
                         </div>
-                      )}
-{taskGrouping === 'none' && blockUndoneTasks.map(task => (
-                        <div
-                          key={task.id}
-                          className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
-                          onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={false}
-                            onChange={() => onUpdateTask(task.id, { done: true })}
-                            id={`today-task-${task.id}`}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <span className="today-task-name">{task.name}</span>
-                          <span
-                            className="today-priority-dot"
-                            style={{ background: priorityColors[task.priority] }}
-                            title={task.priority}
-                          />
-                          {displayBlock.blockType === 'manual' && (
-                            <button
-                              className="today-task-remove-btn"
-                              onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                              title="Usuń z bloku"
-                            >✕</button>
-                          )}
-                        </div>
-                      ))}
-                      {taskGrouping === 'area' && blockGroupedByArea.map(areaGroup => (
-                        <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
-                          <div className="agenda-task-area-header">{areaGroup.areaName}</div>
-                          {areaGroup.lifters.map(lifterGroup => (
-                            <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
-                              <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
-                              {lifterGroup.tasks.map(task => (
-                                <div
-                                  key={task.id}
-                                  className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
-                                  onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={false}
-                                    onChange={() => onUpdateTask(task.id, { done: true })}
-                                    id={`today-task-${task.id}`}
-                                    onClick={e => e.stopPropagation()}
-                                  />
-                                  <span className="today-task-name">{task.name}</span>
-                                  <span
-                                    className="today-priority-dot"
-                                    style={{ background: priorityColors[task.priority] }}
-                                    title={task.priority}
-                                  />
-                                  {displayBlock.blockType === 'manual' && (
-                                    <button
-                                      className="today-task-remove-btn"
-                                      onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                                      title="Usuń z bloku"
-                                    >✕</button>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          ))}
-                        </div>
-                      ))}
-                      {taskGrouping === 'context' && blockGroupedByContext.map(ctxGroup => (
-                        <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
-                          <div className="agenda-task-context-header">
-                            {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
+                        {blockDurationOverflow && (
+                          <div className="block-duration-warning">
+                            ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
                           </div>
-                          {ctxGroup.tasks.map(task => (
-                            <div
-                              key={task.id}
-                              className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
-                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={false}
-                                onChange={() => onUpdateTask(task.id, { done: true })}
-                                id={`today-task-${task.id}`}
-                                onClick={e => e.stopPropagation()}
-                              />
-                              <span className="today-task-name">{task.name}</span>
-                              <span
-                                className="today-priority-dot"
-                                style={{ background: priorityColors[task.priority] }}
-                                title={task.priority}
-                              />
-                              {displayBlock.blockType === 'manual' && (
-                                <button
-                                  className="today-task-remove-btn"
-                                  onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                                  title="Usuń z bloku"
-                                >✕</button>
-                              )}
+                        )}
+{taskGrouping === 'none' && blockUndoneTasks.map(task => (
+                          <div
+                            key={task.id}
+                            className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                            onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={false}
+                              onChange={() => onUpdateTask(task.id, { done: true })}
+                              id={`today-task-${task.id}`}
+                              onClick={e => e.stopPropagation()}
+                            />
+                            <span className="today-task-name">{task.name}</span>
+                            <span
+                              className="today-priority-dot"
+                              style={{ background: priorityColors[task.priority] }}
+                              title={task.priority}
+                            />
+                            {displayBlock.blockType === 'manual' && (
+                              <button
+                                className="today-task-remove-btn"
+                                onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                title="Usuń z bloku"
+                              >✕</button>
+                            )}
+                          </div>
+                        ))}
+                        {taskGrouping === 'area' && blockGroupedByArea.map(areaGroup => (
+                          <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
+                            <div className="agenda-task-area-header">{areaGroup.areaName}</div>
+                            {areaGroup.lifters.map(lifterGroup => (
+                              <div key={lifterGroup.lifterId ?? '__no_lifter__'} className="agenda-task-lifter-group">
+                                <div className="agenda-task-lifter-header">{lifterGroup.lifterName}</div>
+                                {lifterGroup.tasks.map(task => (
+                                  <div
+                                    key={task.id}
+                                    className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                                    onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={false}
+                                      onChange={() => onUpdateTask(task.id, { done: true })}
+                                      id={`today-task-${task.id}`}
+                                      onClick={e => e.stopPropagation()}
+                                    />
+                                    <span className="today-task-name">{task.name}</span>
+                                    <span
+                                      className="today-priority-dot"
+                                      style={{ background: priorityColors[task.priority] }}
+                                      title={task.priority}
+                                    />
+                                    {displayBlock.blockType === 'manual' && (
+                                      <button
+                                        className="today-task-remove-btn"
+                                        onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                        title="Usuń z bloku"
+                                      >✕</button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        {taskGrouping === 'context' && blockGroupedByContext.map(ctxGroup => (
+                          <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
+                            <div className="agenda-task-context-header">
+                              {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
                             </div>
-                          ))}
-                        </div>
-                      ))}
-                      {blockDoneTasks.length > 0 && (
-                        <div className="block-done-section">
-                          <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
-                            {showBlockDone ? '▾' : '▸'} Ukończone ({blockDoneTasks.length})
-                          </button>
-                          {showBlockDone && blockDoneTasks.map(task => (
-                            <div
-                              key={task.id}
-                              className={`today-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
-                              onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={true}
-                                onChange={() => onUpdateTask(task.id, { done: false })}
-                                id={`today-task-done-${task.id}`}
-                                onClick={e => e.stopPropagation()}
-                              />
-                              <span className="today-task-name">{task.name}</span>
-                              <span
-                                className="today-priority-dot"
-                                style={{ background: priorityColors[task.priority] }}
-                                title={task.priority}
-                              />
-                              {displayBlock.blockType === 'manual' && (
-                                <button
-                                  className="today-task-remove-btn"
-                                  onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
-                                  title="Usuń z bloku"
-                                >✕</button>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  )}
-                  {blockProjectNoteGroups.length > 0 && (
-                    <div className="today-block-notes-section">
-                      <div className="agenda-block-notes-header">Notatki projektów</div>
-                      {blockProjectNoteGroups.map(({ project, notes: pNotes }) => (
+                            {ctxGroup.tasks.map(task => (
+                              <div
+                                key={task.id}
+                                className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                                onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={false}
+                                  onChange={() => onUpdateTask(task.id, { done: true })}
+                                  id={`today-task-${task.id}`}
+                                  onClick={e => e.stopPropagation()}
+                                />
+                                <span className="today-task-name">{task.name}</span>
+                                <span
+                                  className="today-priority-dot"
+                                  style={{ background: priorityColors[task.priority] }}
+                                  title={task.priority}
+                                />
+                                {displayBlock.blockType === 'manual' && (
+                                  <button
+                                    className="today-task-remove-btn"
+                                    onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                    title="Usuń z bloku"
+                                  >✕</button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        {blockDoneTasks.length > 0 && (
+                          <div className="block-done-section">
+                            <button className="block-done-toggle" onClick={() => setShowBlockDone(v => !v)}>
+                              {showBlockDone ? '▾' : '▸'} Ukończone ({blockDoneTasks.length})
+                            </button>
+                            {showBlockDone && blockDoneTasks.map(task => (
+                              <div
+                                key={task.id}
+                                className={`today-task-item done${selectedTaskId === task.id ? ' selected' : ''}`}
+                                onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={true}
+                                  onChange={() => onUpdateTask(task.id, { done: false })}
+                                  id={`today-task-done-${task.id}`}
+                                  onClick={e => e.stopPropagation()}
+                                />
+                                <span className="today-task-name">{task.name}</span>
+                                <span
+                                  className="today-priority-dot"
+                                  style={{ background: priorityColors[task.priority] }}
+                                  title={task.priority}
+                                />
+                                {displayBlock.blockType === 'manual' && (
+                                  <button
+                                    className="today-task-remove-btn"
+                                    onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                    title="Usuń z bloku"
+                                  >✕</button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <div className="today-active-notes">
+                    <div className="agenda-block-notes-header">Notatki projektów</div>
+                    <div className="agenda-block-notes-body">
+                      {blockProjectNoteGroups.length === 0 ? (
+                        <p className="agenda-block-panel-empty">Brak projektów z zadaniami w tym bloku.</p>
+                      ) : blockProjectNoteGroups.map(({ project, notes: pNotes }) => (
                         <div key={project.id} className="block-notes-project-group">
                           <div className="block-notes-project-header">
                             <span>{project.name}</span>
@@ -1101,7 +1105,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         </div>
                       ))}
                     </div>
-                  )}
+                  </div>
                 </div>
               </>
             ) : (
