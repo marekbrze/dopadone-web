@@ -19,6 +19,7 @@ interface Props {
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   onDeleteTask: (id: string) => void;
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
+  onSplitTask?: (task: Task, names: string[]) => Promise<void>;
   onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
@@ -130,7 +131,7 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
@@ -1178,6 +1179,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 onDelete={() => { onDeleteTask(selectedTaskId); setSelectedTaskId(null); }}
                 onClose={() => setSelectedTaskId(null)}
                 onCompleteWithNextAction={(name) => { onCompleteWithNextAction(task, name); setSelectedTaskId(null); }}
+                onSplit={onSplitTask ? async (names) => { await onSplitTask(task, names); setSelectedTaskId(null); } : undefined}
               />
             ) : null;
           })()}

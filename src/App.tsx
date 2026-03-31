@@ -1127,6 +1127,7 @@ export default function App() {
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onCompleteWithNextAction={handleCompleteWithNextAction}
+          onSplitTask={async (task, names) => { await splitTask(task, names); }}
           onAddEvent={addEvent}
           onUpdateEvent={updateEvent}
           onDeleteEvent={deleteEvent}
