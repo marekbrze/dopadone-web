@@ -7,6 +7,7 @@ import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { PlannedDatePicker } from './PlannedDatePicker';
+import { renderMarkdown } from '../utils/renderMarkdown';
 
 interface Props {
   areas: Area[];
@@ -1065,7 +1066,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             .map(note => (
                               <div key={note.id} className="block-note-card">
                                 {note.title && <div className="block-note-title">{note.title}</div>}
-                                <div className="block-note-content">{note.content}</div>
+                                <div className="block-note-content">{renderMarkdown(note.content)}</div>
                                 <div className="block-note-meta">
                                   {new Date(note.updatedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
                                   <button
