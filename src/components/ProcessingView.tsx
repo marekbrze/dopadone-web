@@ -1247,7 +1247,7 @@ function EnergyBatteryIcon({ bars, color, size = 28 }: { bars: number; color: st
   );
 }
 
-function EnergyStepPanel({ options, pendingKey, onSelect, onConfirm, onConfirmKey, onSkip }: EnergyStepPanelProps) {
+function EnergyStepPanel({ options, pendingKey, onSelect, onConfirmKey, onSkip }: EnergyStepPanelProps) {
   return (
     <div className="proc-option-step">
       <div className="proc-step-hint">Kliknij lub wybierz <kbd>1</kbd>–<kbd>3</kbd>, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
