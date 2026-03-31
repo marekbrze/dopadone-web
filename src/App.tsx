@@ -23,6 +23,7 @@ import { isCloudSchema } from './db';
 import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
 import { AmbientSoundWidget } from './components/AmbientSoundWidget';
+import { PlannedDatePicker } from './components/PlannedDatePicker';
 import './App.css';
 
 function newId() {
@@ -1350,7 +1351,9 @@ export default function App() {
               <h2 id="column-header-tasks">Zadania</h2>
             )}
           </div>
-          {projectTab === 'tasks' && (
+          {projectTab === 'tasks' && (() => {
+            const todayStr = new Date().toISOString().slice(0, 10);
+            return (
             <div
               className="column-body"
               id="column-body-tasks"
@@ -1402,6 +1405,12 @@ export default function App() {
                           onClick={e => e.stopPropagation()}
                         />
                         <span className="task-name">{task.name}</span>
+                        <PlannedDatePicker
+                          date={task.plannedDate}
+                          isNext={task.isNext}
+                          today={todayStr}
+                          onChange={(date, isNext) => updateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
+                        />
                         <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
                         {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
                         {ctx && <span className="tag context-tag">{ctx.icon}</span>}
@@ -1484,6 +1493,12 @@ export default function App() {
                                 onClick={e => e.stopPropagation()}
                               />
                               <span className="task-name">{task.name}</span>
+                              <PlannedDatePicker
+                                date={task.plannedDate}
+                                isNext={task.isNext}
+                                today={todayStr}
+                                onChange={(date, isNext) => updateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
+                              />
                               <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
                               {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
                               {ctx && <span className="tag context-tag">{ctx.icon}</span>}
@@ -1499,7 +1514,8 @@ export default function App() {
                 </>
               )}
             </div>
-          )}
+            );
+          })()}
           {projectTab === 'notes' && selectedProjectId && (
             <div className="column-body column-body-notes" role="region">
               <ProjectNotesPanel
