@@ -3318,10 +3318,12 @@ body {
 }
 
 .agenda-filters-details summary::before {
-  content: '▸';
-  font-size: 10px;
-  transition: transform 0.2s;
+  content: '›';
+  font-size: 14px;
+  line-height: 1;
+  transition: transform 0.2s ease;
   display: inline-block;
+  color: var(--text-faint);
 }
 
 .agenda-filters-details[open] summary::before {
@@ -3330,6 +3332,13 @@ body {
 
 .agenda-filter-section {
   margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-light);
+}
+
+.agenda-filter-section:first-of-type {
+  padding-top: 0;
+  border-top: none;
 }
 
 .agenda-filter-label {
@@ -3401,8 +3410,8 @@ body {
   font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 12px;
   font-weight: 400;
-  padding: 3px 12px;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  padding: 4px 12px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
 }
 
 .agenda-filter-pill:hover {
@@ -3415,6 +3424,12 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: var(--surface);
+  transform: scale(1.03);
+}
+
+.agenda-filter-pill:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 /* ── Manual block: left task panel ────────────────────────────────────────── */
@@ -3594,6 +3609,11 @@ body {
   background: var(--surface2);
   color: var(--text);
   font-weight: 600;
+}
+
+.agenda-block-type-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 /* ── Today view ──────────────────────────────────────────────── */

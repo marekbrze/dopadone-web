@@ -120,7 +120,7 @@ export function WorkBlockModal({
       <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Edytuj blok' : 'Nowy blok'}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
         <form onSubmit={handleSubmit} className="modal-body">
           <div className="form-group">
@@ -165,11 +165,13 @@ export function WorkBlockModal({
               <button
                 type="button"
                 className={`agenda-block-type-btn${blockType === 'auto' ? ' active' : ''}`}
+                aria-pressed={blockType === 'auto'}
                 onClick={() => setBlockType('auto')}
               >Automatyczny (filtr)</button>
               <button
                 type="button"
                 className={`agenda-block-type-btn${blockType === 'manual' ? ' active' : ''}`}
+                aria-pressed={blockType === 'manual'}
                 onClick={() => setBlockType('manual')}
               >Manualny</button>
             </div>
@@ -199,6 +201,7 @@ export function WorkBlockModal({
                     className="template-clear-btn"
                     onClick={() => setSelectedTemplateId(null)}
                     title="Wyczyść wybór szablonu"
+                    aria-label="Wyczyść wybór szablonu"
                   >×</button>
                 )}
               </div>
@@ -206,12 +209,12 @@ export function WorkBlockModal({
           )}
 
           {blockType === 'auto' && (
-          <details className="form-group agenda-filters-details">
+          <details className="form-group agenda-filters-details" open>
             <summary>Filtry</summary>
 
             {areas.length > 0 && (
-              <div className="agenda-filter-section">
-                <span className="agenda-filter-label">Obszary</span>
+              <div className="agenda-filter-section" role="group" aria-labelledby="filter-label-areas">
+                <span id="filter-label-areas" className="agenda-filter-label">Obszary</span>
                 <div className="agenda-filter-checkboxes">
                   {areas.map(a => {
                     const active = areaIds.includes(a.id);
@@ -220,6 +223,7 @@ export function WorkBlockModal({
                         key={a.id}
                         type="button"
                         className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                        aria-pressed={active}
                         style={active
                           ? { background: a.color, borderColor: a.color }
                           : { borderColor: a.color, color: a.color }}
@@ -234,14 +238,15 @@ export function WorkBlockModal({
             )}
 
             {filteredLifters.length > 0 && (
-              <div className="agenda-filter-section">
-                <span className="agenda-filter-label">Podobszary</span>
+              <div className="agenda-filter-section" role="group" aria-labelledby="filter-label-lifters">
+                <span id="filter-label-lifters" className="agenda-filter-label">Podobszary</span>
                 <div className="agenda-filter-checkboxes">
                   {filteredLifters.map(l => (
                     <button
                       key={l.id}
                       type="button"
                       className={`agenda-filter-pill ${lifterIds.includes(l.id) ? 'active' : ''}`}
+                      aria-pressed={lifterIds.includes(l.id)}
                       onClick={() => setLifterIds(prev => toggleArr(prev, l.id))}
                     >
                       {l.name}
@@ -252,14 +257,15 @@ export function WorkBlockModal({
             )}
 
             {filteredProjects.length > 0 && (
-              <div className="agenda-filter-section">
-                <span className="agenda-filter-label">Projekty</span>
+              <div className="agenda-filter-section" role="group" aria-labelledby="filter-label-projects">
+                <span id="filter-label-projects" className="agenda-filter-label">Projekty</span>
                 <div className="agenda-filter-checkboxes">
                   {filteredProjects.map(p => (
                     <button
                       key={p.id}
                       type="button"
                       className={`agenda-filter-pill ${projectIds.includes(p.id) ? 'active' : ''}`}
+                      aria-pressed={projectIds.includes(p.id)}
                       onClick={() => setProjectIds(prev => toggleArr(prev, p.id))}
                     >
                       {p.name}
@@ -270,14 +276,15 @@ export function WorkBlockModal({
             )}
 
             {contexts.length > 0 && (
-              <div className="agenda-filter-section">
-                <span className="agenda-filter-label">Konteksty</span>
+              <div className="agenda-filter-section" role="group" aria-labelledby="filter-label-contexts">
+                <span id="filter-label-contexts" className="agenda-filter-label">Konteksty</span>
                 <div className="agenda-filter-checkboxes">
                   {contexts.map(c => (
                     <button
                       key={c.id}
                       type="button"
                       className={`agenda-filter-pill ${contextIds.includes(c.id) ? 'active' : ''}`}
+                      aria-pressed={contextIds.includes(c.id)}
                       onClick={() => setContextIds(prev => toggleArr(prev, c.id))}
                     >
                       {c.icon} {c.name}
@@ -287,8 +294,8 @@ export function WorkBlockModal({
               </div>
             )}
 
-            <div className="agenda-filter-section">
-              <span className="agenda-filter-label">Energia</span>
+            <div className="agenda-filter-section" role="group" aria-labelledby="filter-label-energy">
+              <span id="filter-label-energy" className="agenda-filter-label">Energia</span>
               <div className="agenda-filter-checkboxes">
                 {ENERGY_LEVELS.map(e => {
                   const active = effortLevels.includes(e.value);
@@ -297,6 +304,7 @@ export function WorkBlockModal({
                       key={e.value}
                       type="button"
                       className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                      aria-pressed={active}
                       style={active ? { background: e.color, borderColor: e.color } : { borderColor: e.color, color: e.color }}
                       onClick={() => setEffortLevels(prev => toggleArr(prev, e.value))}
                     >
