@@ -703,6 +703,52 @@ body {
   margin-top: 0;
 }
 
+/* ── SplitTaskModal ──────────────────────────────────────── */
+
+.split-task-original {
+  margin: 0;
+  font-style: italic;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.split-task-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.split-task-row input[type="text"] {
+  flex: 1;
+}
+
+.split-task-remove.invisible {
+  visibility: hidden;
+}
+
+.split-task-add-btn {
+  background: transparent;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  padding: 5px 10px;
+  margin-top: 4px;
+  align-self: flex-start;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.split-task-add-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-muted);
+}
+
 .form-group {
   display: flex;
   flex-direction: column;

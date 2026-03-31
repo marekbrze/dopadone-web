@@ -67,12 +67,12 @@ export function SplitTaskModal({ taskName, onConfirm, onClose }: Props) {
         <div className="modal-body">
           <div className="form-group">
             <label>Oryginalne zadanie</label>
-            <p style={{ margin: 0, fontStyle: 'italic', color: 'var(--text-muted)', fontSize: 13 }}>{taskName}</p>
+            <p className="split-task-original">{taskName}</p>
           </div>
           <div className="form-group">
             <label>Nowe zadania</label>
             {names.map((name, i) => (
-              <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+              <div key={i} className="split-task-row">
                 <input
                   ref={el => { inputRefs.current[i] = el; }}
                   type="text"
@@ -80,34 +80,19 @@ export function SplitTaskModal({ taskName, onConfirm, onClose }: Props) {
                   onChange={e => updateName(i, e.target.value)}
                   onKeyDown={e => handleKeyDown(e, i)}
                   placeholder={`Zadanie ${i + 1}`}
-                  style={{ flex: 1 }}
                 />
                 <button
                   type="button"
-                  className="modal-close"
+                  className={`modal-close split-task-remove${names.length <= 1 ? ' invisible' : ''}`}
                   onClick={() => removeName(i)}
                   disabled={names.length <= 1}
                   title="Usuń"
-                  style={{ visibility: names.length <= 1 ? 'hidden' : undefined }}
                 >
                   ✕
                 </button>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={addInput}
-              style={{
-                background: 'transparent',
-                border: '1px dashed var(--border)',
-                borderRadius: 'var(--radius)',
-                color: 'var(--text-faint)',
-                cursor: 'pointer',
-                fontSize: 11,
-                padding: '4px 10px',
-                marginTop: 4,
-              }}
-            >
+            <button type="button" className="split-task-add-btn" onClick={addInput}>
               + dodaj zadanie
             </button>
           </div>
