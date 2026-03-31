@@ -1048,61 +1048,61 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                       )}
                     </>
                   )}
-                </div>
-                {blockProjectNoteGroups.length > 0 && (
-                  <div className="today-block-notes-section">
-                    <div className="agenda-block-notes-header">Notatki projektów</div>
-                    {blockProjectNoteGroups.map(({ project, notes: pNotes }) => (
-                      <div key={project.id} className="block-notes-project-group">
-                        <div className="block-notes-project-header">
-                          <span>{project.name}</span>
-                        </div>
-                        {[...pNotes]
-                          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                          .map(note => (
-                            <div key={note.id} className="block-note-card">
-                              {note.title && <div className="block-note-title">{note.title}</div>}
-                              <div className="block-note-content">{note.content}</div>
-                              <div className="block-note-meta">
-                                {new Date(note.updatedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
-                                <button
-                                  className="block-note-delete"
-                                  onClick={() => onDeleteNote(note.id)}
-                                  title="Usuń notatkę"
-                                >✕</button>
+                  {blockProjectNoteGroups.length > 0 && (
+                    <div className="today-block-notes-section">
+                      <div className="agenda-block-notes-header">Notatki projektów</div>
+                      {blockProjectNoteGroups.map(({ project, notes: pNotes }) => (
+                        <div key={project.id} className="block-notes-project-group">
+                          <div className="block-notes-project-header">
+                            <span>{project.name}</span>
+                          </div>
+                          {[...pNotes]
+                            .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                            .map(note => (
+                              <div key={note.id} className="block-note-card">
+                                {note.title && <div className="block-note-title">{note.title}</div>}
+                                <div className="block-note-content">{note.content}</div>
+                                <div className="block-note-meta">
+                                  {new Date(note.updatedAt).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })}
+                                  <button
+                                    className="block-note-delete"
+                                    onClick={() => onDeleteNote(note.id)}
+                                    title="Usuń notatkę"
+                                  >✕</button>
+                                </div>
                               </div>
-                            </div>
-                          ))
-                        }
-                        <div className="block-note-add">
-                          <textarea
-                            className="block-note-add-input"
-                            placeholder={`Dodaj notatkę do „${project.name}"…`}
-                            value={noteInputs[project.id] ?? ''}
-                            onChange={e => setNoteInputs(prev => ({ ...prev, [project.id]: e.target.value }))}
-                            onKeyDown={async e => {
-                              if (e.key === 'Enter' && e.ctrlKey && (noteInputs[project.id] ?? '').trim()) {
-                                await onAddNote(project.id, { content: noteInputs[project.id].trim() });
+                            ))
+                          }
+                          <div className="block-note-add">
+                            <textarea
+                              className="block-note-add-input"
+                              placeholder={`Dodaj notatkę do „${project.name}"…`}
+                              value={noteInputs[project.id] ?? ''}
+                              onChange={e => setNoteInputs(prev => ({ ...prev, [project.id]: e.target.value }))}
+                              onKeyDown={async e => {
+                                if (e.key === 'Enter' && e.ctrlKey && (noteInputs[project.id] ?? '').trim()) {
+                                  await onAddNote(project.id, { content: noteInputs[project.id].trim() });
+                                  setNoteInputs(prev => ({ ...prev, [project.id]: '' }));
+                                }
+                              }}
+                              rows={2}
+                            />
+                            <button
+                              className="block-note-add-btn"
+                              disabled={!(noteInputs[project.id] ?? '').trim()}
+                              onClick={async () => {
+                                const content = (noteInputs[project.id] ?? '').trim();
+                                if (!content) return;
+                                await onAddNote(project.id, { content });
                                 setNoteInputs(prev => ({ ...prev, [project.id]: '' }));
-                              }
-                            }}
-                            rows={2}
-                          />
-                          <button
-                            className="block-note-add-btn"
-                            disabled={!(noteInputs[project.id] ?? '').trim()}
-                            onClick={async () => {
-                              const content = (noteInputs[project.id] ?? '').trim();
-                              if (!content) return;
-                              await onAddNote(project.id, { content });
-                              setNoteInputs(prev => ({ ...prev, [project.id]: '' }));
-                            }}
-                          >Dodaj</button>
+                              }}
+                            >Dodaj</button>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             ) : (
               <div className="today-empty-wrapper">
