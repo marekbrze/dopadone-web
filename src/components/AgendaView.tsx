@@ -92,6 +92,8 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
 
+    const effortLevels = block.effortLevels ?? [];
+    if (effortLevels.length > 0 && (task.effort === null || !effortLevels.includes(task.effort))) return false;
     if (block.contextIds.length > 0 && !block.contextIds.includes(task.contextId ?? '')) return false;
     if (block.projectIds.length > 0) return block.projectIds.includes(task.projectId ?? '');
     if (block.lifterIds.length > 0 && (!project.lifterId || !block.lifterIds.includes(project.lifterId))) return false;
@@ -106,6 +108,8 @@ function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
 
+    const effortLevels = block.effortLevels ?? [];
+    if (effortLevels.length > 0 && (task.effort === null || !effortLevels.includes(task.effort))) return false;
     if (block.contextIds.length > 0 && !block.contextIds.includes(task.contextId ?? '')) return false;
     if (block.projectIds.length > 0) return block.projectIds.includes(task.projectId ?? '');
     if (block.lifterIds.length > 0 && (!project.lifterId || !block.lifterIds.includes(project.lifterId))) return false;

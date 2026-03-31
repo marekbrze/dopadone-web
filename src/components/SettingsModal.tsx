@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Area, Lifter, Context, Project, ExportData, ImportPreview, ImportMode, BlockTemplate } from '../types';
+import type { Area, Effort, Lifter, Context, Project, ExportData, ImportPreview, ImportMode, BlockTemplate } from '../types';
+
+const ENERGY_LEVELS: { value: Effort; label: string; color: string }[] = [
+  { value: 'low',    label: 'Niski',   color: '#5a7a5e' },
+  { value: 'medium', label: 'Średni',  color: '#a07830' },
+  { value: 'high',   label: 'Wysoki',  color: '#a33a2a' },
+];
 import { db, isCloudSchema } from '../db';
 import { migrateToCloudSchema, connectToExistingCloud } from '../utils/cloudMigration';
 import {
@@ -65,6 +71,7 @@ export function SettingsModal({
   const [tplLifterIds, setTplLifterIds] = useState<string[]>([]);
   const [tplProjectIds, setTplProjectIds] = useState<string[]>([]);
   const [tplContextIds, setTplContextIds] = useState<string[]>([]);
+  const [tplEffortLevels, setTplEffortLevels] = useState<Effort[]>([]);
 
   function toggleTplArr<T>(arr: T[], val: T): T[] {
     return arr.includes(val) ? arr.filter(x => x !== val) : [...arr, val];
@@ -80,8 +87,8 @@ export function SettingsModal({
   const handleSaveTemplate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!tplName.trim() || !onAddBlockTemplate) return;
-    onAddBlockTemplate({ name: tplName.trim(), areaIds: tplAreaIds, lifterIds: tplLifterIds, projectIds: tplProjectIds, contextIds: tplContextIds });
-    setTplName(''); setTplAreaIds([]); setTplLifterIds([]); setTplProjectIds([]); setTplContextIds([]);
+    onAddBlockTemplate({ name: tplName.trim(), areaIds: tplAreaIds, lifterIds: tplLifterIds, projectIds: tplProjectIds, contextIds: tplContextIds, effortLevels: tplEffortLevels });
+    setTplName(''); setTplAreaIds([]); setTplLifterIds([]); setTplProjectIds([]); setTplContextIds([]); setTplEffortLevels([]);
     setShowTemplateForm(false);
   };
 
@@ -567,6 +574,22 @@ export function SettingsModal({
                       </div>
                     )}
 
+                    <div className="agenda-filter-section">
+                      <span className="agenda-filter-label">Energia</span>
+                      <div className="agenda-filter-checkboxes">
+                        {ENERGY_LEVELS.map(e => {
+                          const active = tplEffortLevels.includes(e.value);
+                          return (
+                            <button key={e.value} type="button"
+                              className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                              style={active ? { background: e.color, borderColor: e.color } : { borderColor: e.color, color: e.color }}
+                              onClick={() => setTplEffortLevels(prev => toggleTplArr(prev, e.value))}
+                            >{e.label}</button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
                     <div style={{ marginTop: 12 }}>
                       <button type="submit" className="btn-primary">Zapisz szablon</button>
                     </div>
@@ -605,7 +628,13 @@ export function SettingsModal({
                           {tplCtxs.map(c => (
                             <span key={c.id} className="template-chip">{c.icon} {c.name}</span>
                           ))}
-                          {tplAreas.length === 0 && tplLifters.length === 0 && tplProjects.length === 0 && tplCtxs.length === 0 && (
+                          {(tpl.effortLevels ?? []).map(e => {
+                            const lvl = ENERGY_LEVELS.find(l => l.value === e);
+                            return lvl ? (
+                              <span key={e} className="template-chip" style={{ background: lvl.color + '20', borderColor: lvl.color, color: lvl.color }}>{lvl.label}</span>
+                            ) : null;
+                          })}
+                          {tplAreas.length === 0 && tplLifters.length === 0 && tplProjects.length === 0 && tplCtxs.length === 0 && (tpl.effortLevels ?? []).length === 0 && (
                             <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>brak filtrów</span>
                           )}
                         </div>

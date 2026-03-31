@@ -1,6 +1,12 @@
 import { useState, useRef, useEffect } from 'react';
 import React from 'react';
-import type { Area, Lifter, Project, Context, WorkBlock, CalendarEvent, BlockTemplate } from '../types';
+import type { Area, Effort, Lifter, Project, Context, WorkBlock, CalendarEvent, BlockTemplate } from '../types';
+
+const ENERGY_LEVELS: { value: Effort; label: string; color: string }[] = [
+  { value: 'low',    label: 'Niski',   color: '#5a7a5e' },
+  { value: 'medium', label: 'Średni',  color: '#a07830' },
+  { value: 'high',   label: 'Wysoki',  color: '#a33a2a' },
+];
 
 function formatTime(minutes: number): string {
   const h = Math.floor(minutes / 60).toString().padStart(2, '0');
@@ -63,6 +69,7 @@ export function CreateSlotModal({
   const [lifterIds, setLifterIds] = useState<string[]>([]);
   const [projectIds, setProjectIds] = useState<string[]>([]);
   const [contextIds, setContextIds] = useState<string[]>([]);
+  const [effortLevels, setEffortLevels] = useState<Effort[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
 
   const applyTemplate = (templateId: string) => {
@@ -73,6 +80,7 @@ export function CreateSlotModal({
     setLifterIds(tpl.lifterIds);
     setProjectIds(tpl.projectIds);
     setContextIds(tpl.contextIds);
+    setEffortLevels(tpl.effortLevels ?? []);
   };
 
   const handleBlockStartChange = (val: string) => {
@@ -105,6 +113,7 @@ export function CreateSlotModal({
       lifterIds: blockType === 'manual' ? [] : lifterIds,
       projectIds: blockType === 'manual' ? [] : projectIds,
       contextIds: blockType === 'manual' ? [] : contextIds,
+      effortLevels: blockType === 'manual' ? [] : effortLevels,
     });
   };
 
@@ -349,6 +358,26 @@ export function CreateSlotModal({
                     </div>
                   </div>
                 )}
+
+                <div className="agenda-filter-section">
+                  <span className="agenda-filter-label">Energia</span>
+                  <div className="agenda-filter-checkboxes">
+                    {ENERGY_LEVELS.map(e => {
+                      const active = effortLevels.includes(e.value);
+                      return (
+                        <button
+                          key={e.value}
+                          type="button"
+                          className={`agenda-filter-pill ${active ? 'active' : ''}`}
+                          style={active ? { background: e.color, borderColor: e.color } : { borderColor: e.color, color: e.color }}
+                          onClick={() => setEffortLevels(prev => toggleArr(prev, e.value))}
+                        >
+                          {e.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </details>
             )}
 

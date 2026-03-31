@@ -68,6 +68,7 @@ export interface WorkBlock {
   lifterIds: string[];
   projectIds: string[];
   contextIds: string[];
+  effortLevels?: Effort[];
   color?: string;
   notes?: string;
 }
@@ -79,6 +80,7 @@ export interface BlockTemplate {
   lifterIds: string[];
   projectIds: string[];
   contextIds: string[];
+  effortLevels?: Effort[];
 }
 
 export interface CalendarEvent {
