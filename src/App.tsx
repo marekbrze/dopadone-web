@@ -263,6 +263,28 @@ export default function App() {
 
   const isAggregatedView = !selectedProjectId && !!selectedLifterId;
 
+  const isSubProjectView = useMemo(
+    () => !!selectedProjectId && !!data && data.projects.some(p => p.parentProjectId === selectedProjectId),
+    [selectedProjectId, data]
+  );
+
+  const aggregatedTasksBySubProject = useMemo(() => {
+    if (!isSubProjectView || !data || !selectedProjectId) return [];
+    const projectIds = collectProjectIds(selectedProjectId, data.projects);
+    const projects = projectIds
+      .map(id => data.projects.find(p => p.id === id)!)
+      .filter(Boolean);
+    const groups: { project: Project; undone: Task[]; done: Task[] }[] = [];
+    for (const project of projects) {
+      const projectTasks = data.tasks.filter(t => t.projectId === project.id);
+      if (projectTasks.length === 0) continue;
+      const undone = projectTasks.filter(t => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const done = projectTasks.filter(t => t.done);
+      groups.push({ project, undone, done });
+    }
+    return groups;
+  }, [isSubProjectView, data, selectedProjectId]);
+
   const aggregatedTasksByProject = useMemo(() => {
     if (!isAggregatedView || !data) return [];
     const projectsInLifter = data.projects
@@ -1387,7 +1409,7 @@ export default function App() {
                   onDragLeave={() => setDropTaskGapTarget(undefined)}
                 />
               )}
-              {undoneTasks.map(task => {
+              {!isSubProjectView && undoneTasks.map(task => {
                 const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
                 return (
                   <React.Fragment key={task.id}>
@@ -1428,7 +1450,7 @@ export default function App() {
                   </React.Fragment>
                 );
               })}
-              {doneTasks.length > 0 && (
+              {!isSubProjectView && doneTasks.length > 0 && (
                 <div className="block-done-section">
                   <button
                     className="block-done-toggle"
@@ -1464,6 +1486,49 @@ export default function App() {
                   })}
                 </div>
               )}
+              {isSubProjectView && aggregatedTasksBySubProject.map(({ project, undone, done }) => (
+                <div key={project.id} className="aggregated-project-group">
+                  <div
+                    className="aggregated-project-header"
+                    onClick={() => { setSelectedProjectId(project.id); setProjectTab('tasks'); }}
+                  >
+                    <span>{project.name}</span>
+                    <span className="aggregated-task-count">{undone.length}</span>
+                  </div>
+                  {undone.map(task => {
+                    const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
+                        onClick={() => selectTask(task.id)}
+                      >
+                        <div className="task-main">
+                          <input
+                            type="checkbox"
+                            checked={false}
+                            onChange={() => updateTask(task.id, { done: true })}
+                            onClick={e => e.stopPropagation()}
+                          />
+                          <span className="task-name">{task.name}</span>
+                          <PlannedDatePicker
+                            date={task.plannedDate}
+                            isNext={task.isNext}
+                            today={todayStr}
+                            onChange={(date, isNext) => updateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
+                          />
+                          <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                          {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
+                          {ctx && <span className="tag context-tag">{ctx.icon}</span>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {done.length > 0 && (
+                    <div className="aggregated-done-count">Ukończone: {done.length}</div>
+                  )}
+                </div>
+              ))}
               {isAggregatedView && (
                 <>
                   {aggregatedTasksByProject.length === 0 && (
