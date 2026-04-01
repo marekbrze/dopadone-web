@@ -4052,6 +4052,12 @@ body {
   padding: 0 32px 16px;
 }
 
+.today-planned-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .today-planned-toggle {
   background: none;
   border: none;
@@ -4063,7 +4069,7 @@ body {
   cursor: pointer;
   padding: 14px 0 8px;
   font-family: inherit;
-  width: 100%;
+  flex: 1;
   text-align: left;
   display: flex;
   align-items: center;

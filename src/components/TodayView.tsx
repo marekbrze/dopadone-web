@@ -1256,13 +1256,24 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                 </div>
                 {plannedTasks.length > 0 && (
                   <div className="today-planned-section">
-                    <button
-                      className="today-planned-toggle"
-                      onClick={() => setPlannedExpanded(v => !v)}
-                    >
-                      {plannedExpanded ? '▾' : '▸'} Zaplanowane na dziś
-                      <span className="today-tasks-count"> ({plannedTasks.length})</span>
-                    </button>
+                    <div className="today-planned-header">
+                      <button
+                        className="today-planned-toggle"
+                        onClick={() => setPlannedExpanded(v => !v)}
+                      >
+                        {plannedExpanded ? '▾' : '▸'} Zaplanowane na dziś
+                        <span className="today-tasks-count"> ({plannedTasks.length})</span>
+                      </button>
+                      <select
+                        className="today-grouping-select"
+                        value={taskGrouping}
+                        onChange={e => setAndSaveGrouping(e.target.value as TaskGrouping)}
+                      >
+                        <option value="none">Brak grupowania</option>
+                        <option value="context">Kontekst</option>
+                        <option value="effort">Wysiłek</option>
+                      </select>
+                    </div>
                     {plannedExpanded && (
                       <div className="today-planned-list">
                         {taskGrouping === 'context' && plannedGroupedByContext.map(ctxGroup => (
