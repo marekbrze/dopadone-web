@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Project } from '../types';
 import type { DragPayload } from '../types';
 import { RowMenuButton } from './RowMenuButton';
@@ -28,9 +29,23 @@ interface Props {
   onGapDragOver?: (e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => void;
   onGapDrop?: (parentProjectId: string | null, insertAfterProjectId: string | null) => void;
   onGapDragLeave?: () => void;
+  collapsedIds?: Set<string>;
+  onToggleCollapse?: (id: string) => void;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave }: Props) {
+export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave, collapsedIds: collapsedIdsProp, onToggleCollapse: onToggleCollapseProp }: Props) {
+  const [localCollapsedIds, setLocalCollapsedIds] = useState<Set<string>>(new Set());
+
+  const isRoot = depth === 0;
+  const collapsedIds = isRoot ? localCollapsedIds : (collapsedIdsProp ?? new Set<string>());
+  const toggleCollapse = isRoot
+    ? (id: string) => setLocalCollapsedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id); else next.add(id);
+        return next;
+      })
+    : (onToggleCollapseProp ?? (() => {}));
+
   const sorted = [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const isGapActive = (insertAfterProjectId: string | null) =>
@@ -52,6 +67,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
       {sorted.map(project => {
         const children = allProjects.filter(p => p.parentProjectId === project.id);
         const isSelected = selectedProjectId === project.id;
+        const isCollapsed = collapsedIds.has(project.id);
         return (
           <div key={project.id}>
             <div
@@ -68,7 +84,14 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onDragEnd={onProjectDragEnd}
                 onClick={() => onSelect(project.id)}
               >
-                {children.length > 0 && <span className="tree-icon">▸</span>}
+                {children.length > 0 && (
+                  <span
+                    className="tree-chevron"
+                    onClick={e => { e.stopPropagation(); toggleCollapse(project.id); }}
+                  >
+                    {isCollapsed ? '▸' : '▾'}
+                  </span>
+                )}
                 {project.archived && <span className="archived-label">archiwum</span>}
                 <span>{project.name}</span>
               </div>
@@ -78,7 +101,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onDelete={onDelete ? () => onDelete(project.id) : undefined}
               />
             </div>
-            {children.length > 0 && (
+            {children.length > 0 && !isCollapsed && (
               <ProjectTree
                 projects={children}
                 allProjects={allProjects}
@@ -100,6 +123,8 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onGapDragOver={onGapDragOver}
                 onGapDrop={onGapDrop}
                 onGapDragLeave={onGapDragLeave}
+                collapsedIds={collapsedIds}
+                onToggleCollapse={toggleCollapse}
               />
             )}
             {isDraggingProject && (
