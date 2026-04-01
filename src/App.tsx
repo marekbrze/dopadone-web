@@ -247,10 +247,11 @@ export default function App() {
     );
   }, [visibleProjects]);
 
-  const tasks = useMemo(
-    () => (data && selectedProjectId) ? data.tasks.filter(t => t.projectId === selectedProjectId) : [],
-    [data, selectedProjectId]
-  );
+  const tasks = useMemo(() => {
+    if (!data || !selectedProjectId) return [];
+    const projectIds = collectProjectIds(selectedProjectId, data.projects);
+    return data.tasks.filter(t => t.projectId !== null && projectIds.includes(t.projectId));
+  }, [data, selectedProjectId]);
 
   const undoneTasks = useMemo(() => tasks.filter(t => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0)), [tasks]);
   const doneTasks = useMemo(() => tasks.filter(t => t.done), [tasks]);
