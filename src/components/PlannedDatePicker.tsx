@@ -98,7 +98,7 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
           ? <span className="pdp-next-label">następne</span>
           : hasDate
             ? formatPlannedDate(date!, today)
-            : <span className="pdp-no-date">—</span>
+            : <span className="pdp-no-date">Brak daty</span>
         }
       </button>
 
