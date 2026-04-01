@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
-import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, BlockTemplate, ProjectNote } from '../types';
+import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, BlockTemplate, ProjectNote, Effort } from '../types';
 import { EventDetailPanel } from './EventDetailPanel';
 import { ActiveEventPanel } from './ActiveEventPanel';
 import { CreateSlotModal } from './CreateSlotModal';
@@ -132,15 +132,18 @@ function snap15(minutes: number): number {
   return Math.round(minutes / 15) * 15;
 }
 
+const EFFORT_ORDER: (Effort | null)[] = ['high', 'medium', 'low', null];
+const EFFORT_LABELS: Record<string, string> = { high: 'Wysoki', medium: 'Średni', low: 'Niski' };
+
 export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
   const [showBlockDone, setShowBlockDone] = useState(false);
-  type TaskGrouping = 'none' | 'area' | 'context';
+  type TaskGrouping = 'none' | 'area' | 'context' | 'effort';
   const [taskGrouping, setTaskGrouping] = useState<TaskGrouping>(() => {
     const saved = localStorage.getItem('dopadone-today-grouping');
-    return (saved === 'none' || saved === 'area' || saved === 'context') ? saved : 'area';
+    return (saved === 'none' || saved === 'area' || saved === 'context' || saved === 'effort') ? saved : 'area';
   });
   const setAndSaveGrouping = (g: TaskGrouping) => {
     setTaskGrouping(g);
@@ -401,6 +404,27 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     return result;
   }, [blockUndoneTasks, contexts, displayBlock]);
 
+  type EffortGroup = { effort: Effort | null; effortLabel: string; tasks: Task[] };
+
+  const blockGroupedByEffort: EffortGroup[] = React.useMemo(() => {
+    if (!displayBlock) return [];
+    const effortMap = new Map<string, EffortGroup>();
+    for (const task of blockUndoneTasks) {
+      const key = task.effort ?? '__no_effort__';
+      if (!effortMap.has(key)) {
+        effortMap.set(key, {
+          effort: task.effort,
+          effortLabel: task.effort ? EFFORT_LABELS[task.effort] : 'Bez wysiłku',
+          tasks: [],
+        });
+      }
+      effortMap.get(key)!.tasks.push(task);
+    }
+    const result = [...effortMap.values()];
+    result.sort((a, b) => EFFORT_ORDER.indexOf(a.effort) - EFFORT_ORDER.indexOf(b.effort));
+    return result;
+  }, [blockUndoneTasks, displayBlock]);
+
   const eventNotes = React.useMemo(
     () => notes.filter(n => n.projectId === currentEvent?.projectId),
     [notes, currentEvent?.projectId]
@@ -456,6 +480,44 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     () => tasks.filter(t => t.done && t.plannedDate != null && t.plannedDate <= todayStr),
     [tasks, todayStr]
   );
+
+  const plannedGroupedByContext: ContextGroup[] = React.useMemo(() => {
+    const contextMap = new Map<string, ContextGroup>();
+    for (const task of plannedTasks) {
+      const contextId = task.contextId ?? null;
+      const context = contexts.find(c => c.id === contextId);
+      const key = contextId ?? '__no_context__';
+      if (!contextMap.has(key)) {
+        contextMap.set(key, { contextId, contextName: context?.name ?? 'Bez kontekstu', contextIcon: context?.icon ?? '', tasks: [] });
+      }
+      contextMap.get(key)!.tasks.push(task);
+    }
+    const result = [...contextMap.values()];
+    result.sort((a, b) => {
+      if (a.contextId === null) return 1;
+      if (b.contextId === null) return -1;
+      return a.contextName.localeCompare(b.contextName);
+    });
+    return result;
+  }, [plannedTasks, contexts]);
+
+  const plannedGroupedByEffort: EffortGroup[] = React.useMemo(() => {
+    const effortMap = new Map<string, EffortGroup>();
+    for (const task of plannedTasks) {
+      const key = task.effort ?? '__no_effort__';
+      if (!effortMap.has(key)) {
+        effortMap.set(key, {
+          effort: task.effort,
+          effortLabel: task.effort ? EFFORT_LABELS[task.effort] : 'Bez wysiłku',
+          tasks: [],
+        });
+      }
+      effortMap.get(key)!.tasks.push(task);
+    }
+    const result = [...effortMap.values()];
+    result.sort((a, b) => EFFORT_ORDER.indexOf(a.effort) - EFFORT_ORDER.indexOf(b.effort));
+    return result;
+  }, [plannedTasks]);
 
   const handleAddPlannedTask = async () => {
     const name = newPlannedTaskName.trim();
@@ -879,6 +941,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         <option value="none">Brak grupowania</option>
                         <option value="area">Obszar</option>
                         <option value="context">Kontekst</option>
+                        <option value="effort">Wysiłek</option>
                       </select>
                       <button
                         className="today-block-duplicate-btn"
@@ -984,6 +1047,41 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                               {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
                             </div>
                             {ctxGroup.tasks.map(task => (
+                              <div
+                                key={task.id}
+                                className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
+                                onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={false}
+                                  onChange={() => onUpdateTask(task.id, { done: true })}
+                                  id={`today-task-${task.id}`}
+                                  onClick={e => e.stopPropagation()}
+                                />
+                                <span className="today-task-name">{task.name}</span>
+                                <span
+                                  className="today-priority-dot"
+                                  style={{ background: priorityColors[task.priority] }}
+                                  title={task.priority}
+                                />
+                                {displayBlock.blockType === 'manual' && (
+                                  <button
+                                    className="today-task-remove-btn"
+                                    onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
+                                    title="Usuń z bloku"
+                                  >✕</button>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                        {taskGrouping === 'effort' && blockGroupedByEffort.map(effortGroup => (
+                          <div key={effortGroup.effort ?? '__no_effort__'} className="agenda-task-context-group">
+                            <div className="agenda-task-context-header">
+                              {effortGroup.effortLabel}
+                            </div>
+                            {effortGroup.tasks.map(task => (
                               <div
                                 key={task.id}
                                 className={`today-task-item${selectedTaskId === task.id ? ' selected' : ''}`}
@@ -1167,7 +1265,51 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     </button>
                     {plannedExpanded && (
                       <div className="today-planned-list">
-                        {plannedTasks.map(task => {
+                        {taskGrouping === 'context' && plannedGroupedByContext.map(ctxGroup => (
+                          <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
+                            <div className="agenda-task-context-header">
+                              {ctxGroup.contextIcon && <span>{ctxGroup.contextIcon}</span>} {ctxGroup.contextName}
+                            </div>
+                            {ctxGroup.tasks.map(task => {
+                              const project = projects.find(p => p.id === task.projectId);
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="today-task-item"
+                                  onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                                >
+                                  <input type="checkbox" checked={false} onChange={() => onUpdateTask(task.id, { done: true })} onClick={e => e.stopPropagation()} />
+                                  <span className="today-task-name">{task.name}</span>
+                                  {project && <span className="today-planned-project">{project.name}</span>}
+                                  <PlannedDatePicker date={task.plannedDate} isNext={task.isNext} today={todayStr} onChange={(date, isNext) => onUpdateTask(task.id, { plannedDate: date, isNext: isNext ?? false })} />
+                                  <span className="today-priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                        {taskGrouping === 'effort' && plannedGroupedByEffort.map(effortGroup => (
+                          <div key={effortGroup.effort ?? '__no_effort__'} className="agenda-task-context-group">
+                            <div className="agenda-task-context-header">{effortGroup.effortLabel}</div>
+                            {effortGroup.tasks.map(task => {
+                              const project = projects.find(p => p.id === task.projectId);
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="today-task-item"
+                                  onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                                >
+                                  <input type="checkbox" checked={false} onChange={() => onUpdateTask(task.id, { done: true })} onClick={e => e.stopPropagation()} />
+                                  <span className="today-task-name">{task.name}</span>
+                                  {project && <span className="today-planned-project">{project.name}</span>}
+                                  <PlannedDatePicker date={task.plannedDate} isNext={task.isNext} today={todayStr} onChange={(date, isNext) => onUpdateTask(task.id, { plannedDate: date, isNext: isNext ?? false })} />
+                                  <span className="today-priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
+                        {(taskGrouping === 'none' || taskGrouping === 'area') && plannedTasks.map(task => {
                           const project = projects.find(p => p.id === task.projectId);
                           return (
                             <div
