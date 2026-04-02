@@ -90,6 +90,7 @@ function isManualBlock(block: WorkBlock): boolean {
 function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]): Task[] {
   return tasks.filter(task => {
     if (task.done) return false;
+    if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
 
@@ -106,6 +107,7 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
 function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project[]): Task[] {
   return tasks.filter(task => {
     if (!task.done) return false;
+    if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
 

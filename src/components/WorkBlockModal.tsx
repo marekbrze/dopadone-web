@@ -59,6 +59,7 @@ export function WorkBlockModal({
   const [projectIds, setProjectIds] = useState<string[]>(block?.projectIds ?? []);
   const [contextIds, setContextIds] = useState<string[]>(block?.contextIds ?? []);
   const [effortLevels, setEffortLevels] = useState<Effort[]>(block?.effortLevels ?? []);
+  const [showOnlyDue, setShowOnlyDue] = useState(block?.showOnlyDue ?? false);
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const titleRef = useRef<HTMLInputElement>(null);
 
@@ -112,6 +113,7 @@ export function WorkBlockModal({
       projectIds: blockType === 'manual' ? [] : projectIds,
       contextIds: blockType === 'manual' ? [] : contextIds,
       effortLevels: blockType === 'manual' ? [] : effortLevels,
+      showOnlyDue: blockType === 'manual' ? false : showOnlyDue,
     });
   };
 
@@ -176,6 +178,26 @@ export function WorkBlockModal({
               >Manualny</button>
             </div>
           </div>
+
+          {blockType === 'auto' && (
+            <div className="form-group">
+              <label>Pokazuj zadania</label>
+              <div className="agenda-block-type-toggle">
+                <button
+                  type="button"
+                  className={`agenda-block-type-btn${!showOnlyDue ? ' active' : ''}`}
+                  aria-pressed={!showOnlyDue}
+                  onClick={() => setShowOnlyDue(false)}
+                >Wszystkie daty</button>
+                <button
+                  type="button"
+                  className={`agenda-block-type-btn${showOnlyDue ? ' active' : ''}`}
+                  aria-pressed={showOnlyDue}
+                  onClick={() => setShowOnlyDue(true)}
+                >Zaległe do dnia bloku</button>
+              </div>
+            </div>
+          )}
 
           {blockType === 'auto' && blockTemplates.length > 0 && (
             <div className="form-group template-picker-row">

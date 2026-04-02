@@ -80,6 +80,7 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   }
   return tasks.filter(task => {
     if (task.done) return false;
+    if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
     const effortLevels = block.effortLevels ?? [];
@@ -100,6 +101,7 @@ function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project
   }
   return tasks.filter(task => {
     if (!task.done) return false;
+    if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
     const effortLevels = block.effortLevels ?? [];

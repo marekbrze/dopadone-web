@@ -69,6 +69,7 @@ export interface WorkBlock {
   projectIds: string[];
   contextIds: string[];
   effortLevels?: Effort[];
+  showOnlyDue?: boolean;   // true = tylko zadania z plannedDate <= block.date
   color?: string;
   notes?: string;
 }
