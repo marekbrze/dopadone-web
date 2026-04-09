@@ -22,6 +22,20 @@ export function addDays(dateStr: string, days: number): string {
   return localDateStr(d);
 }
 
+export function nextSaturday(today: string): string {
+  const d = new Date(today + 'T00:00:00');
+  const dow = d.getDay(); // 0=Sun, 6=Sat
+  const daysUntil = (6 - dow + 7) % 7;
+  return addDays(today, daysUntil);
+}
+
+export function nextMonday(today: string): string {
+  const d = new Date(today + 'T00:00:00');
+  const dow = d.getDay();
+  const daysUntil = ((1 - dow + 7) % 7) || 7;
+  return addDays(today, daysUntil);
+}
+
 const MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
 
 export function formatPlannedDate(date: string, today: string): string {
@@ -79,6 +93,8 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
   const options = [
     { label: 'Dziś', date: today },
     { label: 'Jutro', date: addDays(today, 1) },
+    { label: 'Weekend', date: nextSaturday(today) },
+    { label: 'Następny tydzień', date: nextMonday(today) },
     { label: 'Za tydzień', date: addDays(today, 7) },
     { label: 'Za miesiąc', date: addDays(today, 30) },
   ];
@@ -111,7 +127,7 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
               onMouseDown={e => { e.preventDefault(); pick(opt.date, false); }}
             >
               <span className="pdp-option-label">{opt.label}</span>
-              {opt.label !== 'Dziś' && opt.label !== 'Jutro' && (
+              {opt.label !== 'Dziś' && opt.label !== 'Jutro' && opt.label !== 'Weekend' && opt.label !== 'Następny tydzień' && (
                 <span className="pdp-option-hint">{formatPlannedDate(opt.date, today)}</span>
               )}
             </button>
