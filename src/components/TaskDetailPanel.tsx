@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { Task, Context, Effort, Project, TaskDuration } from '../types';
 import { SplitTaskModal } from './SplitTaskModal';
+import { BatteryIcon } from './BatteryIcon';
 
 function normalizeProjectStartDate(startDate: string | null | undefined): string | null {
   if (!startDate) return null;
@@ -27,30 +28,6 @@ const ENERGY_LEVELS: { value: Effort; label: string; color: string; bars: number
   { value: 'high',   label: 'Wysoki',  color: '#a33a2a', bars: 3 },
 ];
 
-function BatteryIcon({ bars, color, size = 16 }: { bars: number; color: string; size?: number }) {
-  const h = size * 0.625;
-  const bodyW = size * 0.75;
-  const barW = (bodyW - 4) / 3 - 1;
-  const barH = h - 4;
-  return (
-    <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`} style={{ display: 'block' }}>
-      <rect x="0.5" y="0.5" width={bodyW} height={h - 1} rx="1.5" stroke={color} fill="none" strokeWidth="1" />
-      <rect x={bodyW + 0.5} y={h * 0.25} width={size - bodyW - 1} height={h * 0.5} rx="0.75" fill={color} opacity="0.5" />
-      {[0, 1, 2].map(i => (
-        <rect
-          key={i}
-          x={2 + i * (barW + 1)}
-          y="2"
-          width={barW}
-          height={barH}
-          rx="0.5"
-          fill={i < bars ? color : 'currentColor'}
-          opacity={i < bars ? 1 : 0.1}
-        />
-      ))}
-    </svg>
-  );
-}
 
 const priorityColors: Record<Task['priority'], string> = {
   low: '#5a7a5e',

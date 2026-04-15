@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Task, Project, Context, TaskDuration, Effort, Area, Lifter } from '../types';
 import { addDays, formatPlannedDate, localDateStr } from './PlannedDatePicker';
+import { BatteryIcon } from './BatteryIcon';
 import './ProcessingView.css';
 
 interface ProcessingViewProps {
@@ -1222,30 +1223,6 @@ interface EnergyStepPanelProps {
   onSkip: () => void;
 }
 
-function EnergyBatteryIcon({ bars, color, size = 28 }: { bars: number; color: string; size?: number }) {
-  const h = size * 0.625;
-  const bodyW = size * 0.75;
-  const barW = (bodyW - 5) / 3 - 1;
-  const barH = h - 5;
-  return (
-    <svg width={size} height={h} viewBox={`0 0 ${size} ${h}`}>
-      <rect x="0.75" y="0.75" width={bodyW} height={h - 1.5} rx="2" stroke={color} fill="none" strokeWidth="1.5" />
-      <rect x={bodyW + 1} y={h * 0.25} width={size - bodyW - 1.5} height={h * 0.5} rx="1" fill={color} opacity="0.4" />
-      {[0, 1, 2].map(i => (
-        <rect
-          key={i}
-          x={2.5 + i * (barW + 1)}
-          y="2.5"
-          width={barW}
-          height={barH}
-          rx="1"
-          fill={i < bars ? color : color}
-          opacity={i < bars ? 1 : 0.12}
-        />
-      ))}
-    </svg>
-  );
-}
 
 function EnergyStepPanel({ options, pendingKey, onSelect, onConfirmKey, onSkip }: EnergyStepPanelProps) {
   return (
@@ -1262,7 +1239,7 @@ function EnergyStepPanel({ options, pendingKey, onSelect, onConfirmKey, onSkip }
               onMouseEnter={() => onSelect(opt.key)}
               onClick={() => onConfirmKey(opt.key)}
             >
-              <EnergyBatteryIcon bars={opt.value === 'low' ? 1 : opt.value === 'medium' ? 2 : 3} color={isHighlighted ? opt.color : 'var(--text-muted)'} />
+              <BatteryIcon bars={opt.value === 'low' ? 1 : opt.value === 'medium' ? 2 : 3} color={isHighlighted ? opt.color : 'var(--text-muted)'} />
               <span className="proc-option-label" style={isHighlighted ? { color: opt.color } : undefined}>{opt.label}</span>
               <span className="proc-option-key">{opt.key}</span>
             </button>

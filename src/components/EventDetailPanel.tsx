@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import type { CalendarEvent, Task, Project } from '../types';
+import { EventProjectPicker } from './EventProjectPicker';
 
 interface Props {
   event: CalendarEvent;
@@ -25,9 +26,6 @@ function parseTime(str: string): number {
 export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, onAddTask, onUpdateTask }: Props) {
   const [title, setTitle] = useState(event.title);
   const [newTaskName, setNewTaskName] = useState('');
-  const [projectSearch, setProjectSearch] = useState('');
-  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
-  const projectPickerRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<'actions' | 'notes'>('actions');
   const [notesDraft, setNotesDraft] = useState(event.notes ?? '');
 
@@ -38,27 +36,9 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
     setActiveTab('actions');
   }, [event.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Close project picker on outside click
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (projectPickerRef.current && !projectPickerRef.current.contains(e.target as Node)) {
-        setProjectPickerOpen(false);
-        setProjectSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
   const eventTasks = event.taskIds
     .map(id => tasks.find(t => t.id === id))
     .filter((t): t is Task => t !== undefined);
-
-  const selectedProject = event.projectId ? projects.find(p => p.id === event.projectId) : null;
-
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(projectSearch.toLowerCase())
-  );
 
   const handleTitleBlur = () => {
     if (title.trim() && title !== event.title) {
@@ -99,11 +79,6 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
     setNewTaskName('');
   };
 
-  const handleSelectProject = (projectId: string | null) => {
-    onUpdate({ projectId });
-    setProjectPickerOpen(false);
-    setProjectSearch('');
-  };
 
   return (
     <div className="event-detail-panel">
@@ -184,43 +159,11 @@ export function EventDetailPanel({ event, tasks, projects, onUpdate, onDelete, o
       <div className="event-detail-section">
         <div className="event-detail-row">
           <label className="event-detail-label">Projekt</label>
-          <div className="event-project-picker-wrap" ref={projectPickerRef}>
-            <button
-              className="event-project-picker-btn"
-              onClick={() => setProjectPickerOpen(v => !v)}
-            >
-              {selectedProject ? selectedProject.name : 'Inbox'}
-              <span className="event-project-picker-chevron">▾</span>
-            </button>
-            {projectPickerOpen && (
-              <div className="event-project-picker-dropdown">
-                <input
-                  className="event-project-search-input"
-                  placeholder="Szukaj projektu…"
-                  value={projectSearch}
-                  onChange={e => setProjectSearch(e.target.value)}
-                  autoFocus
-                />
-                <div className="event-project-list">
-                  <button
-                    className={`event-project-option${event.projectId === null ? ' selected' : ''}`}
-                    onClick={() => handleSelectProject(null)}
-                  >
-                    Inbox
-                  </button>
-                  {filteredProjects.map(p => (
-                    <button
-                      key={p.id}
-                      className={`event-project-option${event.projectId === p.id ? ' selected' : ''}`}
-                      onClick={() => handleSelectProject(p.id)}
-                    >
-                      {p.name}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <EventProjectPicker
+            projects={projects}
+            selectedProjectId={event.projectId ?? null}
+            onChange={projectId => onUpdate({ projectId })}
+          />
         </div>
       </div>
 
