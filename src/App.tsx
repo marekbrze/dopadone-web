@@ -949,16 +949,45 @@ export default function App() {
   };
 
   // Events
-  const addEvent = async (eventData: Omit<CalendarEvent, 'id'>): Promise<CalendarEvent> => {
+  const addEvent = async (eventData: Omit<CalendarEvent, 'id'> & { initialTasks?: string[] }): Promise<CalendarEvent> => {
+    const { initialTasks, ...rest } = eventData;
+    const eventDataClean = rest as Omit<CalendarEvent, 'id'>;
     let event: CalendarEvent;
     if (isCloudSchema()) {
-      const id = await db.events.add(eventData as CalendarEvent) as string;
-      event = { ...eventData, id };
+      const id = await db.events.add(eventDataClean as CalendarEvent) as string;
+      event = { ...eventDataClean, id };
     } else {
-      event = { ...eventData, id: newId() };
+      event = { ...eventDataClean, id: newId() };
       await db.events.put(event);
     }
-    setData(d => d ? ({ ...d, events: [...d.events, event] }) : d);
+
+    let createdTasks: Task[] = [];
+    if (initialTasks && initialTasks.length > 0) {
+      const projectId = event.projectId;
+      for (const name of initialTasks) {
+        let task: Task;
+        if (isCloudSchema()) {
+          const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
+          task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+        } else {
+          task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+          await db.tasks.put(task);
+        }
+        createdTasks.push(task);
+      }
+      const taskIds = createdTasks.map(t => t.id);
+      event = { ...event, taskIds };
+      await db.events.update(event.id, { taskIds });
+    }
+
+    setData(d => {
+      if (!d) return d;
+      return {
+        ...d,
+        events: [...d.events, event],
+        tasks: createdTasks.length > 0 ? [...d.tasks, ...createdTasks] : d.tasks,
+      };
+    });
     return event;
   };
 

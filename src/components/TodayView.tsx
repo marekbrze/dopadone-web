@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import React from 'react';
 import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, BlockTemplate, ProjectNote, Effort } from '../types';
-import { EventDetailPanel } from './EventDetailPanel';
+import { EventForm } from './EventForm';
 import { ActiveEventPanel } from './ActiveEventPanel';
 import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
@@ -21,7 +21,7 @@ interface Props {
   onDeleteTask: (id: string) => void;
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
   onSplitTask?: (task: Task, names: string[]) => Promise<void>;
-  onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
+  onAddEvent: (data: Omit<CalendarEvent, 'id'> & { initialTasks?: string[] }) => Promise<CalendarEvent>;
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
@@ -886,7 +886,10 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           {/* RIGHT: active block panel OR event detail */}
           <section className="today-active-panel">
             {selectedEvent ? (
-              <EventDetailPanel
+              <EventForm
+                key={selectedEvent.id}
+                mode="edit"
+                presentation="inline"
                 event={selectedEvent}
                 tasks={tasks}
                 projects={projects}

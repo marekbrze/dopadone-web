@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import type { Area, Lifter, Project, Context, WorkBlock, Task, CalendarEvent, BlockTemplate, ProjectNote } from '../types';
 import { renderMarkdown } from '../utils/renderMarkdown';
 import { TaskDetailPanel } from './TaskDetailPanel';
-import { EventDetailPanel } from './EventDetailPanel';
-import { EventModal } from './EventModal';
+import { EventForm, EventFormModal, type EventFormData } from './EventForm';
 import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
 
@@ -25,7 +24,7 @@ interface Props {
   onCompleteWithNextAction: (task: Task, nextActionName: string) => void;
   onSplitTask?: (task: Task, names: string[]) => Promise<void>;
   onAddInboxTask: (name: string) => Promise<string>;
-  onAddEvent: (data: Omit<CalendarEvent, 'id'>) => Promise<CalendarEvent>;
+  onAddEvent: (data: Omit<CalendarEvent, 'id'> & { initialTasks?: string[] }) => Promise<CalendarEvent>;
   onUpdateEvent: (id: string, updates: Partial<CalendarEvent>) => Promise<void>;
   onDeleteEvent: (id: string) => Promise<void>;
   onAddEventTask: (eventId: string, name: string) => Promise<void>;
@@ -564,9 +563,18 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     }
   };
 
-  const handleEventSave = async (data: Omit<CalendarEvent, 'id'>) => {
+  const handleEventSave = async (data: EventFormData) => {
     if (editingEvent) {
-      await onUpdateEvent(editingEvent.id, data);
+      await onUpdateEvent(editingEvent.id, {
+        title: data.title,
+        date: data.date,
+        endDate: data.endDate,
+        allDay: data.allDay,
+        startMinutes: data.startMinutes,
+        endMinutes: data.endMinutes,
+        projectId: data.projectId,
+        notes: data.notes,
+      });
       setEditingEvent(null);
     } else {
       await onAddEvent(data);
@@ -1355,7 +1363,10 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               </div>
             </div>
             <div className="agenda-block-panel-body" style={{ padding: 0 }}>
-              <EventDetailPanel
+              <EventForm
+                key={event.id}
+                mode="edit"
+                presentation="inline"
                 event={event}
                 tasks={tasks}
                 projects={projects}
@@ -1394,12 +1405,19 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
 
       {/* Modal: create all-day event (click on all-day row) */}
       {pendingAllDayDate && (
-        <EventModal
-          event={{ date: pendingAllDayDate, allDay: true }}
+        <CreateSlotModal
           defaultDate={pendingAllDayDate}
           defaultStartMinutes={9 * 60}
+          defaultEndMinutes={10 * 60}
+          defaultTab="event"
+          defaultAllDay={true}
+          areas={areas}
+          lifters={lifters}
           projects={projects}
-          onSave={data => { onAddEvent(data); setPendingAllDayDate(null); }}
+          contexts={contexts}
+          blockTemplates={blockTemplates}
+          onSaveBlock={() => {}}
+          onSaveEvent={data => { onAddEvent(data); setPendingAllDayDate(null); }}
           onClose={() => setPendingAllDayDate(null)}
         />
       )}
@@ -1440,11 +1458,9 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
 
       {/* Modal: edit event */}
       {editingEvent && (
-        <EventModal
+        <EventFormModal
+          mode="edit"
           event={editingEvent}
-          defaultDate={editingEvent.date}
-          defaultStartMinutes={editingEvent.startMinutes ?? 9 * 60}
-          defaultEndMinutes={editingEvent.endMinutes}
           projects={projects}
           onSave={handleEventSave}
           onDelete={handleEventDelete}

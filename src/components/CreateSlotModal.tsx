@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import React from 'react';
-import type { Area, Effort, Lifter, Project, Context, WorkBlock, CalendarEvent, BlockTemplate } from '../types';
+import type { Area, Effort, Lifter, Project, Context, WorkBlock, BlockTemplate } from '../types';
+import { EventForm, type EventFormData } from './EventForm';
 
 const ENERGY_LEVELS: { value: Effort; label: string; color: string }[] = [
   { value: 'low',    label: 'Niski',   color: '#5a7a5e' },
@@ -32,8 +33,10 @@ interface Props {
   projects: Project[];
   contexts: Context[];
   blockTemplates?: BlockTemplate[];
+  defaultTab?: 'block' | 'event';
+  defaultAllDay?: boolean;
   onSaveBlock: (data: Omit<WorkBlock, 'id'>) => void;
-  onSaveEvent: (data: Omit<CalendarEvent, 'id'>) => void;
+  onSaveEvent: (data: EventFormData) => void;
   onClose: () => void;
 }
 
@@ -46,21 +49,21 @@ export function CreateSlotModal({
   projects,
   contexts,
   blockTemplates = [],
+  defaultTab,
+  defaultAllDay,
   onSaveBlock,
   onSaveEvent,
   onClose,
 }: Props) {
-  const [tab, setTab] = useState<'block' | 'event'>('block');
+  const [tab, setTab] = useState<'block' | 'event'>(defaultTab ?? 'block');
   const titleRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     titleRef.current?.focus();
   }, []);
 
-  // ── Shared state ─────────────────────────────────────────────────────────────
   const [title, setTitle] = useState('');
 
-  // ── Block form state ────────────────────────────────────────────────────────
   const [blockDate, setBlockDate] = useState(defaultDate);
   const [blockStartMin, setBlockStartMin] = useState(defaultStartMinutes);
   const [blockEndMin, setBlockEndMin] = useState(defaultEndMinutes);
@@ -117,51 +120,8 @@ export function CreateSlotModal({
     });
   };
 
-  // ── Event form state ────────────────────────────────────────────────────────
-  const [eventDate, setEventDate] = useState(defaultDate);
-  const [allDay, setAllDay] = useState(false);
-  const [eventStartMin, setEventStartMin] = useState(defaultStartMinutes);
-  const [eventEndMin, setEventEndMin] = useState(defaultEndMinutes);
-  const [projectId, setProjectId] = useState<string | null>(null);
-  const [projectSearch, setProjectSearch] = useState('');
-  const [projectPickerOpen, setProjectPickerOpen] = useState(false);
-  const projectPickerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (projectPickerRef.current && !projectPickerRef.current.contains(e.target as Node)) {
-        setProjectPickerOpen(false);
-        setProjectSearch('');
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  const handleEventStartChange = (val: string) => {
-    const s = parseTime(val);
-    setEventStartMin(s);
-    if (eventEndMin <= s) setEventEndMin(s + 60);
-  };
-
-  const filteredProjects = projects.filter(p =>
-    p.name.toLowerCase().includes(projectSearch.toLowerCase())
-  );
-  const selectedProject = projectId ? projects.find(p => p.id === projectId) : null;
-
-  const handleEventSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
-    onSaveEvent({
-      title: title.trim(),
-      date: eventDate,
-      allDay,
-      startMinutes: allDay ? undefined : eventStartMin,
-      endMinutes: allDay ? undefined : eventEndMin,
-      projectId,
-      taskIds: [],
-      endDate: null,
-    });
+  const handleEventSave = (data: EventFormData) => {
+    onSaveEvent({ ...data, title: data.title || title.trim() });
   };
 
   return (
@@ -176,21 +136,22 @@ export function CreateSlotModal({
           <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
-        <div className="modal-body" style={{ paddingBottom: 0 }}>
-          <div className="form-group">
-            <label>Tytuł</label>
-            <input
-              ref={titleRef}
-              type="text"
-              value={title}
-              onChange={e => setTitle(e.target.value)}
-              placeholder={tab === 'block' ? 'np. Praca głęboka' : 'np. Spotkanie z zespołem'}
-              required
-            />
+        {tab === 'block' && (
+          <div className="modal-body" style={{ paddingBottom: 0 }}>
+            <div className="form-group">
+              <label>Tytuł</label>
+              <input
+                ref={titleRef}
+                type="text"
+                value={title}
+                onChange={e => setTitle(e.target.value)}
+                placeholder="np. Praca głęboka"
+                required
+              />
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Tabs */}
         <div className="create-slot-tabs">
           <button
             type="button"
@@ -204,7 +165,6 @@ export function CreateSlotModal({
           >Wydarzenie</button>
         </div>
 
-        {/* ── Block form ── */}
         {tab === 'block' && (
           <form onSubmit={handleBlockSubmit} className="modal-body">
             <div className="form-group">
@@ -387,94 +347,17 @@ export function CreateSlotModal({
           </form>
         )}
 
-        {/* ── Event form ── */}
         {tab === 'event' && (
-          <form onSubmit={handleEventSubmit} className="modal-body">
-            <div className="form-group">
-              <label>Projekt</label>
-              <div className="event-project-picker-wrap" ref={projectPickerRef}>
-                <button
-                  type="button"
-                  className="event-project-picker-btn"
-                  onClick={() => setProjectPickerOpen(v => !v)}
-                >
-                  {selectedProject ? selectedProject.name : 'Inbox'}
-                  <span className="event-project-picker-chevron">▾</span>
-                </button>
-                {projectPickerOpen && (
-                  <div className="event-project-picker-dropdown">
-                    <input
-                      className="event-project-search-input"
-                      placeholder="Szukaj projektu…"
-                      value={projectSearch}
-                      onChange={e => setProjectSearch(e.target.value)}
-                      autoFocus
-                    />
-                    <div className="event-project-list">
-                      <button
-                        type="button"
-                        className={`event-project-option${projectId === null ? ' selected' : ''}`}
-                        onClick={() => { setProjectId(null); setProjectPickerOpen(false); setProjectSearch(''); }}
-                      >
-                        Inbox
-                      </button>
-                      {filteredProjects.map(p => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          className={`event-project-option${projectId === p.id ? ' selected' : ''}`}
-                          onClick={() => { setProjectId(p.id); setProjectPickerOpen(false); setProjectSearch(''); }}
-                        >
-                          {p.name}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label>Data</label>
-              <input type="date" value={eventDate} onChange={e => setEventDate(e.target.value)} />
-            </div>
-
-            <div className="form-group">
-              <label className="event-modal-check-label">
-                <input
-                  type="checkbox"
-                  checked={allDay}
-                  onChange={e => setAllDay(e.target.checked)}
-                />
-                Cały dzień
-              </label>
-            </div>
-
-            {!allDay && (
-              <div className="form-group agenda-time-row">
-                <div>
-                  <label>Od</label>
-                  <input
-                    type="time"
-                    value={formatTime(eventStartMin)}
-                    onChange={e => handleEventStartChange(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <label>Do</label>
-                  <input
-                    type="time"
-                    value={formatTime(eventEndMin)}
-                    onChange={e => setEventEndMin(parseTime(e.target.value))}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="modal-footer">
-              <button type="submit" className="btn-primary">Dodaj</button>
-            </div>
-          </form>
+          <EventForm
+            mode="create"
+            presentation="modal"
+            defaultDate={defaultDate}
+            defaultStartMinutes={defaultStartMinutes}
+            defaultEndMinutes={defaultEndMinutes}
+            defaultAllDay={defaultAllDay}
+            projects={projects}
+            onSave={handleEventSave}
+          />
         )}
       </div>
     </div>
