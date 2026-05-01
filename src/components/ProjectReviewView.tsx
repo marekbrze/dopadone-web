@@ -81,6 +81,7 @@ export function ProjectReviewView({
 
   const quickAddRef = useRef<HTMLInputElement>(null);
   const taskListRef = useRef<HTMLDivElement>(null);
+  const confirmCancelRef = useRef<HTMLButtonElement>(null);
 
   const area = useMemo(() => areas.find(a => a.id === areaId), [areas, areaId]);
   const tree = useMemo(() => buildProjectTree(projects, areaId), [projects, areaId]);
@@ -217,6 +218,13 @@ export function ProjectReviewView({
     const highlighted = list.querySelector('.pr-task-row.highlighted') as HTMLElement | null;
     highlighted?.scrollIntoView({ block: 'nearest' });
   }, [taskCursorIndex, screen]);
+
+  // Focus cancel button when delete confirmation appears
+  useEffect(() => {
+    if (confirmDelete) {
+      confirmCancelRef.current?.focus();
+    }
+  }, [confirmDelete]);
 
   // ── Keyboard handler ──
 
@@ -414,9 +422,9 @@ export function ProjectReviewView({
           <div className="pr-progress-info">
             {currentIndex + 1} / {activeProjectIds.length}
           </div>
-          <button className="pr-close-btn" onClick={onClose} title="Zamknij">✕</button>
+          <button className="pr-close-btn" onClick={onClose} aria-label="Zamknij przegląd">✕</button>
         </div>
-        <div className="proc-progress-bar">
+        <div className="proc-progress-bar" role="progressbar" aria-valuenow={currentIndex + 1} aria-valuemin={1} aria-valuemax={activeProjectIds.length} aria-label={`Postęp: ${currentIndex + 1} z ${activeProjectIds.length}`}>
           <div className="proc-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
@@ -425,7 +433,7 @@ export function ProjectReviewView({
 
         {/* All-done badge */}
         {allDone && (
-          <div className="pr-all-done-hint">
+          <div className="pr-all-done-hint" role="status">
             Wszystkie zadania zrobione — rozważ archiwizację <kbd>e</kbd>
           </div>
         )}
@@ -441,14 +449,19 @@ export function ProjectReviewView({
             <div
               key={task.id}
               className={`pr-task-row${i === taskCursorIndex ? ' highlighted' : ''}${task.done ? ' done-task' : ''}`}
+              role="button"
+              tabIndex={0}
+              aria-label={`${task.done ? 'Zrobione' : 'Do zrobienia'}: ${task.name}`}
               onClick={() => { setTaskCursorIndex(i); handleToggleTask(task); }}
               onMouseEnter={() => setTaskCursorIndex(i)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setTaskCursorIndex(i); handleToggleTask(task); } }}
             >
               <input
                 type="checkbox"
                 checked={task.done}
                 onChange={() => handleToggleTask(task)}
-                onClick={e => e.stopPropagation()}
+                aria-label={task.name}
+                tabIndex={-1}
               />
               <span className="pr-task-name">{task.name}</span>
             </div>
@@ -461,6 +474,7 @@ export function ProjectReviewView({
             ref={quickAddRef}
             type="text"
             placeholder="Dodaj zadanie… (a)"
+            aria-label="Dodaj zadanie do projektu"
             value={quickAddName}
             onChange={e => setQuickAddName(e.target.value)}
             onKeyDown={e => {
@@ -474,10 +488,10 @@ export function ProjectReviewView({
 
         {/* Delete confirmation */}
         {confirmDelete && (
-          <div className="pr-confirm-inline">
+          <div className="pr-confirm-inline" role="alertdialog" aria-label="Potwierdzenie usunięcia projektu">
             <span>Usunąć projekt i wszystkie zadania?</span>
             <button className="pr-confirm-yes" onClick={handleDeleteCurrent}>Usuń <kbd>↵</kbd></button>
-            <button className="pr-confirm-no" onClick={() => setConfirmDelete(null)}>Anuluj <kbd>Esc</kbd></button>
+            <button className="pr-confirm-no" ref={confirmCancelRef} onClick={() => setConfirmDelete(null)}>Anuluj <kbd>Esc</kbd></button>
           </div>
         )}
 
@@ -527,13 +541,18 @@ function ProjectTreeRows({ nodes, tasks, markedForArchive, onToggle, depth = 0 }
         const isMarked = markedForArchive.has(node.project.id);
 
         return (
-          <div key={node.project.id}>
+          <div key={node.project.id} role="group">
             <div
               className={`pr-project-row${isMarked ? ' marked' : ''}`}
               style={{ paddingLeft: `${depth * 24 + 12}px` }}
+              role="checkbox"
+              aria-checked={isMarked}
+              aria-label={`${node.project.name}, ${doneCount} z ${totalCount} zadań${isMarked ? ', oznaczony do archiwizacji' : ''}`}
+              tabIndex={0}
               onClick={() => onToggle(node.project.id)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(node.project.id); } }}
             >
-              <span className={`pr-checkbox${isMarked ? ' checked' : ''}`}>
+              <span className={`pr-checkbox${isMarked ? ' checked' : ''}`} aria-hidden="true">
                 {isMarked ? '☑' : '☐'}
               </span>
               <span className="pr-project-name">{node.project.name}</span>

@@ -21,6 +21,11 @@
 }
 .pr-project-row:last-child { border-bottom: none; }
 .pr-project-row:hover { background: var(--surface-hover); }
+.pr-project-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: var(--surface-hover);
+}
 
 .pr-project-row.marked {
   opacity: 0.5;
@@ -117,6 +122,10 @@
   color: var(--text);
   border-color: var(--text-muted);
 }
+.pr-close-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
 
 .pr-divider {
   height: 1px;
@@ -171,6 +180,11 @@
   transition: background 0.1s;
 }
 .pr-task-row:hover {
+  background: var(--surface-hover);
+}
+.pr-task-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
   background: var(--surface-hover);
 }
 .pr-task-row.highlighted {
@@ -285,6 +299,10 @@
 .pr-action-btn:hover {
   border-color: var(--text-muted);
   color: var(--text);
+}
+.pr-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .pr-action-btn kbd {
   background: var(--bg);
