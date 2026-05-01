@@ -31,9 +31,12 @@ interface Props {
   onGapDragLeave?: () => void;
   collapsedIds?: Set<string>;
   onToggleCollapse?: (id: string) => void;
+  checkboxMode?: boolean;
+  checkedIds?: Set<string>;
+  onToggleCheck?: (id: string) => void;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave, collapsedIds: collapsedIdsProp, onToggleCollapse: onToggleCollapseProp }: Props) {
+export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave, collapsedIds: collapsedIdsProp, onToggleCollapse: onToggleCollapseProp, checkboxMode, checkedIds, onToggleCheck }: Props) {
   const [localCollapsedIds, setLocalCollapsedIds] = useState<Set<string>>(new Set());
 
   const isRoot = depth === 0;
@@ -77,13 +80,18 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
               onDragLeave={e => onProjectDragLeave?.(e, project.id)}
             >
               <div
-                className={`project-item${isSelected ? ' selected' : ''}${project.archived ? ' archived' : ''}`}
+                className={`project-item${isSelected ? ' selected' : ''}${project.archived ? ' archived' : ''}${checkboxMode && checkedIds?.has(project.id) ? ' checked' : ''}`}
                 style={{ paddingLeft: `${12 + depth * 16}px` }}
                 draggable
                 onDragStart={() => onProjectDragStart?.(project.id)}
                 onDragEnd={onProjectDragEnd}
-                onClick={() => onSelect(project.id)}
+                onClick={() => checkboxMode ? onToggleCheck?.(project.id) : onSelect(project.id)}
               >
+                {checkboxMode ? (
+                  <span className={`pr-checkbox${checkedIds?.has(project.id) ? ' checked' : ''}`} aria-hidden="true">
+                    {checkedIds?.has(project.id) ? '☑' : '☐'}
+                  </span>
+                ) : null}
                 {children.length > 0 && (
                   <span
                     className="tree-chevron"
@@ -95,11 +103,13 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 {project.archived && <span className="archived-label">archiwum</span>}
                 <span>{project.name}</span>
               </div>
-              <RowMenuButton
-                onEdit={onEdit ? () => onEdit(project.id) : undefined}
-                onArchive={onArchive ? () => onArchive(project.id) : undefined}
-                onDelete={onDelete ? () => onDelete(project.id) : undefined}
-              />
+              {!checkboxMode && (
+                <RowMenuButton
+                  onEdit={onEdit ? () => onEdit(project.id) : undefined}
+                  onArchive={onArchive ? () => onArchive(project.id) : undefined}
+                  onDelete={onDelete ? () => onDelete(project.id) : undefined}
+                />
+              )}
             </div>
             {children.length > 0 && !isCollapsed && (
               <ProjectTree
@@ -125,6 +135,9 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 onGapDragLeave={onGapDragLeave}
                 collapsedIds={collapsedIds}
                 onToggleCollapse={toggleCollapse}
+                checkboxMode={checkboxMode}
+                checkedIds={checkedIds}
+                onToggleCheck={onToggleCheck}
               />
             )}
             {isDraggingProject && (

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import type { Task, Project, Area, Lifter } from '../types';
+import type { Task, Project, Area, Lifter, DragPayload } from '../types';
+import { ProjectTree } from './ProjectTree';
 import './ProcessingView.css';
 import './ProjectReviewView.css';
 
@@ -13,31 +14,53 @@ interface ProjectReviewViewProps {
   onDeleteProject: (id: string) => Promise<void>;
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   onAddTaskToProject: (name: string, projectId: string) => Promise<void>;
+  onReorderProject: (projectId: string, newParentId: string | null, insertAfterProjectId: string | null) => Promise<void>;
   onClose: () => void;
 }
 
-type ReviewScreen = 'summary' | 'processing' | 'done';
+type ReviewScreen = 'lifter-summary' | 'processing' | 'lifter-transition' | 'done';
 
 interface TreeNode {
   project: Project;
   children: TreeNode[];
 }
 
-function buildProjectTree(projects: Project[], areaId: string): TreeNode[] {
-  const areaProjects = projects.filter(p => p.areaId === areaId && !p.archived);
-  const byId = new Map(areaProjects.map(p => [p.id, p]));
+interface LifterQueueItem {
+  lifterId: string | null;
+  name: string;
+}
+
+interface LifterStats {
+  lifterId: string | null;
+  name: string;
+  processed: number;
+  archived: number;
+  tasksMarkedDone: number;
+  tasksAdded: number;
+  elapsedMs: number;
+  skipped?: boolean;
+}
+
+interface GapTarget {
+  parentProjectId: string | null;
+  insertAfterProjectId: string | null;
+}
+
+function buildLifterProjectTree(projects: Project[], areaId: string, lifterId: string | null): TreeNode[] {
+  const filtered = projects.filter(p => p.areaId === areaId && !p.archived && p.lifterId === lifterId);
+  const byId = new Map(filtered.map(p => [p.id, p]));
 
   function buildNode(project: Project): TreeNode {
     return {
       project,
-      children: areaProjects
+      children: filtered
         .filter(p => p.parentProjectId === project.id)
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map(buildNode),
     };
   }
 
-  return areaProjects
+  return filtered
     .filter(p => !p.parentProjectId || !byId.has(p.parentProjectId))
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     .map(buildNode);
@@ -65,11 +88,26 @@ function findNode(nodes: TreeNode[], id: string): TreeNode | null {
   return null;
 }
 
+function formatElapsed(ms: number): string {
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.floor((ms % 60000) / 1000);
+  return `${mins}:${String(secs).padStart(2, '0')}`;
+}
+
+function ElapsedTimer({ ms, label }: { ms: number; label?: string }) {
+  return (
+    <span className="pr-elapsed-timer" aria-live="off">
+      {label && <span className="pr-timer-label">{label}</span>}
+      <span className="pr-timer-value">{formatElapsed(ms)}</span>
+    </span>
+  );
+}
+
 export function ProjectReviewView({
   areaId, projects, tasks, areas, lifters,
-  onArchiveProject, onDeleteProject, onUpdateTask, onAddTaskToProject, onClose,
+  onArchiveProject, onDeleteProject, onUpdateTask, onAddTaskToProject, onReorderProject, onClose,
 }: ProjectReviewViewProps) {
-  const [screen, setScreen] = useState<ReviewScreen>('summary');
+  const [screen, setScreen] = useState<ReviewScreen>('lifter-summary');
   const [markedForArchive, setMarkedForArchive] = useState<Set<string>>(new Set());
 
   const [projectIds, setProjectIds] = useState<string[]>([]);
@@ -79,12 +117,48 @@ export function ProjectReviewView({
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [stats, setStats] = useState({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
 
+  // Lifter iteration
+  const [lifterIndex, setLifterIndex] = useState(0);
+  const [lifterElapsedMs, setLifterElapsedMs] = useState(0);
+  const [totalElapsedMs, setTotalElapsedMs] = useState(0);
+  const [lifterStats, setLifterStats] = useState<LifterStats[]>([]);
+
+  // D&D state
+  const [reviewDragPayload, setReviewDragPayload] = useState<DragPayload | null>(null);
+  const [reviewDropTargetProjectId, setReviewDropTargetProjectId] = useState<string | null>(null);
+  const [reviewDropGapTarget, setReviewDropGapTarget] = useState<GapTarget | null>(null);
+
   const quickAddRef = useRef<HTMLInputElement>(null);
   const taskListRef = useRef<HTMLDivElement>(null);
   const confirmCancelRef = useRef<HTMLButtonElement>(null);
 
   const area = useMemo(() => areas.find(a => a.id === areaId), [areas, areaId]);
-  const tree = useMemo(() => buildProjectTree(projects, areaId), [projects, areaId]);
+
+  // Build lifter queue
+  const lifterQueue = useMemo((): LifterQueueItem[] => {
+    const queue: LifterQueueItem[] = [];
+    const areaLifters = lifters.filter(l => l.areaId === areaId);
+
+    for (const lifter of areaLifters) {
+      const hasProjects = projects.some(p => p.areaId === areaId && !p.archived && p.lifterId === lifter.id);
+      if (hasProjects) {
+        queue.push({ lifterId: lifter.id, name: lifter.name });
+      }
+    }
+
+    const hasUnassigned = projects.some(p => p.areaId === areaId && !p.archived && !p.lifterId);
+    if (hasUnassigned) {
+      queue.push({ lifterId: null, name: 'Bez podobszaru' });
+    }
+
+    return queue;
+  }, [lifters, projects, areaId]);
+
+  const currentLifterItem = lifterQueue[lifterIndex] ?? null;
+  const tree = useMemo(
+    () => currentLifterItem ? buildLifterProjectTree(projects, areaId, currentLifterItem.lifterId) : [],
+    [projects, areaId, currentLifterItem],
+  );
 
   const activeProjectIds = useMemo(() => {
     return projectIds.filter(id => {
@@ -118,7 +192,18 @@ export function ProjectReviewView({
     return currentProject.parentProjectId ? projects.find(p => p.id === currentProject.parentProjectId) ?? null : null;
   }, [currentProject, projects]);
 
-  // ── Summary screen helpers ──
+  // ── Timer ──
+
+  useEffect(() => {
+    if (screen !== 'processing') return;
+    const id = setInterval(() => {
+      setLifterElapsedMs(prev => prev + 1000);
+      setTotalElapsedMs(prev => prev + 1000);
+    }, 1000);
+    return () => clearInterval(id);
+  }, [screen]);
+
+  // ── Summary helpers ──
 
   const toggleMark = useCallback((projectId: string) => {
     setMarkedForArchive(prev => {
@@ -144,7 +229,8 @@ export function ProjectReviewView({
 
     if (remaining.length === 0) {
       setStats(s => ({ ...s, archived: archivedCount }));
-      setScreen('done');
+      // No projects to process — finish this lifter immediately
+      finishLifter({ processed: 0, archived: archivedCount, tasksMarkedDone: 0, tasksAdded: 0 });
       return;
     }
 
@@ -152,10 +238,64 @@ export function ProjectReviewView({
     setCurrentIndex(0);
     setTaskCursorIndex(0);
     setStats(s => ({ ...s, archived: archivedCount }));
+    setLifterElapsedMs(0);
     setScreen('processing');
   }, [markedForArchive, tree, onArchiveProject]);
 
-  // ── Processing screen helpers ──
+  // ── Lifter transition ──
+
+  const finishLifter = useCallback((lifterStatsEntry: { processed: number; archived: number; tasksMarkedDone: number; tasksAdded: number }) => {
+    const item = lifterQueue[lifterIndex];
+    const entry: LifterStats = {
+      lifterId: item?.lifterId ?? null,
+      name: item?.name ?? '—',
+      ...lifterStatsEntry,
+      elapsedMs: lifterElapsedMs,
+    };
+    setLifterStats(prev => [...prev, entry]);
+
+    if (lifterIndex < lifterQueue.length - 1) {
+      setScreen('lifter-transition');
+    } else {
+      setScreen('done');
+    }
+  }, [lifterIndex, lifterQueue, lifterElapsedMs]);
+
+  const handleNextLifter = useCallback(() => {
+    setLifterIndex(i => i + 1);
+    setMarkedForArchive(new Set());
+    setStats({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
+    setScreen('lifter-summary');
+  }, []);
+
+  const handleSkipLifter = useCallback(() => {
+    const item = lifterQueue[lifterIndex];
+    // Record current lifter stats (from transition — already finished)
+    // Skip the NEXT lifter
+    const nextIndex = lifterIndex + 1;
+    const skipItem = lifterQueue[nextIndex];
+    if (skipItem) {
+      setLifterStats(prev => [...prev, {
+        lifterId: skipItem.lifterId,
+        name: skipItem.name,
+        processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0,
+        elapsedMs: 0,
+        skipped: true,
+      }]);
+    }
+
+    const afterSkipIndex = nextIndex + 1;
+    if (afterSkipIndex < lifterQueue.length) {
+      setLifterIndex(afterSkipIndex);
+      setMarkedForArchive(new Set());
+      setStats({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
+      setScreen('lifter-summary');
+    } else {
+      setScreen('done');
+    }
+  }, [lifterIndex, lifterQueue]);
+
+  // ── Processing helpers ──
 
   const advanceProject = useCallback(() => {
     if (currentIndex < activeProjectIds.length - 1) {
@@ -163,9 +303,10 @@ export function ProjectReviewView({
       setTaskCursorIndex(0);
       setConfirmDelete(null);
     } else {
-      setScreen('done');
+      // Finish current lifter
+      finishLifter(stats);
     }
-  }, [currentIndex, activeProjectIds.length]);
+  }, [currentIndex, activeProjectIds.length, finishLifter, stats]);
 
   const goBackProject = useCallback(() => {
     if (currentIndex > 0) {
@@ -210,7 +351,48 @@ export function ProjectReviewView({
     setStats(s => ({ ...s, tasksAdded: s.tasksAdded + 1 }));
   }, [quickAddName, currentProjectId, onAddTaskToProject]);
 
-  // Scroll highlighted task into view
+  // ── D&D handlers ──
+
+  const handleReviewDragStart = useCallback((id: string) => {
+    setReviewDragPayload({ kind: 'project', projectId: id });
+  }, []);
+
+  const handleReviewDragEnd = useCallback(() => {
+    setReviewDragPayload(null);
+    setReviewDropTargetProjectId(null);
+    setReviewDropGapTarget(null);
+  }, []);
+
+  const handleReviewDragOver = useCallback((e: React.DragEvent, id: string) => {
+    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
+    e.preventDefault();
+    setReviewDropTargetProjectId(id);
+    setReviewDropGapTarget(null);
+  }, [reviewDragPayload]);
+
+  const handleReviewDrop = useCallback((id: string) => {
+    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
+    setReviewDropTargetProjectId(null);
+    onReorderProject(reviewDragPayload.projectId, id, null);
+    setReviewDragPayload(null);
+  }, [reviewDragPayload, onReorderProject]);
+
+  const handleReviewGapDragOver = useCallback((e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => {
+    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
+    e.preventDefault();
+    setReviewDropTargetProjectId(null);
+    setReviewDropGapTarget({ parentProjectId, insertAfterProjectId });
+  }, [reviewDragPayload]);
+
+  const handleReviewGapDrop = useCallback((parentProjectId: string | null, insertAfterProjectId: string | null) => {
+    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
+    setReviewDropGapTarget(null);
+    onReorderProject(reviewDragPayload.projectId, parentProjectId, insertAfterProjectId);
+    setReviewDragPayload(null);
+  }, [reviewDragPayload, onReorderProject]);
+
+  // ── Scroll & focus effects ──
+
   useEffect(() => {
     if (screen !== 'processing') return;
     const list = taskListRef.current;
@@ -219,7 +401,6 @@ export function ProjectReviewView({
     highlighted?.scrollIntoView({ block: 'nearest' });
   }, [taskCursorIndex, screen]);
 
-  // Focus cancel button when delete confirmation appears
   useEffect(() => {
     if (confirmDelete) {
       confirmCancelRef.current?.focus();
@@ -229,16 +410,28 @@ export function ProjectReviewView({
   // ── Keyboard handler ──
 
   useEffect(() => {
-    if (screen === 'summary') {
+    if (screen === 'lifter-summary') {
       const handler = (e: KeyboardEvent) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleStart();
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          onClose();
-        }
+        if (e.key === 'Enter') { e.preventDefault(); handleStart(); }
+        if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
+    }
+
+    if (screen === 'lifter-transition') {
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === 'Enter') { e.preventDefault(); handleNextLifter(); }
+        if (e.key === 's') { e.preventDefault(); handleSkipLifter(); }
+        if (e.key === 'Escape') { e.preventDefault(); onClose(); }
+      };
+      window.addEventListener('keydown', handler);
+      return () => window.removeEventListener('keydown', handler);
+    }
+
+    if (screen === 'done') {
+      const handler = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); onClose(); }
       };
       window.addEventListener('keydown', handler);
       return () => window.removeEventListener('keydown', handler);
@@ -250,27 +443,14 @@ export function ProjectReviewView({
       const tag = (e.target as HTMLElement).tagName;
       const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
 
-      // Quick-add input handling
       if (inInput) {
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          quickAddRef.current?.blur();
-        }
+        if (e.key === 'Escape') { e.preventDefault(); quickAddRef.current?.blur(); }
         return;
       }
 
-      // Delete confirmation
       if (confirmDelete) {
-        if (e.key === 'Enter' || e.key === 'd') {
-          e.preventDefault();
-          handleDeleteCurrent();
-          return;
-        }
-        if (e.key === 'Escape') {
-          e.preventDefault();
-          setConfirmDelete(null);
-          return;
-        }
+        if (e.key === 'Enter' || e.key === 'd') { e.preventDefault(); handleDeleteCurrent(); return; }
+        if (e.key === 'Escape') { e.preventDefault(); setConfirmDelete(null); return; }
         return;
       }
 
@@ -290,36 +470,12 @@ export function ProjectReviewView({
         if (task) handleToggleTask(task);
         return;
       }
-      if (e.key === 'a') {
-        e.preventDefault();
-        quickAddRef.current?.focus();
-        return;
-      }
-      if (e.key === 'e') {
-        e.preventDefault();
-        handleArchiveCurrent();
-        return;
-      }
-      if (e.key === 'd') {
-        e.preventDefault();
-        if (currentProjectId) setConfirmDelete(currentProjectId);
-        return;
-      }
-      if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        handleSkip();
-        return;
-      }
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        goBackProject();
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        onClose();
-        return;
-      }
+      if (e.key === 'a') { e.preventDefault(); quickAddRef.current?.focus(); return; }
+      if (e.key === 'e') { e.preventDefault(); handleArchiveCurrent(); return; }
+      if (e.key === 'd') { e.preventDefault(); if (currentProjectId) setConfirmDelete(currentProjectId); return; }
+      if (e.key === 'ArrowRight') { e.preventDefault(); handleSkip(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); goBackProject(); return; }
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
     };
 
     document.addEventListener('keydown', handler);
@@ -327,74 +483,183 @@ export function ProjectReviewView({
   }, [
     screen, projectTasks, taskCursorIndex, confirmDelete, currentProjectId,
     handleToggleTask, handleArchiveCurrent, handleDeleteCurrent, handleSkip,
-    goBackProject, handleStart, onClose,
+    goBackProject, handleStart, handleNextLifter, handleSkipLifter, onClose,
   ]);
 
-  // ── Render ──
+  // ── No lifters / no projects ──
 
-  if (screen === 'summary') {
+  if (lifterQueue.length === 0) {
     return (
       <div className="processing-view">
-        <div className="proc-summary">
-          <div className="proc-summary-title">Przegląd projektów — {area?.name ?? ''}</div>
-          <div className="pr-project-list">
-            <ProjectTreeRows
-              nodes={tree}
-              tasks={tasks}
-              markedForArchive={markedForArchive}
-              onToggle={toggleMark}
-            />
-          </div>
-          {tree.length === 0 ? (
-            <div className="proc-all-done">Brak aktywnych projektów w tym obszarze.</div>
-          ) : (
-            <div className="pr-summary-actions">
-              <button className="proc-start-btn" onClick={handleStart}>
-                Start <kbd>↵</kbd>
-              </button>
-              <button className="proc-skip-btn" onClick={onClose}>
-                Anuluj <kbd>Esc</kbd>
-              </button>
-            </div>
-          )}
+        <div className="proc-done">
+          <div className="proc-done-icon">✓</div>
+          <div className="proc-done-title">Brak aktywnych projektów w tym obszarze</div>
+          <button className="proc-start-btn" onClick={onClose}>Zamknij</button>
         </div>
       </div>
     );
   }
 
+  // ── Render: lifter-summary ──
+
+  if (screen === 'lifter-summary') {
+    const lifterProjectsCount = flattenTree(tree).length;
+    return (
+      <div className="processing-view">
+        <div className="proc-summary">
+          <div className="proc-summary-title">Przegląd — {area?.name ?? ''}</div>
+          <div className="pr-lifter-header">
+            <span className="pr-lifter-name">{currentLifterItem?.name ?? '—'}</span>
+            <span className="pr-lifter-count">{lifterProjectsCount} {lifterProjectsCount === 1 ? 'projekt' : 'projektów'}</span>
+          </div>
+          <div className="pr-project-list">
+            <ProjectTree
+              key={currentLifterItem?.lifterId ?? 'none'}
+              projects={tree.map(n => n.project)}
+              allProjects={tree.flatMap(function flatten(n: TreeNode): Project[] { return [n.project, ...n.children.flatMap(flatten)]; })}
+              selectedProjectId={null}
+              onSelect={() => {}}
+              checkboxMode
+              checkedIds={markedForArchive}
+              onToggleCheck={toggleMark}
+              dragPayload={reviewDragPayload}
+              dropTargetProjectId={reviewDropTargetProjectId}
+              dropGapTarget={reviewDropGapTarget}
+              onProjectDragStart={handleReviewDragStart}
+              onProjectDragEnd={handleReviewDragEnd}
+              onProjectDragOver={handleReviewDragOver}
+              onProjectDrop={handleReviewDrop}
+              onGapDragOver={handleReviewGapDragOver}
+              onGapDrop={handleReviewGapDrop}
+              onGapDragLeave={() => setReviewDropGapTarget(null)}
+            />
+          </div>
+          <div className="pr-summary-actions">
+            <button className="proc-start-btn" onClick={handleStart}>
+              Start <kbd>↵</kbd>
+            </button>
+            <button className="proc-skip-btn" onClick={onClose}>
+              Anuluj <kbd>Esc</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: lifter-transition ──
+
+  if (screen === 'lifter-transition') {
+    const lastStat = lifterStats[lifterStats.length - 1];
+    const nextItem = lifterQueue[lifterIndex + 1];
+    return (
+      <div className="processing-view">
+        <div className="pr-transition">
+          <div className="pr-transition-icon">✓</div>
+          <div className="pr-transition-title">Podobszar zakończony</div>
+          {lastStat && (
+            <div className="pr-transition-stats">
+              <div className="pr-transition-name">{lastStat.name}</div>
+              <div className="pr-transition-row">
+                <span>{lastStat.processed} przetworzonych</span>
+                <span>{lastStat.archived} zarchiwizowanych</span>
+                <span>{lastStat.tasksMarkedDone} zadań done</span>
+              </div>
+              <div className="pr-transition-time">Czas: {formatElapsed(lastStat.elapsedMs)}</div>
+            </div>
+          )}
+          {nextItem && (
+            <div className="pr-transition-next">
+              <span>Następny: <strong>{nextItem.name}</strong></span>
+            </div>
+          )}
+          <div className="pr-transition-actions">
+            {nextItem && (
+              <>
+                <button className="proc-start-btn" onClick={handleNextLifter}>
+                  Dalej <kbd>↵</kbd>
+                </button>
+                <button className="proc-skip-btn" onClick={handleSkipLifter}>
+                  Pomiń <kbd>s</kbd>
+                </button>
+              </>
+            )}
+            <button className="pr-action-btn back-btn" onClick={onClose}>
+              Zamknij <kbd>Esc</kbd>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Render: done ──
+
   if (screen === 'done') {
+    const totals = lifterStats.reduce(
+      (acc, s) => ({
+        processed: acc.processed + s.processed,
+        archived: acc.archived + s.archived,
+        tasksMarkedDone: acc.tasksMarkedDone + s.tasksMarkedDone,
+        tasksAdded: acc.tasksAdded + s.tasksAdded,
+      }),
+      { processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 },
+    );
+
     return (
       <div className="processing-view">
         <div className="proc-done">
           <div className="proc-done-icon">✓</div>
           <div className="proc-done-title">Przegląd zakończony</div>
-          <div className="proc-stats">
-            <div className="proc-stat-card">
-              <div className="proc-stat-number">{stats.processed}</div>
-              <div className="proc-stat-label">Przetworzono</div>
+          <div className="pr-lifter-stats">
+            {lifterStats.map((s, i) => (
+              <div key={i} className={`pr-lifter-stat-row${s.skipped ? ' skipped' : ''}`}>
+                <div className="pr-lifter-stat-name">
+                  {s.name}
+                  {s.skipped && <span className="pr-skipped-badge">pominięty</span>}
+                </div>
+                <div className="pr-lifter-stat-details">
+                  <span>{s.processed} przetworzonych</span>
+                  <span>{s.archived} zarchiwizowanych</span>
+                  <span>{s.tasksMarkedDone} zadań done</span>
+                  {!s.skipped && <span className="pr-lifter-stat-time">{formatElapsed(s.elapsedMs)}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="pr-total-stats">
+            <div className="proc-stats">
+              <div className="proc-stat-card">
+                <div className="proc-stat-number">{totals.processed}</div>
+                <div className="proc-stat-label">Przetworzono</div>
+              </div>
+              <div className="proc-stat-card">
+                <div className="proc-stat-number">{totals.archived}</div>
+                <div className="proc-stat-label">Zarchiwizowano</div>
+              </div>
+              <div className="proc-stat-card">
+                <div className="proc-stat-number">{totals.tasksMarkedDone}</div>
+                <div className="proc-stat-label">Zadania done</div>
+              </div>
+              <div className="proc-stat-card">
+                <div className="proc-stat-number">{totals.tasksAdded}</div>
+                <div className="proc-stat-label">Dodane zadania</div>
+              </div>
             </div>
-            <div className="proc-stat-card">
-              <div className="proc-stat-number">{stats.archived}</div>
-              <div className="proc-stat-label">Zarchiwizowano</div>
-            </div>
-            <div className="proc-stat-card">
-              <div className="proc-stat-number">{stats.tasksMarkedDone}</div>
-              <div className="proc-stat-label">Zadania done</div>
-            </div>
-            <div className="proc-stat-card">
-              <div className="proc-stat-number">{stats.tasksAdded}</div>
-              <div className="proc-stat-label">Dodane zadania</div>
+            <div className="pr-total-time">
+              Łączny czas: <strong>{formatElapsed(totalElapsedMs)}</strong>
             </div>
           </div>
           <button className="proc-start-btn" onClick={onClose}>
-            Zamknij
+            Zamknij <kbd>Esc</kbd>
           </button>
         </div>
       </div>
     );
   }
 
-  // Processing screen
+  // ── Render: processing ──
+
   if (!currentProject) {
     return (
       <div className="processing-view">
@@ -412,13 +677,13 @@ export function ProjectReviewView({
   return (
     <div className="processing-view">
       <div className="pr-layout">
-        {/* Progress bar */}
         <div className="pr-top-bar">
           <div className="pr-breadcrumb">
             {area && <span className="pr-breadcrumb-area">{area.name}</span>}
             {lifter && <><span className="pr-breadcrumb-sep"> / </span><span>{lifter.name}</span></>}
             {parentProject && <><span className="pr-breadcrumb-sep"> / </span><span>{parentProject.name}</span></>}
           </div>
+          <ElapsedTimer ms={lifterElapsedMs} />
           <div className="pr-progress-info">
             {currentIndex + 1} / {activeProjectIds.length}
           </div>
@@ -428,10 +693,8 @@ export function ProjectReviewView({
           <div className="proc-progress-fill" style={{ width: `${progressPct}%` }} />
         </div>
 
-        {/* Project name */}
         <div className="proc-task-name">{currentProject.name}</div>
 
-        {/* All-done badge */}
         {allDone && (
           <div className="pr-all-done-hint" role="status">
             Wszystkie zadania zrobione — rozważ archiwizację <kbd>e</kbd>
@@ -440,7 +703,6 @@ export function ProjectReviewView({
 
         <div className="pr-divider" />
 
-        {/* Task list */}
         <div className="pr-task-list" ref={taskListRef}>
           {projectTasks.length === 0 && (
             <div className="pr-empty-tasks">Brak zadań</div>
@@ -468,7 +730,6 @@ export function ProjectReviewView({
           ))}
         </div>
 
-        {/* Quick-add */}
         <div className="pr-quick-add">
           <input
             ref={quickAddRef}
@@ -486,7 +747,6 @@ export function ProjectReviewView({
           />
         </div>
 
-        {/* Delete confirmation */}
         {confirmDelete && (
           <div className="pr-confirm-inline" role="alertdialog" aria-label="Potwierdzenie usunięcia projektu">
             <span>Usunąć projekt i wszystkie zadania?</span>
@@ -495,7 +755,6 @@ export function ProjectReviewView({
           </div>
         )}
 
-        {/* Action bar */}
         <div className="pr-action-bar">
           <button
             className={`pr-action-btn archive-btn${allDone ? ' suggested' : ''}`}
@@ -518,58 +777,5 @@ export function ProjectReviewView({
         </div>
       </div>
     </div>
-  );
-}
-
-// ── Sub-component: Summary tree rows ──
-
-interface ProjectTreeRowsProps {
-  nodes: TreeNode[];
-  tasks: Task[];
-  markedForArchive: Set<string>;
-  onToggle: (id: string) => void;
-  depth?: number;
-}
-
-function ProjectTreeRows({ nodes, tasks, markedForArchive, onToggle, depth = 0 }: ProjectTreeRowsProps) {
-  return (
-    <>
-      {nodes.map(node => {
-        const projectTasks = tasks.filter(t => t.projectId === node.project.id);
-        const doneCount = projectTasks.filter(t => t.done).length;
-        const totalCount = projectTasks.length;
-        const isMarked = markedForArchive.has(node.project.id);
-
-        return (
-          <div key={node.project.id} role="group">
-            <div
-              className={`pr-project-row${isMarked ? ' marked' : ''}`}
-              style={{ paddingLeft: `${depth * 24 + 12}px` }}
-              role="checkbox"
-              aria-checked={isMarked}
-              aria-label={`${node.project.name}, ${doneCount} z ${totalCount} zadań${isMarked ? ', oznaczony do archiwizacji' : ''}`}
-              tabIndex={0}
-              onClick={() => onToggle(node.project.id)}
-              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(node.project.id); } }}
-            >
-              <span className={`pr-checkbox${isMarked ? ' checked' : ''}`} aria-hidden="true">
-                {isMarked ? '☑' : '☐'}
-              </span>
-              <span className="pr-project-name">{node.project.name}</span>
-              <span className="pr-task-count">{doneCount}/{totalCount}</span>
-            </div>
-            {node.children.length > 0 && (
-              <ProjectTreeRows
-                nodes={node.children}
-                tasks={tasks}
-                markedForArchive={markedForArchive}
-                onToggle={onToggle}
-                depth={depth + 1}
-              />
-            )}
-          </div>
-        );
-      })}
-    </>
   );
 }
