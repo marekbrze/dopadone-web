@@ -1,0 +1,317 @@
+/* ── Project Review View ── */
+
+/* Summary screen */
+.pr-project-list {
+  width: 100%;
+  max-width: 600px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  max-height: 50vh;
+  overflow-y: auto;
+}
+
+.pr-project-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.pr-project-row:last-child { border-bottom: none; }
+.pr-project-row:hover { background: var(--surface-hover); }
+
+.pr-project-row.marked {
+  opacity: 0.5;
+}
+.pr-project-row.marked .pr-project-name {
+  text-decoration: line-through;
+}
+
+.pr-checkbox {
+  font-size: 16px;
+  color: var(--text-faint);
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+}
+.pr-checkbox.checked {
+  color: var(--accent);
+}
+
+.pr-project-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.pr-task-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-faint);
+  background: var(--bg);
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.pr-summary-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* ── Processing layout ── */
+.pr-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  max-width: 700px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 24px 24px;
+}
+
+.pr-top-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.pr-breadcrumb {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-faint);
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+.pr-breadcrumb-area {
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.pr-breadcrumb-sep {
+  color: var(--text-faint);
+}
+
+.pr-progress-info {
+  font-size: 12px;
+  color: var(--text-faint);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.pr-close-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 8px;
+  transition: color 0.1s, border-color 0.1s;
+}
+.pr-close-btn:hover {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.pr-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 8px 0;
+}
+
+/* ── All-done hint ── */
+.pr-all-done-hint {
+  background: var(--accent);
+  background: rgba(90, 140, 160, 0.12);
+  border: 1px solid rgba(90, 140, 160, 0.3);
+  color: var(--accent);
+  padding: 8px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pr-all-done-hint kbd {
+  background: rgba(90, 140, 160, 0.15);
+  border: 1px solid rgba(90, 140, 160, 0.3);
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+  margin-left: 2px;
+}
+
+/* ── Task list ── */
+.pr-task-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pr-empty-tasks {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-faint);
+  font-style: italic;
+}
+
+.pr-task-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: background 0.1s;
+}
+.pr-task-row:hover {
+  background: var(--surface-hover);
+}
+.pr-task-row.highlighted {
+  background: var(--surface-hover);
+  outline: 1px solid var(--border);
+}
+
+.pr-task-row.done-task .pr-task-name {
+  text-decoration: line-through;
+  color: var(--text-faint);
+}
+
+.pr-task-row input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pr-task-name {
+  font-size: 14px;
+  color: var(--text);
+  flex: 1;
+}
+
+/* ── Quick add ── */
+.pr-quick-add {
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+.pr-quick-add input {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.pr-quick-add input:focus {
+  border-color: var(--accent);
+}
+.pr-quick-add input::placeholder {
+  color: var(--text-faint);
+}
+
+/* ── Delete confirmation ── */
+.pr-confirm-inline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(163, 58, 42, 0.08);
+  border: 1px solid rgba(163, 58, 42, 0.3);
+  color: #a33a2a;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.pr-confirm-inline button {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid;
+}
+.pr-confirm-yes {
+  background: #a33a2a;
+  color: #fff;
+  border-color: #a33a2a !important;
+}
+.pr-confirm-no {
+  background: none;
+  color: #a33a2a;
+  border-color: rgba(163, 58, 42, 0.3) !important;
+}
+.pr-confirm-inline kbd {
+  background: rgba(163, 58, 42, 0.12);
+  border: 1px solid rgba(163, 58, 42, 0.25);
+  padding: 1px 4px;
+  font-size: 10px;
+  font-family: inherit;
+}
+
+/* ── Action bar ── */
+.pr-action-bar {
+  display: flex;
+  gap: 8px;
+  padding-top: 12px;
+  flex-wrap: wrap;
+}
+
+.pr-action-btn {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pr-action-btn:hover {
+  border-color: var(--text-muted);
+  color: var(--text);
+}
+.pr-action-btn kbd {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: inherit;
+}
+
+.pr-action-btn.suggested {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(90, 140, 160, 0.06);
+}
+.pr-action-btn.suggested:hover {
+  background: rgba(90, 140, 160, 0.12);
+}
+
+.pr-action-btn.delete-btn {
+  color: #a33a2a;
+  border-color: rgba(163, 58, 42, 0.3);
+}
+.pr-action-btn.delete-btn:hover {
+  border-color: #a33a2a;
+  background: rgba(163, 58, 42, 0.06);
+}
+
+.pr-action-btn.back-btn {
+  margin-left: auto;
+}

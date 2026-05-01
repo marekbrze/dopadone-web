@@ -119,13 +119,20 @@ body {
 .area-tab.add-tab:hover { color: var(--text-muted); }
 
 .archived-toggle-btn {
-  margin-left: auto;
   color: var(--text-faint);
   font-size: 12px;
   opacity: 0.6;
 }
 .archived-toggle-btn:hover { opacity: 0.9; color: var(--text-muted); }
 .archived-toggle-btn.active { opacity: 1; color: var(--text); font-weight: 600; }
+
+.review-tab {
+  margin-left: auto;
+  color: var(--text-faint);
+  font-size: 12px;
+  opacity: 0.7;
+}
+.review-tab:hover { opacity: 1; color: var(--text-muted); }
 
 /* Settings button */
 .settings-btn {

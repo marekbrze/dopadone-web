@@ -16,6 +16,7 @@ import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
 import { ProcessingView } from './components/ProcessingView';
+import { ProjectReviewView } from './components/ProjectReviewView';
 import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
 import { completeMigrationIfPending } from './utils/cloudMigration';
@@ -55,7 +56,8 @@ export default function App() {
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing' | 'project-review'>('today');
+  const [reviewAreaId, setReviewAreaId] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
@@ -505,6 +507,20 @@ export default function App() {
       await db.tasks.put(task);
     }
     return task;
+  };
+
+  const addTaskToProject = async (name: string, projectId: string) => {
+    const projectTasks = data?.tasks.filter(t => t.projectId === projectId) ?? [];
+    const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
+    let task: Task;
+    if (isCloudSchema()) {
+      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order }) as string;
+      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+    } else {
+      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      await db.tasks.put(task);
+    }
+    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
   const deleteTask = async (taskId: string) => {
@@ -1150,6 +1166,13 @@ export default function App() {
           >
             📦 Archiwum
           </button>
+          <button
+            className="area-tab review-tab"
+            onClick={() => { setReviewAreaId(selectedAreaId); setCurrentView('project-review'); }}
+            title="Przeglądaj projekty tego obszaru"
+          >
+            🔄 Przegląd
+          </button>
         </nav>
       )}
 
@@ -1240,6 +1263,21 @@ export default function App() {
           onConvertToProject={convertTaskToProject}
           onCreateLifter={addLifterForProcessing}
           onNavigateToToday={() => setCurrentView('today')}
+        />
+      )}
+
+      {currentView === 'project-review' && reviewAreaId && (
+        <ProjectReviewView
+          areaId={reviewAreaId}
+          projects={data.projects}
+          tasks={data.tasks}
+          areas={data.areas}
+          lifters={data.lifters}
+          onArchiveProject={archiveProject}
+          onDeleteProject={deleteProject}
+          onUpdateTask={updateTask}
+          onAddTaskToProject={addTaskToProject}
+          onClose={() => { setCurrentView('plan'); setReviewAreaId(null); }}
         />
       )}
 
