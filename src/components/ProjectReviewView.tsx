@@ -15,6 +15,7 @@ interface ProjectReviewViewProps {
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   onAddTaskToProject: (name: string, projectId: string) => Promise<void>;
   onReorderProject: (projectId: string, newParentId: string | null, insertAfterProjectId: string | null) => Promise<void>;
+  onAddProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
   onClose: () => void;
 }
 
@@ -105,7 +106,7 @@ function ElapsedTimer({ ms, label }: { ms: number; label?: string }) {
 
 export function ProjectReviewView({
   areaId, projects, tasks, areas, lifters,
-  onArchiveProject, onDeleteProject, onUpdateTask, onAddTaskToProject, onReorderProject, onClose,
+  onArchiveProject, onDeleteProject, onUpdateTask, onAddTaskToProject, onReorderProject, onAddProject, onClose,
 }: ProjectReviewViewProps) {
   const [screen, setScreen] = useState<ReviewScreen>('lifter-summary');
   const [markedForArchive, setMarkedForArchive] = useState<Set<string>>(new Set());
@@ -114,6 +115,7 @@ export function ProjectReviewView({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [taskCursorIndex, setTaskCursorIndex] = useState(0);
   const [quickAddName, setQuickAddName] = useState('');
+  const [quickAddProjectName, setQuickAddProjectName] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [stats, setStats] = useState({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
 
@@ -129,6 +131,7 @@ export function ProjectReviewView({
   const [reviewDropGapTarget, setReviewDropGapTarget] = useState<GapTarget | null>(null);
 
   const quickAddRef = useRef<HTMLInputElement>(null);
+  const quickAddProjectRef = useRef<HTMLInputElement>(null);
   const taskListRef = useRef<HTMLDivElement>(null);
   const confirmCancelRef = useRef<HTMLButtonElement>(null);
 
@@ -219,6 +222,13 @@ export function ProjectReviewView({
       return next;
     });
   }, [tree]);
+
+  const handleQuickAddProject = useCallback(async () => {
+    const name = quickAddProjectName.trim();
+    if (!name || !currentLifterItem) return;
+    await onAddProject(name, areaId, currentLifterItem.lifterId);
+    setQuickAddProjectName('');
+  }, [quickAddProjectName, currentLifterItem, areaId, onAddProject]);
 
   const handleStart = useCallback(async () => {
     for (const id of markedForArchive) {
@@ -410,7 +420,14 @@ export function ProjectReviewView({
   useEffect(() => {
     if (screen === 'lifter-summary') {
       const handler = (e: KeyboardEvent) => {
+        const tag = (e.target as HTMLElement).tagName;
+        const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
+        if (inInput) {
+          if (e.key === 'Escape') { e.preventDefault(); quickAddProjectRef.current?.blur(); }
+          return;
+        }
         if (e.key === 'Enter') { e.preventDefault(); handleStart(); }
+        if (e.key === 'a') { e.preventDefault(); quickAddProjectRef.current?.focus(); }
         if (e.key === 'Escape') { e.preventDefault(); onClose(); }
       };
       window.addEventListener('keydown', handler);
@@ -530,6 +547,22 @@ export function ProjectReviewView({
               onGapDragOver={handleReviewGapDragOver}
               onGapDrop={handleReviewGapDrop}
               onGapDragLeave={() => setReviewDropGapTarget(null)}
+            />
+          </div>
+          <div className="pr-quick-add">
+            <input
+              ref={quickAddProjectRef}
+              type="text"
+              placeholder="Dodaj projekt… (a)"
+              aria-label="Dodaj projekt do podobszaru"
+              value={quickAddProjectName}
+              onChange={e => setQuickAddProjectName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && quickAddProjectName.trim()) {
+                  e.preventDefault();
+                  handleQuickAddProject();
+                }
+              }}
             />
           </div>
           <div className="pr-summary-actions">

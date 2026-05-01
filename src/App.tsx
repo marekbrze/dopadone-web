@@ -1275,6 +1275,7 @@ export default function App() {
           onUpdateTask={updateTask}
           onAddTaskToProject={addTaskToProject}
           onReorderProject={reorderProject}
+          onAddProject={addProjectForProcessing}
           onClose={() => { setCurrentView('plan'); setReviewAreaId(null); }}
         />
       )}
