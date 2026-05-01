@@ -269,8 +269,6 @@ export function ProjectReviewView({
   }, []);
 
   const handleSkipLifter = useCallback(() => {
-    const item = lifterQueue[lifterIndex];
-    // Record current lifter stats (from transition — already finished)
     // Skip the NEXT lifter
     const nextIndex = lifterIndex + 1;
     const skipItem = lifterQueue[nextIndex];
