@@ -364,18 +364,6 @@ body {
   font-size: 10px;
 }
 
-.tree-chevron {
-  color: var(--text-faint);
-  font-size: 10px;
-  padding: 0 2px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.tree-chevron:hover {
-  color: var(--accent);
-}
-
 /* ── Task items ──────────────────────────────────────────── */
 
 .task-item {
@@ -907,23 +895,6 @@ body {
   height: 6px;
   background-color: var(--accent);
   border-radius: 3px;
-}
-
-.root-drop-zone {
-  margin: 4px 0 8px;
-  padding: 7px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  color: var(--text-faint);
-  font-size: 12px;
-  font-style: italic;
-  text-align: center;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
-}
-
-.root-drop-zone.active {
-  background: rgba(92, 74, 56, 0.08);
-  border-style: solid;
 }
 
 /* ── Settings modal ──────────────────────────────────────── */

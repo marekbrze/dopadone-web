@@ -6,9 +6,7 @@ interface Props {
   project: Project;
   tasks: Task[];
   lifters: Lifter[];
-  parentCandidates: Project[];
   onUpdate: (updates: Partial<Project>) => void;
-  onMoveToParent: (parentId: string | null) => void;
   onMoveToLifter: (lifterId: string | null) => void;
   onArchive: () => void;
   onDelete: () => void;
@@ -41,7 +39,7 @@ function buildStartDate(year: string, month: string, day: string): string | null
   return `${year}-${month}-${day}`;
 }
 
-export function ProjectDetailPanel({ project, tasks, lifters, parentCandidates, onUpdate, onMoveToParent, onMoveToLifter, onArchive, onDelete, onClose }: Props) {
+export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveToLifter, onArchive, onDelete, onClose }: Props) {
   const [localName, setLocalName] = useState(project.name);
   const [pendingEndDate, setPendingEndDate] = useState<string | null | undefined>(undefined);
 
@@ -152,30 +150,15 @@ export function ProjectDetailPanel({ project, tasks, lifters, parentCandidates, 
           />
         </div>
 
-        {project.parentProjectId === null && (
-          <div className="detail-field">
-            <label>Podobszar</label>
-            <select
-              value={project.lifterId ?? ''}
-              onChange={e => onMoveToLifter(e.target.value || null)}
-            >
-              <option value="">— brak —</option>
-              {lifters.map(l => (
-                <option key={l.id} value={l.id}>{l.name}</option>
-              ))}
-            </select>
-          </div>
-        )}
-
         <div className="detail-field">
-          <label>Projekt nadrzędny</label>
+          <label>Podobszar</label>
           <select
-            value={project.parentProjectId ?? ''}
-            onChange={e => onMoveToParent(e.target.value || null)}
+            value={project.lifterId ?? ''}
+            onChange={e => onMoveToLifter(e.target.value || null)}
           >
-            <option value="">— brak (projekt główny) —</option>
-            {parentCandidates.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+            <option value="">— brak —</option>
+            {lifters.map(l => (
+              <option key={l.id} value={l.id}>{l.name}</option>
             ))}
           </select>
         </div>

@@ -20,7 +20,6 @@ export interface Project {
   name: string;
   areaId: string;
   lifterId: string | null;
-  parentProjectId: string | null;
   startDate?: string | null;  // "YYYY" | "YYYY-MM" | "YYYY-MM-DD"
   endDate?: string | null;    // "YYYY-MM-DD"
   order?: number;

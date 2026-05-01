@@ -14,17 +14,12 @@ interface ProjectReviewViewProps {
   onDeleteProject: (id: string) => Promise<void>;
   onUpdateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   onAddTaskToProject: (name: string, projectId: string) => Promise<void>;
-  onReorderProject: (projectId: string, newParentId: string | null, insertAfterProjectId: string | null) => Promise<void>;
+  onReorderProject: (projectId: string, insertAfterProjectId: string | null) => Promise<void>;
   onAddProject: (name: string, areaId: string, lifterId: string | null) => Promise<Project>;
   onClose: () => void;
 }
 
 type ReviewScreen = 'lifter-summary' | 'processing' | 'lifter-transition' | 'done';
-
-interface TreeNode {
-  project: Project;
-  children: TreeNode[];
-}
 
 interface LifterQueueItem {
   lifterId: string | null;
@@ -40,53 +35,6 @@ interface LifterStats {
   tasksAdded: number;
   elapsedMs: number;
   skipped?: boolean;
-}
-
-interface GapTarget {
-  parentProjectId: string | null;
-  insertAfterProjectId: string | null;
-}
-
-function buildLifterProjectTree(projects: Project[], areaId: string, lifterId: string | null): TreeNode[] {
-  const filtered = projects.filter(p => p.areaId === areaId && !p.archived && p.lifterId === lifterId);
-  const byId = new Map(filtered.map(p => [p.id, p]));
-
-  function buildNode(project: Project): TreeNode {
-    return {
-      project,
-      children: filtered
-        .filter(p => p.parentProjectId === project.id)
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map(buildNode),
-    };
-  }
-
-  return filtered
-    .filter(p => !p.parentProjectId || !byId.has(p.parentProjectId))
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-    .map(buildNode);
-}
-
-function collectDescendantIds(node: TreeNode): string[] {
-  return [node.project.id, ...node.children.flatMap(collectDescendantIds)];
-}
-
-function flattenTree(nodes: TreeNode[]): string[] {
-  const result: string[] = [];
-  for (const node of nodes) {
-    result.push(node.project.id);
-    result.push(...flattenTree(node.children));
-  }
-  return result;
-}
-
-function findNode(nodes: TreeNode[], id: string): TreeNode | null {
-  for (const node of nodes) {
-    if (node.project.id === id) return node;
-    const found = findNode(node.children, id);
-    if (found) return found;
-  }
-  return null;
 }
 
 function formatElapsed(ms: number): string {
@@ -127,8 +75,7 @@ export function ProjectReviewView({
 
   // D&D state
   const [reviewDragPayload, setReviewDragPayload] = useState<DragPayload | null>(null);
-  const [reviewDropTargetProjectId, setReviewDropTargetProjectId] = useState<string | null>(null);
-  const [reviewDropGapTarget, setReviewDropGapTarget] = useState<GapTarget | null>(null);
+  const [reviewDropGapTarget, setReviewDropGapTarget] = useState<string | null>(null);
 
   const quickAddRef = useRef<HTMLInputElement>(null);
   const quickAddProjectRef = useRef<HTMLInputElement>(null);
@@ -158,8 +105,12 @@ export function ProjectReviewView({
   }, [lifters, projects, areaId]);
 
   const currentLifterItem = lifterQueue[lifterIndex] ?? null;
-  const tree = useMemo(
-    () => currentLifterItem ? buildLifterProjectTree(projects, areaId, currentLifterItem.lifterId) : [],
+  const lifterProjects = useMemo(
+    () => currentLifterItem
+      ? projects
+          .filter(p => p.areaId === areaId && !p.archived && p.lifterId === currentLifterItem.lifterId)
+          .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      : [],
     [projects, areaId, currentLifterItem],
   );
 
@@ -190,11 +141,6 @@ export function ProjectReviewView({
     return currentProject.lifterId ? lifters.find(l => l.id === currentProject.lifterId) ?? null : null;
   }, [currentProject, lifters]);
 
-  const parentProject = useMemo(() => {
-    if (!currentProject) return null;
-    return currentProject.parentProjectId ? projects.find(p => p.id === currentProject.parentProjectId) ?? null : null;
-  }, [currentProject, projects]);
-
   // ── Timer ──
 
   useEffect(() => {
@@ -211,17 +157,14 @@ export function ProjectReviewView({
   const toggleMark = useCallback((projectId: string) => {
     setMarkedForArchive(prev => {
       const next = new Set(prev);
-      const node = findNode(tree, projectId);
-      if (!node) return prev;
-      const ids = collectDescendantIds(node);
       if (next.has(projectId)) {
-        ids.forEach(id => next.delete(id));
+        next.delete(projectId);
       } else {
-        ids.forEach(id => next.add(id));
+        next.add(projectId);
       }
       return next;
     });
-  }, [tree]);
+  }, []);
 
   const handleQuickAddProject = useCallback(async () => {
     const name = quickAddProjectName.trim();
@@ -235,7 +178,7 @@ export function ProjectReviewView({
       await onArchiveProject(id);
     }
     const archivedCount = markedForArchive.size;
-    const remaining = flattenTree(tree).filter(id => !markedForArchive.has(id));
+    const remaining = lifterProjects.map(p => p.id).filter(id => !markedForArchive.has(id));
 
     if (remaining.length === 0) {
       setStats(s => ({ ...s, archived: archivedCount }));
@@ -250,7 +193,7 @@ export function ProjectReviewView({
     setStats(s => ({ ...s, archived: archivedCount }));
     setLifterElapsedMs(0);
     setScreen('processing');
-  }, [markedForArchive, tree, onArchiveProject]);
+  }, [markedForArchive, lifterProjects, onArchiveProject]);
 
   // ── Lifter transition ──
 
@@ -367,35 +310,19 @@ export function ProjectReviewView({
 
   const handleReviewDragEnd = useCallback(() => {
     setReviewDragPayload(null);
-    setReviewDropTargetProjectId(null);
     setReviewDropGapTarget(null);
   }, []);
 
-  const handleReviewDragOver = useCallback((e: React.DragEvent, id: string) => {
+  const handleReviewGapDragOver = useCallback((e: React.DragEvent, insertAfterProjectId: string | null) => {
     if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
     e.preventDefault();
-    setReviewDropTargetProjectId(id);
-    setReviewDropGapTarget(null);
+    setReviewDropGapTarget(insertAfterProjectId);
   }, [reviewDragPayload]);
 
-  const handleReviewDrop = useCallback((id: string) => {
-    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
-    setReviewDropTargetProjectId(null);
-    onReorderProject(reviewDragPayload.projectId, id, null);
-    setReviewDragPayload(null);
-  }, [reviewDragPayload, onReorderProject]);
-
-  const handleReviewGapDragOver = useCallback((e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => {
-    if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
-    e.preventDefault();
-    setReviewDropTargetProjectId(null);
-    setReviewDropGapTarget({ parentProjectId, insertAfterProjectId });
-  }, [reviewDragPayload]);
-
-  const handleReviewGapDrop = useCallback((parentProjectId: string | null, insertAfterProjectId: string | null) => {
+  const handleReviewGapDrop = useCallback((insertAfterProjectId: string | null) => {
     if (!reviewDragPayload || reviewDragPayload.kind !== 'project') return;
     setReviewDropGapTarget(null);
-    onReorderProject(reviewDragPayload.projectId, parentProjectId, insertAfterProjectId);
+    onReorderProject(reviewDragPayload.projectId, insertAfterProjectId);
     setReviewDragPayload(null);
   }, [reviewDragPayload, onReorderProject]);
 
@@ -518,7 +445,7 @@ export function ProjectReviewView({
   // ── Render: lifter-summary ──
 
   if (screen === 'lifter-summary') {
-    const lifterProjectsCount = flattenTree(tree).length;
+    const lifterProjectsCount = lifterProjects.length;
     return (
       <div className="processing-view">
         <div className="proc-summary">
@@ -530,20 +457,16 @@ export function ProjectReviewView({
           <div className="pr-project-list">
             <ProjectTree
               key={currentLifterItem?.lifterId ?? 'none'}
-              projects={tree.map(n => n.project)}
-              allProjects={tree.flatMap(function flatten(n: TreeNode): Project[] { return [n.project, ...n.children.flatMap(flatten)]; })}
+              projects={lifterProjects}
               selectedProjectId={null}
               onSelect={() => {}}
               checkboxMode
               checkedIds={markedForArchive}
               onToggleCheck={toggleMark}
               dragPayload={reviewDragPayload}
-              dropTargetProjectId={reviewDropTargetProjectId}
               dropGapTarget={reviewDropGapTarget}
               onProjectDragStart={handleReviewDragStart}
               onProjectDragEnd={handleReviewDragEnd}
-              onProjectDragOver={handleReviewDragOver}
-              onProjectDrop={handleReviewDrop}
               onGapDragOver={handleReviewGapDragOver}
               onGapDrop={handleReviewGapDrop}
               onGapDragLeave={() => setReviewDropGapTarget(null)}
@@ -712,7 +635,6 @@ export function ProjectReviewView({
           <div className="pr-breadcrumb">
             {area && <span className="pr-breadcrumb-area">{area.name}</span>}
             {lifter && <><span className="pr-breadcrumb-sep"> / </span><span>{lifter.name}</span></>}
-            {parentProject && <><span className="pr-breadcrumb-sep"> / </span><span>{parentProject.name}</span></>}
           </div>
           <ElapsedTimer ms={lifterElapsedMs} />
           <div className="pr-progress-info">

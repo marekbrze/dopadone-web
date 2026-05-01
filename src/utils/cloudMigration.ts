@@ -72,15 +72,12 @@ export async function completeMigrationIfPending(): Promise<void> {
       lifterIdMap.set(lifter.id, newId)
     }
 
-    // Projects may have self-referencing parentProjectId — add parents first
     const projectIdMap = new Map<string, string>()
-    const sorted = sortByParent(projects)
-    for (const project of sorted) {
+    for (const project of projects) {
       const newId = await db.projects.add({
         name: project.name,
         areaId: areaIdMap.get(project.areaId) ?? project.areaId,
         lifterId: project.lifterId ? (lifterIdMap.get(project.lifterId) ?? project.lifterId) : null,
-        parentProjectId: project.parentProjectId ? (projectIdMap.get(project.parentProjectId) ?? null) : null,
       }) as string
       projectIdMap.set(project.id, newId)
     }
@@ -112,23 +109,4 @@ export async function connectToExistingCloud(): Promise<void> {
   localStorage.setItem('dopadone-schema', 'cloud')
   await db.delete()
   window.location.reload()
-}
-
-function sortByParent(projects: Project[]): Project[] {
-  const result: Project[] = []
-  const visited = new Set<string>()
-  const byId = new Map(projects.map(p => [p.id, p]))
-
-  function visit(p: Project) {
-    if (visited.has(p.id)) return
-    if (p.parentProjectId) {
-      const parent = byId.get(p.parentProjectId)
-      if (parent) visit(parent)
-    }
-    visited.add(p.id)
-    result.push(p)
-  }
-
-  for (const p of projects) visit(p)
-  return result
 }

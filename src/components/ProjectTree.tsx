@@ -1,59 +1,35 @@
-import { useState } from 'react';
 import type { Project } from '../types';
 import type { DragPayload } from '../types';
 import { RowMenuButton } from './RowMenuButton';
 
-interface GapTarget {
-  parentProjectId: string | null;
-  insertAfterProjectId: string | null;
-}
-
 interface Props {
   projects: Project[];
-  allProjects: Project[];
   selectedProjectId: string | null;
   onSelect: (id: string) => void;
   onDelete?: (id: string) => void;
   onArchive?: (id: string) => void;
   onEdit?: (id: string) => void;
-  depth?: number;
-  parentProjectId?: string | null;
   dragPayload?: DragPayload | null;
   dropTargetProjectId?: string | null;
-  dropGapTarget?: GapTarget | null;
+  dropGapTarget?: string | null;
   onProjectDragStart?: (id: string) => void;
   onProjectDragEnd?: () => void;
   onProjectDragOver?: (e: React.DragEvent, id: string) => void;
   onProjectDrop?: (id: string) => void;
   onProjectDragLeave?: (e: React.DragEvent, id: string) => void;
-  onGapDragOver?: (e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => void;
-  onGapDrop?: (parentProjectId: string | null, insertAfterProjectId: string | null) => void;
+  onGapDragOver?: (e: React.DragEvent, insertAfterProjectId: string | null) => void;
+  onGapDrop?: (insertAfterProjectId: string | null) => void;
   onGapDragLeave?: () => void;
-  collapsedIds?: Set<string>;
-  onToggleCollapse?: (id: string) => void;
   checkboxMode?: boolean;
   checkedIds?: Set<string>;
   onToggleCheck?: (id: string) => void;
 }
 
-export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, depth = 0, parentProjectId = null, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave, collapsedIds: collapsedIdsProp, onToggleCollapse: onToggleCollapseProp, checkboxMode, checkedIds, onToggleCheck }: Props) {
-  const [localCollapsedIds, setLocalCollapsedIds] = useState<Set<string>>(new Set());
-
-  const isRoot = depth === 0;
-  const collapsedIds = isRoot ? localCollapsedIds : (collapsedIdsProp ?? new Set<string>());
-  const toggleCollapse = isRoot
-    ? (id: string) => setLocalCollapsedIds(prev => {
-        const next = new Set(prev);
-        if (next.has(id)) next.delete(id); else next.add(id);
-        return next;
-      })
-    : (onToggleCollapseProp ?? (() => {}));
-
+export function ProjectTree({ projects, selectedProjectId, onSelect, onDelete, onArchive, onEdit, dragPayload, dropTargetProjectId, dropGapTarget, onProjectDragStart, onProjectDragEnd, onProjectDragOver, onProjectDrop, onProjectDragLeave, onGapDragOver, onGapDrop, onGapDragLeave, checkboxMode, checkedIds, onToggleCheck }: Props) {
   const sorted = [...projects].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
   const isGapActive = (insertAfterProjectId: string | null) =>
-    dropGapTarget?.parentProjectId === parentProjectId &&
-    dropGapTarget?.insertAfterProjectId === insertAfterProjectId;
+    dropGapTarget === insertAfterProjectId;
 
   const isDraggingProject = dragPayload?.kind === 'project';
 
@@ -62,15 +38,13 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
       {isDraggingProject && (
         <div
           className={`project-gap-zone${isGapActive(null) ? ' active' : ''}`}
-          onDragOver={e => onGapDragOver?.(e, parentProjectId, null)}
-          onDrop={() => onGapDrop?.(parentProjectId, null)}
+          onDragOver={e => onGapDragOver?.(e, null)}
+          onDrop={() => onGapDrop?.(null)}
           onDragLeave={onGapDragLeave}
         />
       )}
       {sorted.map(project => {
-        const children = allProjects.filter(p => p.parentProjectId === project.id);
         const isSelected = selectedProjectId === project.id;
-        const isCollapsed = collapsedIds.has(project.id);
         return (
           <div key={project.id}>
             <div
@@ -81,7 +55,7 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
             >
               <div
                 className={`project-item${isSelected ? ' selected' : ''}${project.archived ? ' archived' : ''}${checkboxMode && checkedIds?.has(project.id) ? ' checked' : ''}`}
-                style={{ paddingLeft: `${12 + depth * 16}px` }}
+                style={{ paddingLeft: '12px' }}
                 draggable
                 onDragStart={() => onProjectDragStart?.(project.id)}
                 onDragEnd={onProjectDragEnd}
@@ -92,14 +66,6 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                     {checkedIds?.has(project.id) ? '☑' : '☐'}
                   </span>
                 ) : null}
-                {children.length > 0 && (
-                  <span
-                    className="tree-chevron"
-                    onClick={e => { e.stopPropagation(); toggleCollapse(project.id); }}
-                  >
-                    {isCollapsed ? '▸' : '▾'}
-                  </span>
-                )}
                 {project.archived && <span className="archived-label">archiwum</span>}
                 <span>{project.name}</span>
               </div>
@@ -111,40 +77,11 @@ export function ProjectTree({ projects, allProjects, selectedProjectId, onSelect
                 />
               )}
             </div>
-            {children.length > 0 && !isCollapsed && (
-              <ProjectTree
-                projects={children}
-                allProjects={allProjects}
-                selectedProjectId={selectedProjectId}
-                onSelect={onSelect}
-                onDelete={onDelete}
-                onArchive={onArchive}
-                onEdit={onEdit}
-                depth={depth + 1}
-                parentProjectId={project.id}
-                dragPayload={dragPayload}
-                dropTargetProjectId={dropTargetProjectId}
-                dropGapTarget={dropGapTarget}
-                onProjectDragStart={onProjectDragStart}
-                onProjectDragEnd={onProjectDragEnd}
-                onProjectDragOver={onProjectDragOver}
-                onProjectDrop={onProjectDrop}
-                onProjectDragLeave={onProjectDragLeave}
-                onGapDragOver={onGapDragOver}
-                onGapDrop={onGapDrop}
-                onGapDragLeave={onGapDragLeave}
-                collapsedIds={collapsedIds}
-                onToggleCollapse={toggleCollapse}
-                checkboxMode={checkboxMode}
-                checkedIds={checkedIds}
-                onToggleCheck={onToggleCheck}
-              />
-            )}
             {isDraggingProject && (
               <div
                 className={`project-gap-zone${isGapActive(project.id) ? ' active' : ''}`}
-                onDragOver={e => onGapDragOver?.(e, parentProjectId, project.id)}
-                onDrop={() => onGapDrop?.(parentProjectId, project.id)}
+                onDragOver={e => onGapDragOver?.(e, project.id)}
+                onDrop={() => onGapDrop?.(project.id)}
                 onDragLeave={onGapDragLeave}
               />
             )}

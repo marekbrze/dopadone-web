@@ -52,7 +52,7 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'subproject' | 'settings' | 'inbox-add'>(null);
+  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'settings' | 'inbox-add'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
@@ -62,8 +62,7 @@ export default function App() {
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
   const [dropTargetProjectId, setDropTargetProjectId] = useState<string | null>(null);
   const [dropTargetLifterId, setDropTargetLifterId] = useState<string | null>(null);
-  const [dropTargetRootZone, setDropTargetRootZone] = useState(false);
-  const [dropGapTarget, setDropGapTarget] = useState<{ parentProjectId: string | null; insertAfterProjectId: string | null } | null>(null);
+  const [dropGapTarget, setDropGapTarget] = useState<string | null>(null);
   const [dropTaskGapTarget, setDropTaskGapTarget] = useState<string | null | undefined>(undefined);
   const [quickAddTaskName, setQuickAddTaskName] = useState('');
   const prevAreasCount = useRef(0);
@@ -84,7 +83,7 @@ export default function App() {
     const lifterId = firstLifter?.id ?? null;
     setSelectedLifterId(lifterId);
     const firstProject = d.projects.find(p =>
-      p.areaId === areaId && p.lifterId === lifterId && p.parentProjectId === null
+      p.areaId === areaId && p.lifterId === lifterId
     );
     setSelectedProjectId(firstProject?.id ?? null);
   }, []);
@@ -160,7 +159,6 @@ export default function App() {
             name: result.firstProject.name,
             areaId: areaRec.id,
             lifterId: null,
-            parentProjectId: null,
             order: 0,
           });
         }
@@ -242,16 +240,11 @@ export default function App() {
     [data, selectedAreaId, selectedLifterId, showArchivedProjects]
   );
 
-  const rootProjects = useMemo(() => {
-    const visibleIds = new Set(visibleProjects.map(p => p.id));
-    return visibleProjects.filter(p =>
-      p.parentProjectId === null || !visibleIds.has(p.parentProjectId)
-    );
-  }, [visibleProjects]);
+  const rootProjects = visibleProjects;
 
   const tasks = useMemo(() => {
     if (!data || !selectedProjectId) return [];
-    const projectIds = collectProjectIds(selectedProjectId, data.projects);
+    const projectIds = collectProjectIds(selectedProjectId);
     return data.tasks.filter(t => t.projectId !== null && projectIds.includes(t.projectId));
   }, [data, selectedProjectId]);
 
@@ -264,28 +257,6 @@ export default function App() {
   );
 
   const isAggregatedView = !selectedProjectId && !!selectedLifterId;
-
-  const isSubProjectView = useMemo(
-    () => !!selectedProjectId && !!data && data.projects.some(p => p.parentProjectId === selectedProjectId),
-    [selectedProjectId, data]
-  );
-
-  const aggregatedTasksBySubProject = useMemo(() => {
-    if (!isSubProjectView || !data || !selectedProjectId) return [];
-    const projectIds = collectProjectIds(selectedProjectId, data.projects);
-    const projects = projectIds
-      .map(id => data.projects.find(p => p.id === id)!)
-      .filter(Boolean);
-    const groups: { project: Project; undone: Task[]; done: Task[] }[] = [];
-    for (const project of projects) {
-      const projectTasks = data.tasks.filter(t => t.projectId === project.id);
-      if (projectTasks.length === 0) continue;
-      const undone = projectTasks.filter(t => !t.done).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
-      const done = projectTasks.filter(t => t.done);
-      groups.push({ project, undone, done });
-    }
-    return groups;
-  }, [isSubProjectView, data, selectedProjectId]);
 
   const aggregatedTasksByProject = useMemo(() => {
     if (!isAggregatedView || !data) return [];
@@ -430,15 +401,15 @@ export default function App() {
     }
   };
 
-  const addProject = async (name: string, parentProjectId: string | null = null) => {
-    const siblings = data.projects.filter(p => p.parentProjectId === parentProjectId && p.areaId === selectedAreaId);
+  const addProject = async (name: string) => {
+    const siblings = data.projects.filter(p => p.areaId === selectedAreaId && p.lifterId === selectedLifterId);
     const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order ?? 0)) + 1 : 0;
     let proj: Project;
     if (isCloudSchema()) {
-      const id = await db.projects.add({ name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order }) as string;
-      proj = { id, name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order };
+      const id = await db.projects.add({ name, areaId: selectedAreaId, lifterId: selectedLifterId, order }) as string;
+      proj = { id, name, areaId: selectedAreaId, lifterId: selectedLifterId, order };
     } else {
-      proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, parentProjectId, order };
+      proj = { id: newId(), name, areaId: selectedAreaId, lifterId: selectedLifterId, order };
       await db.projects.put(proj);
     }
   };
@@ -456,14 +427,14 @@ export default function App() {
   };
 
   const addProjectForProcessing = async (name: string, areaId: string, lifterId: string | null): Promise<Project> => {
-    const siblings = data.projects.filter(p => p.parentProjectId === null && p.areaId === areaId);
+    const siblings = data.projects.filter(p => p.areaId === areaId);
     const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order ?? 0)) + 1 : 0;
     let proj: Project;
     if (isCloudSchema()) {
-      const id = await db.projects.add({ name, areaId, lifterId, parentProjectId: null, order }) as string;
-      proj = { id, name, areaId, lifterId, parentProjectId: null, order };
+      const id = await db.projects.add({ name, areaId, lifterId, order }) as string;
+      proj = { id, name, areaId, lifterId, order };
     } else {
-      proj = { id: newId(), name, areaId, lifterId, parentProjectId: null, order };
+      proj = { id: newId(), name, areaId, lifterId, order };
       await db.projects.put(proj);
     }
     return proj;
@@ -594,13 +565,12 @@ export default function App() {
   };
 
   // Helpers
-  function collectProjectIds(rootId: string, allProjects: Project[]): string[] {
-    const children = allProjects.filter(p => p.parentProjectId === rootId);
-    return [rootId, ...children.flatMap(c => collectProjectIds(c.id, allProjects))];
+  function collectProjectIds(rootId: string): string[] {
+    return [rootId];
   }
 
   const archiveProject = async (id: string) => {
-    const ids = collectProjectIds(id, data.projects);
+    const ids = collectProjectIds(id);
     const archivedAt = new Date().toISOString();
     await db.transaction('rw', [db.projects], async () => {
       for (const pid of ids) await db.projects.update(pid, { archived: true, archivedAt });
@@ -625,7 +595,7 @@ export default function App() {
   };
 
   const deleteProject = async (id: string) => {
-    const ids = collectProjectIds(id, data.projects);
+    const ids = collectProjectIds(id);
     const idsSet = new Set(ids);
     const taskIds = data.tasks.filter(t => t.projectId !== null && idsSet.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.projects, db.tasks], async () => {
@@ -649,7 +619,7 @@ export default function App() {
 
   const deleteLifter = async (id: string) => {
     const rootIds = data.projects.filter(p => p.lifterId === id).map(p => p.id);
-    const allIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
+    const allIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid)));
     const projectIds = [...allIds];
     const taskIds = data.tasks.filter(t => t.projectId !== null && allIds.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.lifters, db.projects, db.tasks], async () => {
@@ -723,67 +693,36 @@ export default function App() {
 
   const moveProjectToLifter = async (projectId: string, targetLifterId: string) => {
     const project = data.projects.find(p => p.id === projectId);
-    if (!project || (project.lifterId === targetLifterId && project.parentProjectId === null)) return;
-    await db.projects.update(projectId, { lifterId: targetLifterId, parentProjectId: null });
-    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, lifterId: targetLifterId, parentProjectId: null } : p) }) : d);
-  };
-
-  const reparentProject = async (projectId: string, newParentId: string | null) => {
-    const project = data.projects.find(p => p.id === projectId);
-    if (!project || project.parentProjectId === newParentId) return;
-    if (newParentId !== null) {
-      const descendants = collectProjectIds(projectId, data.projects);
-      if (descendants.includes(newParentId)) return;
-    }
-    const newSiblings = data.projects.filter(p => p.parentProjectId === newParentId && p.id !== projectId);
-    const order = newSiblings.length > 0 ? Math.max(...newSiblings.map(p => p.order ?? 0)) + 1 : 0;
-    const updates: Partial<Project> = { parentProjectId: newParentId, order };
-    if (newParentId !== null) {
-      const parent = data.projects.find(p => p.id === newParentId);
-      if (parent) updates.lifterId = parent.lifterId;
-    }
-    await db.projects.update(projectId, updates);
-    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, ...updates } : p) }) : d);
+    if (!project || project.lifterId === targetLifterId) return;
+    await db.projects.update(projectId, { lifterId: targetLifterId });
+    setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, lifterId: targetLifterId } : p) }) : d);
   };
 
   const handleProjectDragEnd = () => {
     setDragPayload(null);
     setDropTargetProjectId(null);
     setDropTargetLifterId(null);
-    setDropTargetRootZone(false);
     setDropGapTarget(null);
   };
 
-  const reorderProject = async (projectId: string, newParentId: string | null, insertAfterProjectId: string | null) => {
+  const reorderProject = async (projectId: string, insertAfterProjectId: string | null) => {
     const project = data.projects.find(p => p.id === projectId);
     if (!project) return;
-    if (newParentId !== null) {
-      const descendants = collectProjectIds(projectId, data.projects);
-      if (descendants.includes(newParentId)) return;
-    }
     const siblings = data.projects
-      .filter(p => p.parentProjectId === newParentId && p.areaId === project.areaId && p.id !== projectId)
+      .filter(p => p.lifterId === project.lifterId && p.areaId === project.areaId && p.id !== projectId)
       .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     const insertIdx = insertAfterProjectId === null
       ? 0
       : siblings.findIndex(p => p.id === insertAfterProjectId) + 1;
-    siblings.splice(insertIdx, 0, { ...project, parentProjectId: newParentId });
-    const updates: { id: string; order: number; parentProjectId?: string | null; lifterId?: string | null }[] = siblings.map((p, i) => ({
-      id: p.id,
-      order: i,
-      ...(p.id === projectId && p.parentProjectId !== project.parentProjectId ? { parentProjectId: newParentId } : {}),
-      ...(p.id === projectId && newParentId !== null && newParentId !== project.parentProjectId ? (() => {
-        const parent = data.projects.find(pr => pr.id === newParentId);
-        return parent ? { lifterId: parent.lifterId } : {};
-      })() : {}),
-    }));
+    siblings.splice(insertIdx, 0, project);
+    const updates = siblings.map((p, i) => ({ id: p.id, order: i }));
     await db.transaction('rw', db.projects, async () => {
-      for (const u of updates) await db.projects.update(u.id, u);
+      for (const u of updates) await db.projects.update(u.id, { order: u.order });
     });
     setData(d => {
       if (!d) return d;
-      const updateMap = new Map(updates.map(u => [u.id, u]));
-      return { ...d, projects: d.projects.map(p => updateMap.has(p.id) ? { ...p, ...updateMap.get(p.id) } : p) };
+      const updateMap = new Map(updates.map(u => [u.id, u.order]));
+      return { ...d, projects: d.projects.map(p => updateMap.has(p.id) ? { ...p, order: updateMap.get(p.id)! } : p) };
     });
   };
 
@@ -808,17 +747,17 @@ export default function App() {
     });
   };
 
-  const handleGapDragOver = (e: React.DragEvent, parentProjectId: string | null, insertAfterProjectId: string | null) => {
+  const handleGapDragOver = (e: React.DragEvent, insertAfterProjectId: string | null) => {
     if (!dragPayload || dragPayload.kind !== 'project') return;
     e.preventDefault();
     setDropTargetProjectId(null);
-    setDropGapTarget({ parentProjectId, insertAfterProjectId });
+    setDropGapTarget(insertAfterProjectId);
   };
 
-  const handleGapDrop = (parentProjectId: string | null, insertAfterProjectId: string | null) => {
+  const handleGapDrop = (insertAfterProjectId: string | null) => {
     if (!dragPayload || dragPayload.kind !== 'project') return;
     setDropGapTarget(null);
-    reorderProject(dragPayload.projectId, parentProjectId, insertAfterProjectId);
+    reorderProject(dragPayload.projectId, insertAfterProjectId);
     setDragPayload(null);
   };
 
@@ -836,8 +775,6 @@ export default function App() {
     setDropTargetProjectId(null);
     if (dragPayload.kind === 'task') {
       moveTaskToProject(dragPayload.taskId, targetProjectId);
-    } else if (dragPayload.kind === 'project') {
-      if (dragPayload.projectId !== targetProjectId) reparentProject(dragPayload.projectId, targetProjectId);
     }
     setDragPayload(null);
   };
@@ -863,7 +800,7 @@ export default function App() {
   const deleteArea = async (id: string) => {
     const lifterIds = data.lifters.filter(l => l.areaId === id).map(l => l.id);
     const rootIds = data.projects.filter(p => p.areaId === id).map(p => p.id);
-    const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid, data.projects)));
+    const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid)));
     const projectIds = [...allProjectIds];
     const taskIds = data.tasks.filter(t => t.projectId !== null && allProjectIds.has(t.projectId)).map(t => t.id);
     await db.transaction('rw', [db.areas, db.lifters, db.projects, db.tasks], async () => {
@@ -1355,9 +1292,6 @@ export default function App() {
           >
             <h2 id="column-header-projects">Projekty</h2>
             <div className="header-actions">
-              {selectedProjectId && (
-                <button onClick={e => { e.stopPropagation(); setModal('subproject'); }} title="Dodaj podprojekt">⤷</button>
-              )}
               <button onClick={e => { e.stopPropagation(); setModal('project'); }}>+</button>
             </div>
           </div>
@@ -1367,29 +1301,11 @@ export default function App() {
             role="region"
             aria-labelledby="column-header-projects"
           >
-            {dragPayload?.kind === 'project' && (() => {
-              const dragged = data.projects.find(p => p.id === (dragPayload as { kind: 'project'; projectId: string }).projectId);
-              return dragged?.parentProjectId !== null ? (
-                <div
-                  className={`root-drop-zone${dropTargetRootZone ? ' active' : ''}`}
-                  onDragOver={e => { e.preventDefault(); setDropTargetRootZone(true); }}
-                  onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDropTargetRootZone(false); }}
-                  onDrop={e => {
-                    e.preventDefault(); setDropTargetRootZone(false);
-                    reparentProject((dragPayload as { kind: 'project'; projectId: string }).projectId, null);
-                    setDragPayload(null);
-                  }}
-                >
-                  Upuść tutaj, aby przenieść do głównych projektów
-                </div>
-              ) : null;
-            })()}
             {rootProjects.length === 0 && (
               <p className="empty-hint">Brak projektów{selectedLifterId ? ' dla tego podobszaru' : ''}</p>
             )}
             <ProjectTree
               projects={rootProjects}
-              allProjects={visibleProjects}
               selectedProjectId={selectedProjectId}
               onSelect={id => { setSelectedProjectId(prev => prev === id ? null : id); setSelectedTaskId(null); setProjectTab('tasks'); }}
               onDelete={deleteProject}
@@ -1475,7 +1391,7 @@ export default function App() {
                   onDragLeave={() => setDropTaskGapTarget(undefined)}
                 />
               )}
-              {!isSubProjectView && undoneTasks.map(task => {
+              {undoneTasks.map(task => {
                 const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
                 return (
                   <React.Fragment key={task.id}>
@@ -1516,7 +1432,7 @@ export default function App() {
                   </React.Fragment>
                 );
               })}
-              {!isSubProjectView && doneTasks.length > 0 && (
+              {doneTasks.length > 0 && (
                 <div className="block-done-section">
                   <button
                     className="block-done-toggle"
@@ -1552,49 +1468,6 @@ export default function App() {
                   })}
                 </div>
               )}
-              {isSubProjectView && aggregatedTasksBySubProject.map(({ project, undone, done }) => (
-                <div key={project.id} className="aggregated-project-group">
-                  <div
-                    className="aggregated-project-header"
-                    onClick={() => { setSelectedProjectId(project.id); setProjectTab('tasks'); }}
-                  >
-                    <span>{project.name}</span>
-                    <span className="aggregated-task-count">{undone.length}</span>
-                  </div>
-                  {undone.map(task => {
-                    const ctx = task.contextId ? contextsMap.get(task.contextId) : undefined;
-                    return (
-                      <div
-                        key={task.id}
-                        className={`task-item ${task.id === selectedTaskId ? 'selected' : ''}`}
-                        onClick={() => selectTask(task.id)}
-                      >
-                        <div className="task-main">
-                          <input
-                            type="checkbox"
-                            checked={false}
-                            onChange={() => updateTask(task.id, { done: true })}
-                            onClick={e => e.stopPropagation()}
-                          />
-                          <span className="task-name">{task.name}</span>
-                          <PlannedDatePicker
-                            date={task.plannedDate}
-                            isNext={task.isNext}
-                            today={todayStr}
-                            onChange={(date, isNext) => updateTask(task.id, { plannedDate: date, isNext: isNext ?? false })}
-                          />
-                          <span className="priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
-                          {task.effort && <span className={`tag energy-tag energy-tag--${task.effort}`}>{energyLabels[task.effort]}</span>}
-                          {ctx && <span className="tag context-tag">{ctx.icon}</span>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                  {done.length > 0 && (
-                    <div className="aggregated-done-count">Ukończone: {done.length}</div>
-                  )}
-                </div>
-              ))}
               {isAggregatedView && (
                 <>
                   {aggregatedTasksByProject.length === 0 && (
@@ -1726,20 +1599,12 @@ export default function App() {
           const project = data.projects.find(p => p.id === editingProjectId);
           if (!project) return null;
           const projectLifters = data.lifters.filter(l => l.areaId === project.areaId);
-          const descendants = collectProjectIds(editingProjectId, data.projects);
-          const parentCandidates = data.projects.filter(p =>
-            p.areaId === project.areaId &&
-            p.id !== editingProjectId &&
-            !descendants.includes(p.id)
-          ).sort((a, b) => a.name.localeCompare(b.name, 'pl'));
           return (
             <ProjectDetailPanel
               project={project}
               tasks={data.tasks.filter(t => t.projectId === editingProjectId)}
               lifters={projectLifters}
-              parentCandidates={parentCandidates}
               onUpdate={updates => updateProject(editingProjectId, updates)}
-              onMoveToParent={parentId => reparentProject(editingProjectId, parentId)}
               onMoveToLifter={lifterId => {
                 if (lifterId) moveProjectToLifter(editingProjectId, lifterId);
                 else updateProject(editingProjectId, { lifterId: null });
@@ -1755,7 +1620,6 @@ export default function App() {
       {modal === 'area' && <AddItemModal title="Nowy obszar" placeholder="np. Finanse" onAdd={addArea} onClose={() => setModal(null)} />}
       {modal === 'lifter' && <AddItemModal title="Nowy podobszar" placeholder="np. Samochód" onAdd={addLifter} onClose={() => setModal(null)} />}
       {modal === 'project' && <AddItemModal title="Nowy projekt" placeholder="np. Remont łazienki" onAdd={n => addProject(n)} onClose={() => setModal(null)} />}
-      {modal === 'subproject' && <AddItemModal title="Nowy podprojekt" placeholder="np. Kafelki" onAdd={n => addProject(n, selectedProjectId)} onClose={() => setModal(null)} />}
       {modal === 'inbox-add' && <AddItemModal title="Dodaj do Inboxu" placeholder="np. Zadzwoń do dentysty" onAdd={name => addInboxTask(name).then(() => {})} onClose={() => setModal(null)} />}
       {modal === 'settings' && (
         <SettingsModal
