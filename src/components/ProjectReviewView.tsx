@@ -76,7 +76,6 @@ export function ProjectReviewView({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [taskCursorIndex, setTaskCursorIndex] = useState(0);
   const [quickAddName, setQuickAddName] = useState('');
-  const [quickAddFocused, setQuickAddFocused] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [stats, setStats] = useState({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
 
@@ -248,7 +247,6 @@ export function ProjectReviewView({
         if (e.key === 'Escape') {
           e.preventDefault();
           quickAddRef.current?.blur();
-          setQuickAddFocused(false);
         }
         return;
       }
@@ -287,7 +285,6 @@ export function ProjectReviewView({
       if (e.key === 'a') {
         e.preventDefault();
         quickAddRef.current?.focus();
-        setQuickAddFocused(true);
         return;
       }
       if (e.key === 'e') {
@@ -472,8 +469,6 @@ export function ProjectReviewView({
                 handleQuickAdd();
               }
             }}
-            onFocus={() => setQuickAddFocused(true)}
-            onBlur={() => setQuickAddFocused(false)}
           />
         </div>
 
