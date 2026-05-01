@@ -512,15 +512,12 @@ export default function App() {
   const addTaskToProject = async (name: string, projectId: string) => {
     const projectTasks = data?.tasks.filter(t => t.projectId === projectId) ?? [];
     const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
-    let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order }) as string;
-      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order });
     } else {
-      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      const task: Task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
       await db.tasks.put(task);
     }
-    setData(d => d ? ({ ...d, tasks: [...d.tasks, task] }) : d);
   };
 
   const deleteTask = async (taskId: string) => {
