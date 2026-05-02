@@ -19,7 +19,7 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
 
   const dateOptions = getDateOptions(today);
 
-  const goNext = useCallback((taskId: string) => {
+  const goNext = useCallback((_taskId: string) => {
     setPendingKey(null);
     if (idx + 1 >= tasks.length) {
       onDone();
