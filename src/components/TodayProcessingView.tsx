@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import type { Task, Project } from '../types';
 import { addDays, formatPlannedDate, getDateOptions, type DateOption } from './dateStepUtils';
 import './ProcessingView.css';
@@ -17,16 +17,20 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const taskRef = useRef<HTMLDivElement>(null);
 
+  // Freeze task list on mount so DB updates don't shift the array mid-processing
+  const queue = useMemo(() => [...tasks], [tasks]);
+  const total = queue.length;
+
   const dateOptions = getDateOptions(today);
 
-  const goNext = useCallback((_taskId: string) => {
+  const goNext = useCallback(() => {
     setPendingKey(null);
-    if (idx + 1 >= tasks.length) {
+    if (idx + 1 >= total) {
       onDone();
     } else {
       setIdx(idx + 1);
     }
-  }, [idx, tasks.length, onDone]);
+  }, [idx, total, onDone]);
 
   const goBack = useCallback(() => {
     if (idx === 0) return;
@@ -35,33 +39,31 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
   }, [idx]);
 
   const pickDate = useCallback(async (opt: DateOption) => {
-    const task = tasks[idx];
+    const task = queue[idx];
     if (!task) return;
     await onUpdateTask(task.id, {
       plannedDate: opt.date,
       isNext: opt.isNext ? true : false,
     });
-    goNext(task.id);
-  }, [tasks, idx, onUpdateTask, goNext]);
+    goNext();
+  }, [queue, idx, onUpdateTask, goNext]);
 
   const markDone = useCallback(async () => {
-    const task = tasks[idx];
+    const task = queue[idx];
     if (!task) return;
     await onUpdateTask(task.id, { done: true });
-    goNext(task.id);
-  }, [tasks, idx, onUpdateTask, goNext]);
+    goNext();
+  }, [queue, idx, onUpdateTask, goNext]);
 
   const skip = useCallback(() => {
-    const task = tasks[idx];
-    if (!task) return;
-    goNext(task.id);
-  }, [tasks, idx, goNext]);
+    if (!queue[idx]) return;
+    goNext();
+  }, [queue, idx, goNext]);
 
   useEffect(() => {
-    if (tasks.length === 0) { onDone(); return; }
-  }, [tasks.length, onDone]);
+    if (total === 0) { onDone(); return; }
+  }, [total, onDone]);
 
-  // Focus task card on navigation for screen readers
   useEffect(() => {
     taskRef.current?.focus();
   }, [idx]);
@@ -94,9 +96,9 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
     return () => window.removeEventListener('keydown', handleKey);
   }, [markDone, skip, goBack, pendingKey, dateOptions, pickDate]);
 
-  if (tasks.length === 0) return null;
+  if (total === 0) return null;
 
-  const task = tasks[idx];
+  const task = queue[idx];
   if (!task) return null;
 
   const project = task.projectId ? projects.find(p => p.id === task.projectId) : null;
@@ -107,8 +109,8 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
       <div className="tp-shell">
         <h1 className="tp-sr-heading">Przegląd zadań</h1>
 
-        <div className="tp-counter" aria-label={`Zadanie ${idx + 1} z ${tasks.length}`}>
-          {idx + 1}/{tasks.length}
+        <div className="tp-counter" aria-label={`Zadanie ${idx + 1} z ${total}`}>
+          {idx + 1}/{total}
         </div>
 
         <div
