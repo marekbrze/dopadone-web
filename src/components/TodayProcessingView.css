@@ -1,5 +1,16 @@
 /* ── Today processing ── */
 
+.tp-sr-heading {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .tp-shell {
   flex: 1;
   display: flex;

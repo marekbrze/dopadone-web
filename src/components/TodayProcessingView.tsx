@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Task, Project } from '../types';
 import { addDays, formatPlannedDate, getDateOptions, type DateOption } from './dateStepUtils';
 import './ProcessingView.css';
+import './TodayProcessingView.css';
 
 interface TodayProcessingViewProps {
   tasks: Task[];
@@ -14,12 +15,11 @@ interface TodayProcessingViewProps {
 export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDone }: TodayProcessingViewProps) {
   const [idx, setIdx] = useState(0);
   const [pendingKey, setPendingKey] = useState<string | null>(null);
-  const [history, setHistory] = useState<{ taskId: string; action: string }[]>([]);
+  const taskRef = useRef<HTMLDivElement>(null);
 
   const dateOptions = getDateOptions(today);
 
-  const goNext = useCallback((action: string, taskId: string) => {
-    setHistory(h => [...h, { taskId, action }]);
+  const goNext = useCallback((taskId: string) => {
     setPendingKey(null);
     if (idx + 1 >= tasks.length) {
       onDone();
@@ -41,21 +41,30 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
       plannedDate: opt.date,
       isNext: opt.isNext ? true : false,
     });
-    goNext('date', task.id);
+    goNext(task.id);
   }, [tasks, idx, onUpdateTask, goNext]);
 
   const markDone = useCallback(async () => {
     const task = tasks[idx];
     if (!task) return;
     await onUpdateTask(task.id, { done: true });
-    goNext('done', task.id);
+    goNext(task.id);
   }, [tasks, idx, onUpdateTask, goNext]);
 
   const skip = useCallback(() => {
     const task = tasks[idx];
     if (!task) return;
-    goNext('skip', task.id);
+    goNext(task.id);
   }, [tasks, idx, goNext]);
+
+  useEffect(() => {
+    if (tasks.length === 0) { onDone(); return; }
+  }, [tasks.length, onDone]);
+
+  // Focus task card on navigation for screen readers
+  useEffect(() => {
+    taskRef.current?.focus();
+  }, [idx]);
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -85,10 +94,7 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
     return () => window.removeEventListener('keydown', handleKey);
   }, [markDone, skip, goBack, pendingKey, dateOptions, pickDate]);
 
-  if (tasks.length === 0) {
-    onDone();
-    return null;
-  }
+  if (tasks.length === 0) return null;
 
   const task = tasks[idx];
   if (!task) return null;
@@ -97,16 +103,28 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
   const priorityColors: Record<string, string> = { low: '#5a7a5e', medium: '#a07830', high: '#a33a2a' };
 
   return (
-    <div className="processing-view">
+    <div className="processing-view" role="region" aria-label="Przegląd zadań na dziś">
       <div className="tp-shell">
-        {/* Counter */}
-        <div className="tp-counter">{idx + 1}/{tasks.length}</div>
+        <h1 className="tp-sr-heading">Przegląd zadań</h1>
 
-        {/* Task card */}
-        <div className="tp-task-card">
+        <div className="tp-counter" aria-label={`Zadanie ${idx + 1} z ${tasks.length}`}>
+          {idx + 1}/{tasks.length}
+        </div>
+
+        <div
+          ref={taskRef}
+          className="tp-task-card"
+          tabIndex={-1}
+          role="group"
+          aria-label={`Zadanie: ${task.name}`}
+        >
           <div className="tp-task-name">{task.name}</div>
           <div className="tp-task-meta">
-            {project && <span className="tp-task-project">{project.name}</span>}
+            {project && (
+              <span className="tp-task-project">
+                <span aria-hidden="true">▸ </span>{project.name}
+              </span>
+            )}
             <span className="tp-task-priority" style={{ color: priorityColors[task.priority] }}>
               {task.priority === 'low' ? 'Niski' : task.priority === 'medium' ? 'Średni' : 'Wysoki'}
             </span>
@@ -119,19 +137,22 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
           </div>
         </div>
 
-        {/* Date grid */}
-        <div className="proc-option-step proc-date-step">
+        <div className="proc-option-step proc-date-step" role="group" aria-label="Opcje daty">
           <div className="proc-step-hint">
             Wybierz klawiszem lub klikiem, potwierdź <kbd>↵</kbd>
           </div>
-          <div className="proc-options-grid">
+          <div className="proc-options-grid" role="radiogroup" aria-label="Wybierz datę">
             {dateOptions.map(opt => {
               const hint = opt.date && opt.date !== today && opt.date !== addDays(today, 1)
                 ? formatPlannedDate(opt.date, today) : null;
+              const isSelected = pendingKey === opt.key;
               return (
                 <button
                   key={opt.key}
-                  className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}${opt.isNext ? ' proc-option-next' : ''}`}
+                  className={`proc-option-card${isSelected ? ' highlighted' : ''}${opt.isNext ? ' proc-option-next' : ''}`}
+                  role="radio"
+                  aria-checked={isSelected}
+                  aria-keyshortcuts={opt.key}
                   onMouseEnter={() => setPendingKey(opt.key)}
                   onClick={() => {
                     if (pendingKey === opt.key) {
@@ -143,24 +164,23 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
                 >
                   <span className="proc-option-label">{opt.label}</span>
                   {hint && <span className="proc-option-date-hint">{hint}</span>}
-                  <span className="proc-option-key">{opt.key}</span>
+                  <span className="proc-option-key" aria-hidden="true">{opt.key}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Action buttons */}
-        <div className="tp-actions">
-          <button className="tp-action-btn tp-done-btn" onClick={markDone}>
-            Zakończ <kbd>d</kbd>
+        <div className="tp-actions" role="group" aria-label="Akcje">
+          <button className="tp-action-btn tp-done-btn" onClick={markDone} aria-keyshortcuts="d">
+            Zakończ <kbd aria-hidden="true">d</kbd>
           </button>
-          <button className="tp-action-btn tp-skip-btn" onClick={skip}>
-            Pomiń <kbd>s</kbd>
+          <button className="tp-action-btn tp-skip-btn" onClick={skip} aria-keyshortcuts="s">
+            Pomiń <kbd aria-hidden="true">s</kbd>
           </button>
           {idx > 0 && (
-            <button className="tp-action-btn tp-back-btn" onClick={goBack}>
-              Cofnij <kbd>←</kbd>
+            <button className="tp-action-btn tp-back-btn" onClick={goBack} aria-keyshortcuts="ArrowLeft">
+              Cofnij <kbd aria-hidden="true">←</kbd>
             </button>
           )}
         </div>
