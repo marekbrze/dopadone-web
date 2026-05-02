@@ -35,6 +35,8 @@ interface Props {
   onUpdateNote: (id: string, updates: Partial<ProjectNote>) => Promise<void>;
   onDeleteNote: (id: string) => Promise<void>;
   onAddInboxTask: (name: string) => Promise<string>;
+  todayProcessingCount?: number;
+  onStartTodayProcessing?: () => void;
 }
 
 function toDateString(d: Date): string {
@@ -137,7 +139,7 @@ function snap15(minutes: number): number {
 const EFFORT_ORDER: (Effort | null)[] = ['high', 'medium', 'low', null];
 const EFFORT_LABELS: Record<string, string> = { high: 'Wysoki', medium: 'Średni', low: 'Niski' };
 
-export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask }: Props) {
+export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask, todayProcessingCount = 0, onStartTodayProcessing }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
   const [editingBlock, setEditingBlock] = useState<WorkBlock | null>(null);
@@ -564,6 +566,11 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
             </div>
           </div>
           <div className="today-header-rule" />
+          {todayProcessingCount > 0 && onStartTodayProcessing && (
+            <button className="today-processing-btn" onClick={onStartTodayProcessing}>
+              Przegląd <span className="today-processing-badge">{todayProcessingCount}</span>
+            </button>
+          )}
         </div>
 
         {/* Mobile: current block summary bar */}

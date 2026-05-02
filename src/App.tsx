@@ -16,6 +16,7 @@ import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
 import { ProcessingView } from './components/ProcessingView';
+import { TodayProcessingView } from './components/TodayProcessingView';
 import { ProjectReviewView } from './components/ProjectReviewView';
 import { ProjectNotesPanel } from './components/ProjectNotesPanel';
 import { saveAutoBackup } from './utils/dataPortability';
@@ -56,7 +57,7 @@ export default function App() {
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing' | 'project-review'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing' | 'project-review' | 'today-processing'>('today');
   const [reviewAreaId, setReviewAreaId] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
@@ -325,6 +326,16 @@ export default function App() {
         return true;
       }
       return false;
+    }).length;
+  }, [data]);
+
+  const todayProcessingCount = useMemo(() => {
+    if (!data) return 0;
+    const today = new Date().toISOString().slice(0, 10);
+    return data.tasks.filter(t => {
+      if (t.done) return false;
+      if (!t.plannedDate) return false;
+      return t.plannedDate <= today;
     }).length;
   }, [data]);
 
@@ -1151,6 +1162,8 @@ export default function App() {
           onUpdateNote={updateNote}
           onDeleteNote={deleteNote}
           onAddInboxTask={async name => { const t = await addInboxTask(name); return t.id; }}
+          todayProcessingCount={todayProcessingCount}
+          onStartTodayProcessing={() => setCurrentView('today-processing')}
         />
       )}
 
@@ -1197,6 +1210,20 @@ export default function App() {
           onConvertToProject={convertTaskToProject}
           onCreateLifter={addLifterForProcessing}
           onNavigateToToday={() => setCurrentView('today')}
+        />
+      )}
+
+      {currentView === 'today-processing' && (
+        <TodayProcessingView
+          tasks={data.tasks.filter(t => {
+            if (t.done) return false;
+            if (!t.plannedDate) return false;
+            return t.plannedDate <= new Date().toISOString().slice(0, 10);
+          })}
+          projects={data.projects.filter(p => !p.archived)}
+          today={new Date().toISOString().slice(0, 10)}
+          onUpdateTask={updateTask}
+          onDone={() => setCurrentView('today')}
         />
       )}
 
