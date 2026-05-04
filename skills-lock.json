@@ -21,6 +21,12 @@
       "sourceType": "github",
       "computedHash": "784f0dbb7403b0f00324bce9a112f715342777a0daee7bbb7385f9c6f0a170ea"
     },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "18257101114a8828fecefc41967dd03e297682424242477ac3e74c3588857c89"
+    },
     "responsive-design": {
       "source": "supercent-io/skills-template",
       "sourceType": "github",
