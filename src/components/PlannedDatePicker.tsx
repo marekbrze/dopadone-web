@@ -1,60 +1,30 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import {
+  localDateStr, addDays, formatPlannedDate,
+  getDateOptions, parseDateInput, type DateOption,
+} from './dateStepUtils';
 import './PlannedDatePicker.css';
+
+export { localDateStr, addDays, formatPlannedDate, nextSaturday, nextMonday } from './dateStepUtils';
 
 interface Props {
   date: string | null | undefined;
   isNext?: boolean;
   onChange: (date: string | null, isNext?: boolean) => void;
-  today: string; // "YYYY-MM-DD"
-}
-
-export function localDateStr(d: Date = new Date()): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-export function addDays(dateStr: string, days: number): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + days);
-  return localDateStr(d);
-}
-
-export function nextSaturday(today: string): string {
-  const d = new Date(today + 'T00:00:00');
-  const dow = d.getDay(); // 0=Sun, 6=Sat
-  const daysUntil = (6 - dow + 7) % 7;
-  return addDays(today, daysUntil);
-}
-
-export function nextMonday(today: string): string {
-  const d = new Date(today + 'T00:00:00');
-  const dow = d.getDay();
-  const daysUntil = ((1 - dow + 7) % 7) || 7;
-  return addDays(today, daysUntil);
-}
-
-const MONTHS_SHORT = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
-
-export function formatPlannedDate(date: string, today: string): string {
-  if (date === today) return 'dziś';
-  if (date === addDays(today, 1)) return 'jutro';
-  const d = new Date(date + 'T00:00:00');
-  const todayYear = parseInt(today.slice(0, 4));
-  const day = d.getDate();
-  const month = MONTHS_SHORT[d.getMonth()];
-  if (d.getFullYear() === todayYear) return `${day} ${month}`;
-  return `${day} ${month} ${d.getFullYear()}`;
+  today: string;
 }
 
 export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
   const [open, setOpen] = useState(false);
   const [showCustomInput, setShowCustomInput] = useState(false);
-  const [customDate, setCustomDate] = useState('');
+  const [customText, setCustomText] = useState('');
   const btnRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [dropPos, setDropPos] = useState({ top: 0, left: 0 });
+
+  const dateOptions = getDateOptions(today);
+  const parsedDate = parseDateInput(customText);
 
   const handleOpen = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -65,7 +35,7 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
       setDropPos({ top: rect.bottom + 4, left: dropLeft });
     }
     setShowCustomInput(false);
-    setCustomDate('');
+    setCustomText('');
     setOpen(true);
   };
 
@@ -85,22 +55,27 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
     };
   }, [open]);
 
+  useEffect(() => {
+    if (showCustomInput && open) inputRef.current?.focus();
+  }, [showCustomInput, open]);
+
   const pick = (newDate: string | null, newIsNext?: boolean) => {
     onChange(newDate, newIsNext);
     setOpen(false);
   };
 
-  const options = [
-    { label: 'Dziś', date: today },
-    { label: 'Jutro', date: addDays(today, 1) },
-    { label: 'Weekend', date: nextSaturday(today) },
-    { label: 'Następny tydzień', date: nextMonday(today) },
-    { label: 'Za tydzień', date: addDays(today, 7) },
-    { label: 'Za miesiąc', date: addDays(today, 30) },
-  ];
+  const confirmCustom = () => {
+    if (parsedDate) pick(parsedDate, false);
+  };
 
   const hasDate = date != null && date !== '';
   const isOverdue = hasDate && date! < today;
+
+  const regularOptions = dateOptions.filter(o => !o.isCustom && !o.isNext);
+  const customOption = dateOptions.find(o => o.isCustom)!;
+  const nextOption = dateOptions.find(o => o.isNext)!;
+
+  const NO_HINT_LABELS = new Set(['Dziś', 'Jutro', 'Weekend', 'Następny tydzień']);
 
   return (
     <div className="pdp-root" onClick={e => e.stopPropagation()}>
@@ -120,39 +95,40 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
 
       {open && createPortal(
         <div className="pdp-dropdown" style={{ top: dropPos.top, left: dropPos.left }}>
-          {options.map(opt => (
+          {regularOptions.map(opt => (
             <button
-              key={opt.date}
+              key={opt.key}
               className={`pdp-option${date === opt.date && !isNext ? ' active' : ''}`}
               onClick={() => pick(opt.date, false)}
             >
               <span className="pdp-option-label">{opt.label}</span>
-              {opt.label !== 'Dziś' && opt.label !== 'Jutro' && opt.label !== 'Weekend' && opt.label !== 'Następny tydzień' && (
-                <span className="pdp-option-hint">{formatPlannedDate(opt.date, today)}</span>
+              {!NO_HINT_LABELS.has(opt.label) && (
+                <span className="pdp-option-hint">{formatPlannedDate(opt.date!, today)}</span>
               )}
             </button>
           ))}
           {showCustomInput ? (
             <div className="pdp-custom-row">
               <input
-                type="date"
+                ref={inputRef}
+                type="text"
                 className="pdp-custom-input"
-                value={customDate}
-                autoFocus
-                onChange={e => setCustomDate(e.target.value)}
+                placeholder="RRRR MM DD"
+                value={customText}
+                onChange={e => setCustomText(e.target.value)}
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => {
                   e.stopPropagation();
-                  if (e.key === 'Enter' && customDate) pick(customDate, false);
-                  if (e.key === 'Escape') setShowCustomInput(false);
+                  if (e.key === 'Enter' && parsedDate) confirmCustom();
+                  if (e.key === 'Escape') { setShowCustomInput(false); setCustomText(''); }
                 }}
               />
-              {customDate && (
+              {parsedDate && (
                 <button
                   className="pdp-custom-confirm"
-                  onClick={() => pick(customDate, false)}
+                  onClick={confirmCustom}
                 >
-                  OK
+                  {formatPlannedDate(parsedDate, today)}
                 </button>
               )}
             </div>

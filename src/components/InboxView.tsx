@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Task, Project, Context, Area, Lifter } from '../types';
-import { PlannedDatePicker, localDateStr } from './PlannedDatePicker';
+import { PlannedDatePicker } from './PlannedDatePicker';
+import { localDateStr } from './dateStepUtils';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { ConfirmModal } from './ConfirmModal';
 

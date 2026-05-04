@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Task, Project, Context, TaskDuration, Effort, Area, Lifter } from '../types';
-import { addDays, formatPlannedDate, localDateStr } from './PlannedDatePicker';
-import { getDateOptions as getDateOptionsShared, type DateOption as DateOptionShared } from './dateStepUtils';
+import { PlannedDatePicker } from './PlannedDatePicker';
+import { addDays, formatPlannedDate, localDateStr, getDateOptions as getDateOptionsShared, type DateOption as DateOptionShared, parseDateInput } from './dateStepUtils';
 import { BatteryIcon } from './BatteryIcon';
 import './ProcessingView.css';
 
@@ -123,6 +123,10 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   // Duration / Context step state
   const [pendingOptionKey, setPendingOptionKey] = useState<string | null>(null);
 
+  // Date parser state
+  const [showParser, setShowParser] = useState(false);
+  const [parserText, setParserText] = useState('');
+
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(TIMER_DURATION);
   const timerTaskIdRef = useRef<string | null>(null);
@@ -174,6 +178,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     setProjectCursorIndex(0);
     setPendingOptionKey(null);
     setProjectPanelMode('list');
+    setShowParser(false);
+    setParserText('');
   }, []);
 
   const initPendingFromTask = useCallback((task: Task | null, kind: ProcessingStepKind) => {
@@ -517,7 +523,11 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           setPendingOptionKey(lowerKey);
         }
       } else if (currentStep.kind === 'date') {
-        if (dateOptions.some(o => o.key === lowerKey)) {
+        if (lowerKey === '7') {
+          e.preventDefault();
+          setShowParser(true);
+          setParserText('');
+        } else if (dateOptions.some(o => o.key === lowerKey)) {
           e.preventDefault();
           setPendingOptionKey(lowerKey);
         }
@@ -815,9 +825,20 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               onSelect={setPendingOptionKey}
               onConfirm={() => {
                 const opt = dateOptions.find(o => o.key === pendingOptionKey);
-                if (opt) pickDate(opt);
+                if (opt && !opt.isCustom) pickDate(opt);
+              }}
+              onConfirmCustomDate={(date) => {
+                if (!currentStep) return;
+                onUpdateTask(currentStep.taskId, { plannedDate: date, isNext: false }).then(() => {
+                  markStepCompleted(currentStep.taskId, 'date');
+                  advanceStep(allSteps, currentStepIndex);
+                });
               }}
               onSkip={() => advanceStep(allSteps, currentStepIndex)}
+              showParser={showParser}
+              parserText={parserText}
+              onOpenParser={() => { setShowParser(true); setParserText(''); }}
+              onParserTextChange={setParserText}
             />
           )}
 
@@ -1269,16 +1290,63 @@ interface DateStepPanelProps {
   today: string;
   onSelect: (key: string) => void;
   onConfirm: () => void;
+  onConfirmCustomDate: (date: string) => void;
   onSkip: () => void;
+  showParser: boolean;
+  parserText: string;
+  onOpenParser: () => void;
+  onParserTextChange: (text: string) => void;
 }
 
-function DateStepPanel({ options, pendingKey, today, onSelect, onConfirm, onSkip }: DateStepPanelProps) {
+const NO_HINT_LABELS = new Set(['Dziś', 'Jutro', 'Weekend', 'Następny tydzień']);
+
+function DateStepPanel({ options, pendingKey, today, onSelect, onConfirm, onConfirmCustomDate, onSkip, showParser, parserText, onOpenParser, onParserTextChange }: DateStepPanelProps) {
+  const parserRef = useRef<HTMLInputElement>(null);
+  const parsed = parseDateInput(parserText);
+
+  useEffect(() => {
+    if (showParser) parserRef.current?.focus();
+  }, [showParser]);
+
   return (
     <div className="proc-option-step proc-date-step">
       <div className="proc-step-hint">Wybierz klawiszem lub klikiem, potwierdź <kbd>↵</kbd> · pomiń <kbd>Esc</kbd></div>
       <div className="proc-options-grid">
         {options.map(opt => {
-          const hint = opt.date && opt.date !== today && opt.date !== addDays(today, 1) ? formatPlannedDate(opt.date, today) : null;
+          if (opt.isCustom) {
+            if (showParser) {
+              return (
+                <div key="parser" className="proc-date-parser">
+                  <input
+                    ref={parserRef}
+                    type="text"
+                    className="proc-parser-input"
+                    placeholder="RRRR MM DD"
+                    value={parserText}
+                    onChange={e => onParserTextChange(e.target.value)}
+                    onKeyDown={e => {
+                      e.stopPropagation();
+                      if (e.key === 'Enter' && parsed) onConfirmCustomDate(parsed);
+                      if (e.key === 'Escape') onParserTextChange('');
+                    }}
+                  />
+                  {parsed && <span className="proc-parser-preview">{formatPlannedDate(parsed, today)}</span>}
+                </div>
+              );
+            }
+            return (
+              <button
+                key={opt.key}
+                className={`proc-option-card${pendingKey === opt.key ? ' highlighted' : ''}`}
+                onMouseEnter={() => onSelect(opt.key)}
+                onClick={onOpenParser}
+              >
+                <span className="proc-option-label">{opt.label}</span>
+                <span className="proc-option-key">{opt.key}</span>
+              </button>
+            );
+          }
+          const hint = opt.date && !NO_HINT_LABELS.has(opt.label) ? formatPlannedDate(opt.date, today) : null;
           return (
             <button
               key={opt.key}
