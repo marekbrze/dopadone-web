@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Task, Project } from '../types';
 import { addDays, formatPlannedDate, getDateOptions, type DateOption } from './dateStepUtils';
 import './ProcessingView.css';
@@ -18,7 +18,7 @@ export function TodayProcessingView({ tasks, projects, today, onUpdateTask, onDo
   const taskRef = useRef<HTMLDivElement>(null);
 
   // Freeze task list on mount so DB updates don't shift the array mid-processing
-  const queue = useMemo(() => [...tasks], [tasks]);
+  const [queue] = useState(() => [...tasks]);
   const total = queue.length;
 
   const dateOptions = getDateOptions(today);
