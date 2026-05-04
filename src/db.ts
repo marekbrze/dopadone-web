@@ -1,6 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import dexieCloud from 'dexie-cloud-addon'
-import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, ProjectNote } from './types'
+import type { Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, ProjectNote, DailyPracticeDay } from './types'
 
 const getCloudUrl = (): string | null => {
   const raw = localStorage.getItem('dopadone-cloud-url');
@@ -24,6 +24,7 @@ export class DopadoneDB extends Dexie {
   workBlocks!: EntityTable<WorkBlock, 'id'>
   events!: EntityTable<CalendarEvent, 'id'>
   projectNotes!: EntityTable<ProjectNote, 'id'>
+  dailyPractice!: EntityTable<DailyPracticeDay, 'id'>
 
   constructor() {
     const cloudUrl = getCloudUrl();
@@ -32,6 +33,17 @@ export class DopadoneDB extends Dexie {
 
     if (cloud) {
       // @id: Dexie Cloud generates IDs — required for cross-device sync
+      this.version(8).stores({
+        areas:        '@id, name',
+        lifters:      '@id, areaId',
+        projects:     '@id, areaId, lifterId',
+        tasks:        '@id, projectId, contextId, done',
+        contexts:     '@id, name',
+        workBlocks:   '@id, date',
+        events:       '@id, date',
+        projectNotes: '@id, projectId',
+        dailyPractice: '@id, date',
+      });
       this.version(7).stores({
         areas:        '@id, name',
         lifters:      '@id, areaId',
@@ -103,6 +115,17 @@ export class DopadoneDB extends Dexie {
       });
     } else {
       // Legacy schema for existing local databases
+      this.version(10).stores({
+        areas:         'id, name',
+        lifters:       'id, areaId',
+        projects:      'id, areaId, lifterId',
+        tasks:         'id, projectId, contextId, done',
+        contexts:      'id, name',
+        workBlocks:    'id, date',
+        events:        'id, date',
+        projectNotes:  'id, projectId',
+        dailyPractice: 'id, date',
+      });
       this.version(9).stores({
         areas:        'id, name',
         lifters:      'id, areaId',

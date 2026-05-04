@@ -100,7 +100,7 @@ export async function exportAllData(
     db.projectNotes.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events, projectNotes };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events, projectNotes, dailyPractices: [] };
   const exportData: ExportData = {
     version: 2,
     exportedAt: new Date().toISOString(),
@@ -233,7 +233,7 @@ export async function saveAutoBackup(db: DopadoneDB): Promise<void> {
     db.projectNotes.toArray(),
   ]);
 
-  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events, projectNotes };
+  const data: AppState = { areas, lifters, projects, tasks, contexts, workBlocks, events, projectNotes, dailyPractices: [] };
   const exportData: ExportData = {
     version: 2,
     exportedAt: new Date().toISOString(),

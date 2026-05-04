@@ -106,6 +106,19 @@ export interface ProjectNote {
   order?: number;
 }
 
+export type HabitKey = 'inbox' | 'today' | 'projects';
+
+export interface DailyPracticeDay {
+  id: string; // "YYYY-MM-DD"
+  date: string;
+  inboxDone: boolean;
+  inboxCompletedAt: string | null;
+  todayDone: boolean;
+  todayCompletedAt: string | null;
+  projectsDone: boolean;
+  projectsCompletedAt: string | null;
+}
+
 export interface AppState {
   areas: Area[];
   lifters: Lifter[];
@@ -115,6 +128,7 @@ export interface AppState {
   workBlocks: WorkBlock[];
   events: CalendarEvent[];
   projectNotes: ProjectNote[];
+  dailyPractices: DailyPracticeDay[];
 }
 
 export interface ExportData {

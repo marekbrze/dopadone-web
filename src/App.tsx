@@ -26,6 +26,7 @@ import { useVersionCheck } from './hooks/useVersionCheck';
 import { UpdateBanner } from './components/UpdateBanner';
 import { AmbientSoundWidget } from './components/AmbientSoundWidget';
 import { PlannedDatePicker } from './components/PlannedDatePicker';
+import { DailyPracticeView } from './components/DailyPracticeView';
 import './App.css';
 
 function newId() {
@@ -57,7 +58,7 @@ export default function App() {
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
-  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing' | 'project-review' | 'today-processing'>('today');
+  const [currentView, setCurrentView] = useState<'today' | 'plan' | 'agenda' | 'inbox' | 'processing' | 'project-review' | 'today-processing' | 'daily-practice'>('today');
   const [reviewAreaId, setReviewAreaId] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [dragPayload, setDragPayload] = useState<DragPayload | null>(null);
@@ -124,7 +125,7 @@ export default function App() {
       })
       .catch(err => {
         console.error('Failed to load data:', err);
-        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [], projectNotes: [] });
+        applyInitialData({ areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [], projectNotes: [], dailyPractices: [] });
         setDataInitialized(true);
       });
   }, [applyInitialData]);
@@ -1043,6 +1044,10 @@ export default function App() {
             onClick={() => setCurrentView('agenda')}
             data-tour="agenda"
           >Kalendarz</button>
+          <button
+            className={`view-tab ${currentView === 'daily-practice' ? 'active' : ''}`}
+            onClick={() => setCurrentView('daily-practice')}
+          >Praktyka</button>
         </nav>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <AmbientSoundWidget />
@@ -1086,6 +1091,10 @@ export default function App() {
                 className={`mobile-nav-item ${currentView === 'agenda' ? 'active' : ''}`}
                 onClick={() => { setCurrentView('agenda'); setMobileNavOpen(false); }}
               >Kalendarz</button>
+              <button
+                className={`mobile-nav-item ${currentView === 'daily-practice' ? 'active' : ''}`}
+                onClick={() => { setCurrentView('daily-practice'); setMobileNavOpen(false); }}
+              >Praktyka</button>
             </nav>
           </div>
         </div>
@@ -1241,6 +1250,14 @@ export default function App() {
           onReorderProject={reorderProject}
           onAddProject={addProjectForProcessing}
           onClose={() => { setCurrentView('plan'); setReviewAreaId(null); }}
+        />
+      )}
+
+      {currentView === 'daily-practice' && (
+        <DailyPracticeView
+          tasks={data.tasks}
+          projects={data.projects}
+          dailyPractices={data.dailyPractices}
         />
       )}
 
