@@ -25,6 +25,10 @@
   --accent-soft: #7a6150;
 
   --radius: 1px;
+
+  /* Derived tokens */
+  --surface-hover: var(--surface2);
+  --text-secondary: var(--text-muted);
 }
 
 body {
@@ -206,7 +210,7 @@ body {
 .column-tab.active {
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+  box-shadow: 0 1px 3px rgba(28,23,18,0.10);
 }
 
 .column-body-notes {
@@ -1205,7 +1209,7 @@ body {
 
 .sync-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border: none;
   border-radius: 3px;
   cursor: pointer;
@@ -1593,7 +1597,6 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 2px;
-  box-shadow: 0 2px 8px rgba(28,23,18,.10), 0 4px 16px rgba(28,23,18,.08);
   min-width: 120px;
   padding: 4px 0;
 }
@@ -1984,7 +1987,7 @@ body {
   padding: 0 4px;
   margin-left: 6px;
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border-radius: 8px;
   font-size: 10px;
   font-weight: 600;
@@ -1996,7 +1999,7 @@ body {
   background: var(--accent);
   border: none;
   border-radius: var(--radius);
-  color: #fff;
+  color: var(--surface);
   cursor: pointer;
   font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
   font-size: 10px;
@@ -2101,7 +2104,7 @@ body {
   background: var(--accent);
   border: none;
   border-radius: var(--radius);
-  color: #fff;
+  color: var(--surface);
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -2186,7 +2189,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+  box-shadow: 0 4px 16px rgba(28,23,18,0.25);
   min-width: 200px;
   max-width: 260px;
   display: flex;
@@ -2382,7 +2385,7 @@ body {
     position: fixed;
     inset: 0;
     z-index: 199;
-    background: rgba(0, 0, 0, 0.4);
+    background: rgba(28, 23, 18, 0.4);
     animation: inboxBackdropIn 0.18s ease;
   }
 
@@ -3044,7 +3047,7 @@ body {
 
 .agenda-toggle-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
 }
 
 .agenda-grid-wrap {
@@ -3102,7 +3105,7 @@ body {
 
 .agenda-day-header.today .agenda-day-num {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border-radius: 50%;
   width: 28px;
   height: 28px;
@@ -3158,7 +3161,6 @@ body {
 
 .agenda-block:hover {
   filter: brightness(0.92);
-  box-shadow: 0 2px 6px rgba(28, 23, 18, 0.12);
 }
 
 .agenda-block.dragging {
@@ -3166,7 +3168,6 @@ body {
   opacity: 0.85;
   pointer-events: none;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(28, 23, 18, 0.2);
 }
 
 .agenda-block.drag-ghost {
@@ -3177,7 +3178,6 @@ body {
 .agenda-block.resizing {
   opacity: 0.85;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(28, 23, 18, 0.2);
 }
 
 .resize-handle {
@@ -3500,7 +3500,7 @@ body {
 
 .agenda-grouping-btn.active {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border-color: var(--accent);
 }
 
@@ -3883,7 +3883,7 @@ body {
   font-size: 11px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  font-family: 'Courier New', monospace;
+  font-family: 'IBM Plex Mono', monospace;
   letter-spacing: 0.03em;
   transition: color 1s ease;
 }
@@ -4255,7 +4255,7 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 16px rgba(28,23,18,0.18);
   z-index: 100;
   overflow: hidden;
 }
@@ -4865,7 +4865,7 @@ body {
     border-top: 1px solid var(--border);
     border-radius: 14px 14px 0 0;
     background: var(--surface);
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -4px 24px rgba(28, 23, 18, 0.12);
     animation: agendaSheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -4904,7 +4904,7 @@ body {
     border-top: 1px solid var(--border);
     border-radius: 14px 14px 0 0;
     background: var(--surface);
-    box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 -4px 24px rgba(28, 23, 18, 0.12);
     animation: agendaSheetIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
@@ -4968,7 +4968,7 @@ body {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, 0.35);
+    background: rgba(28, 23, 18, 0.35);
     z-index: 199;
     animation: agendaBackdropIn 0.18s ease;
   }

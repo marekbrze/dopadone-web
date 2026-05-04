@@ -183,7 +183,7 @@ export function OnboardingWizard({ onComplete, onSkip }: Props) {
             <div>
               <div className="onboarding-title" id="onboarding-title">Wybierz swoje obszary życia</div>
               <div className="onboarding-subtitle">
-                Obszary to bardzo wysokopoziomowe kategorie do rozdzielania planowania — np. Dom, Praca, Osobiste. Nie chodzi o szczegóły, tylko o główne sfery życia.
+                Obszary to bardzo wysokopoziomowe kategorie do rozdzielania planowania, np. Dom, Praca, Osobiste. Nie chodzi o szczegóły, tylko o główne sfery życia.
               </div>
             </div>
             <div className="area-chips" role="group" aria-label="Sugestie obszarów">
@@ -429,10 +429,10 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   { selector: '[data-tour="inbox"]', text: 'Zadania bez przypisanego projektu lądują tutaj. Dobry punkt startowy każdego dnia.' },
-  { selector: '[data-tour="today"]', text: 'Podgląd pracy — zadania zaplanowane na dziś i bloki czasowe.' },
-  { selector: '[data-tour="agenda"]', text: 'Planowanie dni — rozkładasz zadania i bloki na kolejne tygodnie.' },
+  { selector: '[data-tour="today"]', text: 'Podgląd pracy: zadania zaplanowane na dziś i bloki czasowe.' },
+  { selector: '[data-tour="agenda"]', text: 'Planowanie dni: rozkładasz zadania i bloki na kolejne tygodnie.' },
   { selector: '[data-tour="plan"]', text: 'Tu organizujesz obszary, projekty i zadania w hierarchii.' },
-  { selector: '[data-tour="settings"]', text: 'Ustawienia — zarządzaj obszarami, kontekstami, kopiami zapasowymi i synchronizacją.' },
+  { selector: '[data-tour="settings"]', text: 'Ustawienia: zarządzaj obszarami, kontekstami, kopiami zapasowymi i synchronizacją.' },
 ];
 
 interface SpotlightProps {

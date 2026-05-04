@@ -62,10 +62,10 @@
   text-align: left;
   background: none;
   border: none;
-  border-left: 2px solid transparent;
+  border-left: 1px solid transparent;
   padding: 8px 14px;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.12s;
   color: var(--text);
 }
 
@@ -249,7 +249,7 @@
 
 .note-save-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--surface);
   border: none;
   border-radius: 4px;
   padding: 5px 14px;
@@ -424,9 +424,10 @@
 }
 
 .note-content .md-blockquote {
-  border-left: 3px solid var(--accent-soft, #a0b4d6);
+  border-left: 1px solid var(--border);
   margin: 4px 0;
-  padding: 2px 10px;
+  padding: 2px 10px 2px 12px;
+  background: var(--surface2);
   color: var(--text-muted);
   font-style: italic;
 }
@@ -448,4 +449,23 @@
 
 .note-content .md-link:hover {
   opacity: 0.75;
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 767px) {
+  .notes-panel {
+    flex-direction: column;
+  }
+
+  .notes-list {
+    width: 100%;
+    max-height: 35vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+  }
+
+  .note-card {
+    border-radius: 2px;
+  }
 }

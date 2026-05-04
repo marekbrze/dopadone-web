@@ -201,7 +201,7 @@ export function ProjectReviewView({
     const item = lifterQueue[lifterIndex];
     const entry: LifterStats = {
       lifterId: item?.lifterId ?? null,
-      name: item?.name ?? '—',
+      name: item?.name ?? '(brak)',
       ...lifterStatsEntry,
       elapsedMs: lifterElapsedMs,
     };
@@ -449,9 +449,9 @@ export function ProjectReviewView({
     return (
       <div className="processing-view">
         <div className="proc-summary">
-          <div className="proc-summary-title">Przegląd — {area?.name ?? ''}</div>
+          <div className="proc-summary-title">Przegląd: {area?.name ?? ''}</div>
           <div className="pr-lifter-header">
-            <span className="pr-lifter-name">{currentLifterItem?.name ?? '—'}</span>
+            <span className="pr-lifter-name">{currentLifterItem?.name ?? '(brak)'}</span>
             <span className="pr-lifter-count">{lifterProjectsCount} {lifterProjectsCount === 1 ? 'projekt' : 'projektów'}</span>
           </div>
           <div className="pr-project-list">
@@ -650,7 +650,7 @@ export function ProjectReviewView({
 
         {allDone && (
           <div className="pr-all-done-hint" role="status">
-            Wszystkie zadania zrobione — rozważ archiwizację <kbd>e</kbd>
+            Wszystkie zadania zrobione, rozważ archiwizację <kbd>e</kbd>
           </div>
         )}
 

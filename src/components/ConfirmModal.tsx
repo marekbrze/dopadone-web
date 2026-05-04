@@ -23,7 +23,7 @@ export function ConfirmModal({ title, message, onConfirm, onCancel }: Props) {
       <div className="modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <span>{title}</span>
-          <button className="modal-close" onClick={onCancel}>✕</button>
+          <button className="modal-close" onClick={onCancel} aria-label="Zamknij">✕</button>
         </div>
         <div className="modal-body">
           <p style={{ margin: 0, lineHeight: 1.5 }}>{message}</p>

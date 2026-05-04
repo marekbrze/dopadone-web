@@ -119,7 +119,7 @@ export function WorkBlockModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+      <div className="modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2>{isEdit ? 'Edytuj blok' : 'Nowy blok'}</h2>
           <button className="modal-close" onClick={onClose} aria-label="Zamknij">✕</button>

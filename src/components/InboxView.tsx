@@ -67,6 +67,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
             placeholder="Dodaj zadanie do Inboxu..."
             value={newTaskName}
             onChange={e => setNewTaskName(e.target.value)}
+            aria-label="Nowe zadanie"
             onKeyDown={e => { if (e.key === 'Enter') handleAdd(); }}
             autoFocus
           />
@@ -75,7 +76,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
 
         <div className="inbox-list">
           {undone.length === 0 && (
-            <p className="inbox-empty">Inbox pusty — dodaj zadania powyżej lub skrótem Cmd+Shift+Spacja</p>
+            <p className="inbox-empty">Inbox pusty. Dodaj zadania powyżej lub skrótem Cmd+Shift+Spacja</p>
           )}
           {undone.map(task => (
             <InboxTaskRow
@@ -190,7 +191,7 @@ function buildInboxGroups(projects: Project[], areas: Area[], lifters: Lifter[])
     if (!group) {
       const area = areas.find(a => a.id === project.areaId);
       const lifter = project.lifterId ? lifters.find(l => l.id === project.lifterId) : null;
-      group = { areaId: project.areaId, areaName: area?.name ?? '—', lifterId: project.lifterId, lifterName: lifter?.name ?? null, projects: [] };
+      group = { areaId: project.areaId, areaName: area?.name ?? '(brak)', lifterId: project.lifterId, lifterName: lifter?.name ?? null, projects: [] };
       groups.push(group);
     }
     group.projects.push(project);
@@ -255,7 +256,7 @@ function ProjectPicker({ projects, areas, lifters, onAssign }: { projects: Proje
                       <div
                         key={p.id}
                         className="inbox-project-option"
-                        onMouseDown={() => { onAssign(p.id); close(); }}
+                        onClick={() => { onAssign(p.id); close(); }}
                       >
                         {p.name}
                       </div>

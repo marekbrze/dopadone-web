@@ -24,10 +24,10 @@ export function ContextsPanel({ contexts, onAdd, onDelete, onClose }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal contexts-panel" onClick={e => e.stopPropagation()}>
+      <div className="modal contexts-panel" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="panel-header">
           <h3>Zarządzaj kontekstami</h3>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
 
         <div className="contexts-list">
@@ -38,7 +38,7 @@ export function ContextsPanel({ contexts, onAdd, onDelete, onClose }: Props) {
             <div key={ctx.id} className="context-row">
               <span className="context-icon">{ctx.icon}</span>
               <span className="context-name">{ctx.name}</span>
-              <button className="delete-btn" onClick={() => onDelete(ctx.id)}>✕</button>
+              <button className="delete-btn" onClick={() => onDelete(ctx.id)} aria-label="Usuń">✕</button>
             </div>
           ))}
         </div>

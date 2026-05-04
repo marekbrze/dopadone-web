@@ -112,7 +112,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     setStartDateError('');
     onUpdate('startDate', date);
     if (date && task.plannedDate && task.plannedDate < date) {
-      setPlannedDateError('Data planowania jest teraz wcześniejsza niż data rozpoczęcia — zaktualizuj ją.');
+      setPlannedDateError('Data planowania jest teraz wcześniejsza niż data rozpoczęcia. Zaktualizuj ją.');
     }
   };
 
@@ -129,7 +129,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     setEndDateError('');
     onUpdate('endDate', date);
     if (date && task.plannedDate && task.plannedDate > date) {
-      setPlannedDateError('Data planowania jest teraz późniejsza niż data zakończenia — zaktualizuj ją.');
+      setPlannedDateError('Data planowania jest teraz późniejsza niż data zakończenia. Zaktualizuj ją.');
     }
   };
 
@@ -157,7 +157,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
     >
       <div className="detail-header">
         <span className="detail-title" id="task-detail-title">Szczegóły zadania</span>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
       </div>
       <div className="task-detail-body">
         <div className="detail-field">
@@ -251,7 +251,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
             value={task.contextId ?? ''}
             onChange={e => onUpdate('contextId', e.target.value || null)}
           >
-            <option value="">— brak kontekstu —</option>
+            <option value="">(brak kontekstu)</option>
             {contexts.map(c => (
               <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
             ))}
@@ -286,6 +286,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
                 className="close-btn"
                 onClick={() => { setStartDateError(''); setPlannedDateError(''); onUpdate('startDate', null); }}
                 title="Wyczyść datę rozpoczęcia"
+                  aria-label="Wyczyść datę"
               >✕</button>
             )}
           </div>
@@ -308,6 +309,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
                 className="close-btn"
                 onClick={() => { setEndDateError(''); setPlannedDateError(''); onUpdate('endDate', null); }}
                 title="Wyczyść datę zakończenia"
+                  aria-label="Wyczyść datę"
               >✕</button>
             )}
           </div>
@@ -323,6 +325,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
                 className="close-btn"
                 onClick={() => onUpdate('isNext', false)}
                 title="Usuń 'następne'"
+                aria-label="Wyczyść"
               >✕</button>
             </div>
           )}
@@ -340,6 +343,7 @@ export function TaskDetailPanel({ task, contexts, project, onUpdate, onDelete, o
                 className="close-btn"
                 onClick={() => { setPlannedDateError(''); onUpdate('plannedDate', null); }}
                 title="Wyczyść datę planowania"
+                  aria-label="Wyczyść datę"
               >✕</button>
             )}
           </div>

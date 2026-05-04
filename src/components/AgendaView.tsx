@@ -599,7 +599,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
         <div className={`agenda-left-panel${mobileTaskDrawerOpen ? ' mobile-open' : ''}`}>
           <div className="agenda-left-panel-mobile-close">
             <span>Wszystkie zadania</span>
-            <button onClick={() => setMobileTaskDrawerOpen(false)}>✕</button>
+            <button onClick={() => setMobileTaskDrawerOpen(false)} aria-label="Zamknij">✕</button>
           </div>
           <div className="agenda-block-panel-header">
             <span className="agenda-block-panel-title">Wszystkie zadania</span>
@@ -610,6 +610,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               placeholder="Szukaj zadania..."
               value={leftPanelSearch}
               onChange={e => setLeftPanelSearch(e.target.value)}
+              aria-label="Szukaj"
             />
           </div>
           <div className="agenda-grouping-switcher">
@@ -849,7 +850,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         top: `${top}px`,
                         height: `${height}px`,
                         background: color + '33',
-                        borderLeft: `3px solid ${color}`,
+                        borderLeft: `1px solid ${color}`,
                       }}
                       onClick={e => {
                         e.stopPropagation();
@@ -901,7 +902,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         top: `${blockDragState.currentMinutes}px`,
                         height: `${height}px`,
                         background: color + '33',
-                        borderLeft: `3px solid ${color}`,
+                        borderLeft: `1px solid ${color}`,
                       }}
                     >
                       <span className="agenda-block-title">{block.title}</span>
@@ -932,7 +933,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         top: `${start}px`,
                         height: `${height}px`,
                         background: EVENT_COLOR + '22',
-                        borderLeft: `3px solid ${EVENT_COLOR}`,
+                        borderLeft: `1px solid ${EVENT_COLOR}`,
                       }}
                       onClick={e => {
                         e.stopPropagation();
@@ -984,7 +985,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                         top: `${eventDragState.currentMinutes}px`,
                         height: `${height}px`,
                         background: EVENT_COLOR + '22',
-                        borderLeft: `3px solid ${EVENT_COLOR}`,
+                        borderLeft: `1px solid ${EVENT_COLOR}`,
                       }}
                     >
                       <span className="agenda-block-title">◈ {event.title}</span>
@@ -1063,7 +1064,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                     key={block.id}
                     data-block-id={block.id}
                     className={`agenda-block${selectedBlockId === block.id ? ' selected' : ''}${isDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
-                    style={{ top: `${top}px`, height: `${height}px`, background: color + '33', borderLeft: `3px solid ${color}` }}
+                    style={{ top: `${top}px`, height: `${height}px`, background: color + '33', borderLeft: `1px solid ${color}` }}
                     onClick={e => {
                       e.stopPropagation();
                       if (dragMovedRef.current) { dragMovedRef.current = false; return; }
@@ -1097,7 +1098,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                     key={event.id}
                     data-event-id={event.id}
                     className={`agenda-block agenda-event${selectedEventId === event.id ? ' selected' : ''}${isEventDragging ? ' dragging' : ''}${isResizing ? ' resizing' : ''}`}
-                    style={{ top: `${start}px`, height: `${height}px`, background: EVENT_COLOR + '22', borderLeft: `3px solid ${EVENT_COLOR}` }}
+                    style={{ top: `${start}px`, height: `${height}px`, background: EVENT_COLOR + '22', borderLeft: `1px solid ${EVENT_COLOR}` }}
                     onClick={e => {
                       e.stopPropagation();
                       if (eventDragMovedRef.current) { eventDragMovedRef.current = false; return; }
@@ -1135,7 +1136,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
           <div className="agenda-block-panel-header">
             <div className="agenda-block-panel-header-top">
               <span className="agenda-block-panel-title">{selectedBlock.title}</span>
-              <button className="agenda-block-panel-close" onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); setMobileDetailSheetOpen(false); }}>✕</button>
+              <button className="agenda-block-panel-close" onClick={() => { setSelectedBlockId(null); setSelectedTaskId(null); setMobileDetailSheetOpen(false); }} aria-label="Zamknij">✕</button>
             </div>
             <div className="agenda-block-panel-actions">
               <button onClick={() => onDuplicate(selectedBlock.id)}>Duplikuj</button>
@@ -1152,6 +1153,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                     placeholder="Dodaj zadanie do bloku..."
                     value={newBlockTaskName}
                     onChange={e => setNewBlockTaskName(e.target.value)}
+                    aria-label="Nowe zadanie"
                     onKeyDown={e => {
                       if (e.key === 'Enter' && newBlockTaskName.trim()) {
                         handleAddNewTaskToBlock(newBlockTaskName.trim());
@@ -1193,6 +1195,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                                 className="agenda-right-task-remove-btn"
                                 onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                 title="Usuń z bloku"
+                                aria-label="Usuń"
                               >✕</button>
                             </div>
                           );
@@ -1225,6 +1228,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                                 className="agenda-right-task-remove-btn"
                                 onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                 title="Usuń z bloku"
+                                aria-label="Usuń"
                               >✕</button>
                             </div>
                           );
@@ -1313,6 +1317,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                               className="block-note-delete"
                               onClick={() => onDeleteNote(note.id)}
                               title="Usuń notatkę"
+                              aria-label="Usuń notatkę"
                             >✕</button>
                           </div>
                         </div>
@@ -1359,7 +1364,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
               <span className="agenda-block-panel-title">◈ {event.title}</span>
               <div className="agenda-block-panel-actions">
                 <button onClick={() => setEditingEvent(event)}>Edytuj</button>
-                <button onClick={() => { setSelectedEventId(null); setMobileDetailSheetOpen(false); }}>✕</button>
+                <button onClick={() => { setSelectedEventId(null); setMobileDetailSheetOpen(false); }} aria-label="Zamknij">✕</button>
               </div>
             </div>
             <div className="agenda-block-panel-body" style={{ padding: 0 }}>

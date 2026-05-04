@@ -265,10 +265,14 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   // Timer: countdown tick
   useEffect(() => {
     if (screen !== 'processing') return;
-    if (timerSeconds <= 0) return;
-    const id = setInterval(() => setTimerSeconds(s => Math.max(0, s - 1)), 1000);
+    const id = setInterval(() => {
+      setTimerSeconds(s => {
+        if (s <= 1) return 0;
+        return s - 1;
+      });
+    }, 1000);
     return () => clearInterval(id);
-  }, [screen, timerSeconds]);
+  }, [screen]);
 
   // Auto-skip date step if the task's project has a future startDate
   useEffect(() => {
@@ -541,7 +545,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
       <div className="processing-view">
         <div className="proc-summary">
           {nothingToDo ? (
-            <div className="proc-all-done">Wszystko gotowe — brak zadań do przetworzenia.</div>
+            <div className="proc-all-done">Wszystko gotowe, brak zadań do przetworzenia.</div>
           ) : (
             <>
               <div className="proc-summary-title">Do przetworzenia</div>
@@ -846,7 +850,7 @@ function buildProjectGroups(projects: Project[], areas: Area[], lifters: Lifter[
     if (!group) {
       const area = areas.find(a => a.id === project.areaId);
       const lifter = project.lifterId ? lifters.find(l => l.id === project.lifterId) : null;
-      group = { areaId: project.areaId, areaName: area?.name ?? '—', lifterId: project.lifterId, lifterName: lifter?.name ?? null, items: [] };
+      group = { areaId: project.areaId, areaName: area?.name ?? '(brak)', lifterId: project.lifterId, lifterName: lifter?.name ?? null, items: [] };
       groups.push(group);
     }
     group.items.push({ project, flatIndex });
@@ -967,7 +971,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
                 value={newProjLifterId ?? ''}
                 onChange={e => setNewProjLifterId(e.target.value || null)}
               >
-                <option value="">— brak —</option>
+                <option value="">(brak)</option>
                 {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
@@ -1051,7 +1055,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
                 value={convLifterId ?? ''}
                 onChange={e => setConvLifterId(e.target.value || null)}
               >
-                <option value="">— brak —</option>
+                <option value="">(brak)</option>
                 {areaLifters.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
               </select>
             </div>
@@ -1127,7 +1131,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
       />
       <div className="proc-project-list" ref={listRef}>
         {groups.length === 0 && !showCreateOption && (
-          <div className="proc-project-empty">Brak projektów — wpisz inną frazę lub pomiń</div>
+          <div className="proc-project-empty">Brak projektów, wpisz inną frazę lub pomiń</div>
         )}
         {groups.map(group => (
           <div key={`${group.areaId}-${group.lifterId ?? ''}`} className="proc-project-group">
@@ -1140,7 +1144,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
                 key={project.id}
                 className={`proc-project-option${flatIndex === cursorIndex ? ' highlighted' : ''}`}
                 onMouseEnter={() => onSelect(flatIndex)}
-                onMouseDown={e => { e.preventDefault(); onConfirm(project.id); }}
+                onClick={() => onConfirm(project.id)}
               >
                 {project.name}
               </div>
@@ -1150,7 +1154,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
         {showCreateOption && (
           <div
             className="proc-project-create"
-            onMouseDown={e => { e.preventDefault(); openNewProject(); }}
+            onClick={() => openNewProject()}
           >
             + Stwórz projekt: „{query}"
           </div>
@@ -1158,7 +1162,7 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
       </div>
       <div className="proc-project-bottom">
         <button className="proc-skip-btn" onClick={onSkip}>
-          Pomiń — zostaw w Inbox <kbd>Esc</kbd>
+          Pomiń, zostaw w Inbox <kbd>Esc</kbd>
         </button>
         <button className="proc-convert-btn" onClick={openConvert}>
           Zamień w projekt

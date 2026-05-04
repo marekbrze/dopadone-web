@@ -289,7 +289,7 @@ export function SettingsModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="settings-modal" onClick={e => e.stopPropagation()}>
+      <div className="settings-modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="settings-mobile-nav">
           <select
             className="settings-mobile-select"
@@ -303,7 +303,7 @@ export function SettingsModal({
             <option value="backup">Kopia zapasowa</option>
             <option value="sync">Synchronizacja</option>
           </select>
-          <button className="settings-mobile-close-btn" onClick={onClose}>✕</button>
+          <button className="settings-mobile-close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
 
         <div className="settings-sidebar">
@@ -356,7 +356,7 @@ export function SettingsModal({
                 : activeCategory === 'backup' ? 'Kopia zapasowa'
                 : 'Synchronizacja'}
             </span>
-            <button className="close-btn" onClick={onClose}>✕</button>
+            <button className="close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
           </div>
           <div className="settings-content-body">
             {activeCategory === 'obszary' && (
@@ -377,12 +377,12 @@ export function SettingsModal({
                         <span className="drag-handle">⠿</span>
                         <span className="settings-area-swatch" style={{ background: area.color }} />
                         <span className="settings-area-name">{area.name}</span>
-                        <button className="delete-btn" onClick={() => onDeleteArea(area.id)}>✕</button>
+                        <button className="delete-btn" onClick={() => onDeleteArea(area.id)} aria-label="Usuń">✕</button>
                       </div>
                       {areaLifters.map(lifter => (
                         <div key={lifter.id} className="settings-lifter-row">
                           <span className="settings-lifter-name">{lifter.name}</span>
-                          <button className="delete-btn" onClick={() => onDeleteLifter(lifter.id)}>✕</button>
+                          <button className="delete-btn" onClick={() => onDeleteLifter(lifter.id)} aria-label="Usuń">✕</button>
                         </div>
                       ))}
                     </div>
@@ -425,7 +425,7 @@ export function SettingsModal({
                     <div key={ctx.id} className="context-row">
                       <span className="context-icon">{ctx.icon}</span>
                       <span className="context-name">{ctx.name}</span>
-                      <button className="delete-btn" onClick={() => onDeleteContext(ctx.id)}>✕</button>
+                      <button className="delete-btn" onClick={() => onDeleteContext(ctx.id)} aria-label="Usuń">✕</button>
                     </div>
                   ))}
                 </div>
@@ -448,6 +448,7 @@ export function SettingsModal({
                       placeholder="Nazwa kontekstu"
                       value={ctxName}
                       onChange={e => setCtxName(e.target.value)}
+                      aria-label="Nazwa kontekstu"
                     />
                     <button type="submit">Dodaj</button>
                   </div>
@@ -613,6 +614,7 @@ export function SettingsModal({
                             type="button"
                             className="delete-btn"
                             onClick={() => onDeleteBlockTemplate?.(tpl.id)}
+                            aria-label="Usuń"
                           >✕</button>
                         </div>
                         <div className="settings-template-filter-chips">
@@ -690,6 +692,7 @@ export function SettingsModal({
                       placeholder="Hasło do pliku"
                       value={exportPassword.trim()}
                       onChange={e => setExportPassword(e.target.value)}
+                      aria-label="Hasło"
                       style={{ marginTop: '8px', width: '200px' }}
                     />
                   )}
@@ -747,7 +750,7 @@ export function SettingsModal({
                     }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
                         <h3 style={{ margin: 0, fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Import danych</h3>
-                        <button onClick={resetImport} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
+                        <button onClick={resetImport} aria-label="Zamknij" style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>✕</button>
                       </div>
 
                       <p style={{ fontSize: '0.9em', opacity: 0.8, marginBottom: '12px' }}>
@@ -766,6 +769,7 @@ export function SettingsModal({
                               placeholder="Hasło"
                               value={importPassword}
                               onChange={e => setImportPassword(e.target.value)}
+                              aria-label="Hasło"
                               style={{ flex: 1 }}
                             />
                             <button className="sync-btn" onClick={handleDecryptImport}>
@@ -890,6 +894,7 @@ export function SettingsModal({
                     placeholder="https://xxx.dexie.cloud"
                     value={urlDraft}
                     onChange={e => { setUrlDraft(e.target.value); setUrlError(null); }}
+                    aria-label="Adres URL"
                     style={{ flex: 1, minWidth: '200px' }}
                   />
                   <button className="sync-btn" onClick={handleSaveUrl}>
@@ -926,6 +931,7 @@ export function SettingsModal({
                               placeholder="Email"
                               value={syncEmail}
                               onChange={e => setSyncEmail(e.target.value)}
+                              aria-label="Email"
                               style={{ flex: 1 }}
                             />
                             <button className="sync-btn" onClick={handleLogin}>
@@ -947,6 +953,7 @@ export function SettingsModal({
                                 placeholder="Kod OTP"
                                 value={syncOtp}
                                 onChange={e => setSyncOtp(e.target.value)}
+                                aria-label="Kod weryfikacyjny"
                                 style={{ flex: 1 }}
                               />
                               <button

@@ -44,7 +44,7 @@ export function ItemDetailPanel({ title, name, onRename, onDelete, onClose }: Pr
     >
       <div className="detail-header">
         <span className="detail-title" id="item-detail-title">{title}</span>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
       </div>
       <div className="task-detail-body">
         <div className="detail-field">

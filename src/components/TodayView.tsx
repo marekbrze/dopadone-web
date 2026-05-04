@@ -139,6 +139,18 @@ function snap15(minutes: number): number {
 const EFFORT_ORDER: (Effort | null)[] = ['high', 'medium', 'low', null];
 const EFFORT_LABELS: Record<string, string> = { high: 'Wysoki', medium: 'Średni', low: 'Niski' };
 
+function Clock() {
+  const [time, setTime] = useState(() => new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const hh = String(time.getHours()).padStart(2, '0');
+  const mm = String(time.getMinutes()).padStart(2, '0');
+  const ss = String(time.getSeconds()).padStart(2, '0');
+  return <><span className="today-clock-hm">{hh}:{mm}</span><span className="today-clock-sep">:</span><span className="today-clock-ss">{ss}</span></>;
+}
+
 export function TodayView({ areas, lifters, projects, tasks, contexts, workBlocks, events, onUpdateTask, onDeleteTask, onCompleteWithNextAction, onSplitTask, onAddEvent, onUpdateEvent, onDeleteEvent, onAddEventTask, onAddWorkBlock, onUpdateWorkBlock, onDeleteWorkBlock, onDuplicateWorkBlock, blockTemplates = [], notes, onAddNote, onUpdateNote, onDeleteNote, onAddInboxTask, todayProcessingCount = 0, onStartTodayProcessing }: Props) {
   const [now, setNow] = useState(() => new Date());
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
@@ -198,7 +210,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const touchStartRef = useRef<{ y: number; minutes: number } | null>(null);
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 1_000);
+    const id = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(id);
   }, []);
 
@@ -456,10 +468,6 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     year: 'numeric',
   });
 
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const ss = String(now.getSeconds()).padStart(2, '0');
-
   const nextBlock = currentBlock === null
     ? todayBlocks.find(b => b.startMinutes > nowMinutes)
     : null;
@@ -560,9 +568,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           <div className="today-header-left">
             <div className="today-date-line">{dateLabel}</div>
             <div className="today-clock">
-              <span className="today-clock-hm">{hh}:{mm}</span>
-              <span className="today-clock-sep">:</span>
-              <span className="today-clock-ss">{ss}</span>
+              <Clock />
             </div>
           </div>
           <div className="today-header-rule" />
@@ -608,7 +614,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           <aside className={`today-agenda${mobileAgendaOpen ? ' mobile-open' : ''}`} style={{ width: agendaWidth }}>
             <div className="today-agenda-mobile-close">
               <span>Harmonogram dnia</span>
-              <button onClick={() => setMobileAgendaOpen(false)}>✕</button>
+              <button onClick={() => setMobileAgendaOpen(false)} aria-label="Zamknij">✕</button>
             </div>
             <div className="today-agenda-heading">
               Harmonogram dnia
@@ -788,7 +794,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           top: `${top}px`,
                           height: `${height}px`,
                           background: color + '33',
-                          borderLeft: `3px solid ${color}`,
+                          borderLeft: `1px solid ${color}`,
                         }}
                         onClick={() => {
                           if (dragMovedRef.current) { dragMovedRef.current = false; return; }
@@ -841,7 +847,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                           top: `${start}px`,
                           height: `${height}px`,
                           background: EVENT_COLOR + '22',
-                          borderLeft: `3px solid ${EVENT_COLOR}`,
+                          borderLeft: `1px solid ${EVENT_COLOR}`,
                         }}
                         onClick={() => {
                           if (eventDragMovedRef.current) { eventDragMovedRef.current = false; return; }
@@ -1011,6 +1017,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                 className="today-task-remove-btn"
                                 onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                 title="Usuń z bloku"
+                                aria-label="Usuń zadanie"
                               >✕</button>
                             )}
                           </div>
@@ -1045,6 +1052,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                         className="today-task-remove-btn"
                                         onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                         title="Usuń z bloku"
+                                        aria-label="Usuń zadanie"
                                       >✕</button>
                                     )}
                                   </div>
@@ -1082,6 +1090,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                     className="today-task-remove-btn"
                                     onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                     title="Usuń z bloku"
+                                    aria-label="Usuń zadanie"
                                   >✕</button>
                                 )}
                               </div>
@@ -1117,6 +1126,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                     className="today-task-remove-btn"
                                     onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                     title="Usuń z bloku"
+                                    aria-label="Usuń zadanie"
                                   >✕</button>
                                 )}
                               </div>
@@ -1152,6 +1162,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                     className="today-task-remove-btn"
                                     onClick={e => { e.stopPropagation(); handleRemoveTaskFromBlock(task.id); }}
                                     title="Usuń z bloku"
+                                    aria-label="Usuń zadanie"
                                   >✕</button>
                                 )}
                               </div>
@@ -1183,6 +1194,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                                     className="block-note-delete"
                                     onClick={() => onDeleteNote(note.id)}
                                     title="Usuń notatkę"
+                                    aria-label="Usuń notatkę"
                                   >✕</button>
                                 </div>
                               </div>
@@ -1258,6 +1270,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                     placeholder="Dodaj zadanie do Inboxu..."
                     value={newPlannedTaskName}
                     onChange={e => setNewPlannedTaskName(e.target.value)}
+                    aria-label="Nowe zadanie"
                     onKeyDown={e => { if (e.key === 'Enter') handleAddPlannedTask(); }}
                   />
                   <button

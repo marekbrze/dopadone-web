@@ -249,6 +249,7 @@ export function EventForm(props: Props) {
                     ep.onUpdate({ endDate: null });
                   }}
                   title="Usuń datę końcową"
+                  aria-label="Wyczyść datę"
                 >×</button>
               )}
             </div>
@@ -311,6 +312,7 @@ export function EventForm(props: Props) {
                 className="event-detail-clear-btn"
                 onClick={() => setEndDate(null)}
                 title="Usuń datę końcową"
+                aria-label="Wyczyść datę"
               >×</button>
             )}
           </div>
@@ -349,6 +351,7 @@ export function EventForm(props: Props) {
                   placeholder="Dodaj action point…"
                   value={newTaskName}
                   onChange={e => setNewTaskName(e.target.value)}
+                  aria-label="Nowy punkt"
                   onKeyDown={e => {
                     if (e.key === 'Enter') { handleAddInlineTask(); }
                   }}
@@ -396,6 +399,7 @@ export function EventForm(props: Props) {
                 type="button"
                 className="event-detail-clear-btn"
                 onClick={() => handleRemoveInitialTask(i)}
+                aria-label="Usuń zadanie"
               >×</button>
             </div>
           ))}
@@ -405,6 +409,7 @@ export function EventForm(props: Props) {
               placeholder="Dodaj action point…"
               value={newTaskName}
               onChange={e => setNewTaskName(e.target.value)}
+              aria-label="Nowy punkt"
               onKeyDown={e => {
                 if (e.key === 'Enter') { e.preventDefault(); handleAddInitialTask(); }
               }}
@@ -535,10 +540,10 @@ export function EventFormModal(props: Omit<CreateProps, 'presentation'> | (Omit<
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()} style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}>
         <div className="modal-header">
           <h2>{headerTitle}</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
         {props.mode === 'create' ? (
           <EventForm {...props} presentation="modal" />

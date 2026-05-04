@@ -62,7 +62,7 @@ export function SplitTaskModal({ taskName, onConfirm, onClose }: Props) {
       <div className="modal" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-header">
           <span>Rozbij zadanie</span>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
         <div className="modal-body">
           <div className="form-group">

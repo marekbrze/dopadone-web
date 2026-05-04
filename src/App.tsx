@@ -1004,11 +1004,11 @@ export default function App() {
     <div className="app">
       {updateAvailable && <UpdateBanner />}
       <header className="app-header">
-        <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu">
+        <button className="hamburger-btn" onClick={() => setMobileNavOpen(true)} aria-label="Menu" aria-expanded={mobileNavOpen} aria-controls="mobile-nav">
           <span /><span /><span />
         </button>
         <div className="logo">Dopadone</div>
-        <div className="view-tabs">
+        <nav className="view-tabs" aria-label="Widoki główne">
           <button
             className={`view-tab ${currentView === 'today' ? 'active' : ''}`}
             onClick={() => setCurrentView('today')}
@@ -1043,7 +1043,7 @@ export default function App() {
             onClick={() => setCurrentView('agenda')}
             data-tour="agenda"
           >Kalendarz</button>
-        </div>
+        </nav>
         <button className="quick-add-btn" onClick={() => setModal('inbox-add')} title="Dodaj zadanie do Inboxu (Cmd+Shift+Spacja)">+ Zadanie</button>
         <AmbientSoundWidget />
         <button className="settings-btn" onClick={() => setModal('settings')} title="Ustawienia" data-tour="settings">
@@ -1052,9 +1052,9 @@ export default function App() {
       </header>
 
       {mobileNavOpen && (
-        <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)}>
+        <div className="mobile-nav-overlay" onClick={() => setMobileNavOpen(false)} role="dialog" aria-modal="true" id="mobile-nav">
           <div className="mobile-nav-panel" onClick={e => e.stopPropagation()}>
-            <button className="mobile-nav-close" onClick={() => setMobileNavOpen(false)}>✕</button>
+            <button className="mobile-nav-close" onClick={() => setMobileNavOpen(false)} aria-label="Zamknij nawigację">✕</button>
             <nav className="mobile-nav-items">
               <button
                 className={`mobile-nav-item ${currentView === 'today' ? 'active' : ''}`}
@@ -1264,7 +1264,7 @@ export default function App() {
             onKeyDown={e => handleColumnKeydown(e, 'lifters')}
           >
             <h2 id="column-header-lifters">Podobszary</h2>
-            <button onClick={e => { e.stopPropagation(); setModal('lifter'); }}>+</button>
+            <button aria-label="Dodaj obszar" onClick={e => { e.stopPropagation(); setModal('lifter'); }}>+</button>
           </div>
           <div
             className="column-body"
@@ -1319,7 +1319,7 @@ export default function App() {
           >
             <h2 id="column-header-projects">Projekty</h2>
             <div className="header-actions">
-              <button onClick={e => { e.stopPropagation(); setModal('project'); }}>+</button>
+              <button aria-label="Dodaj projekt" onClick={e => { e.stopPropagation(); setModal('project'); }}>+</button>
             </div>
           </div>
           <div
@@ -1398,6 +1398,7 @@ export default function App() {
                   <input
                     className="task-quick-add-input"
                     type="text"
+                    aria-label="Nowe zadanie"
                     placeholder="Dodaj zadanie..."
                     value={quickAddTaskName}
                     onChange={e => setQuickAddTaskName(e.target.value)}

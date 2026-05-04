@@ -258,7 +258,7 @@
 }
 .pr-confirm-yes {
   background: #a33a2a;
-  color: #fff;
+  color: var(--surface);
   border-color: #a33a2a !important;
 }
 .pr-confirm-no {
@@ -500,4 +500,46 @@
 }
 .project-item .pr-checkbox.checked {
   color: var(--accent);
+}
+
+/* ── Responsive ── */
+
+@media (max-width: 767px) {
+  .pr-layout {
+    padding: 0 12px 16px;
+  }
+
+  .pr-project-list {
+    max-width: 100%;
+  }
+
+  .pr-top-bar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .pr-breadcrumb {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .pr-action-bar {
+    flex-wrap: wrap;
+  }
+
+  .pr-action-btn {
+    padding: 10px 14px;
+  }
+
+  .pr-transition {
+    padding: 16px;
+  }
+
+  .pr-lifter-stats {
+    max-width: 100%;
+  }
+
+  .pr-total-stats {
+    max-width: 100%;
+  }
 }

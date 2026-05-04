@@ -132,7 +132,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
     >
       <div className="detail-header">
         <span className="detail-title" id="project-detail-title">Projekt</span>
-        <button className="close-btn" onClick={onClose}>✕</button>
+        <button className="close-btn" onClick={onClose} aria-label="Zamknij">✕</button>
       </div>
       <div className="task-detail-body">
         <div className="detail-field">
@@ -156,7 +156,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
             value={project.lifterId ?? ''}
             onChange={e => onMoveToLifter(e.target.value || null)}
           >
-            <option value="">— brak —</option>
+            <option value="">(brak)</option>
             {lifters.map(l => (
               <option key={l.id} value={l.id}>{l.name}</option>
             ))}
@@ -170,7 +170,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
               value={startYear}
               onChange={e => handleYearChange(e.target.value)}
             >
-              <option value="">— rok —</option>
+              <option value="">(rok)</option>
               {years.map(y => (
                 <option key={y} value={String(y)}>{y}</option>
               ))}
@@ -180,7 +180,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
               onChange={e => handleMonthChange(e.target.value)}
               disabled={!startYear}
             >
-              <option value="">— miesiąc —</option>
+              <option value="">(miesiąc)</option>
               {MONTHS.map((m, i) => (
                 <option key={i} value={String(i + 1).padStart(2, '0')}>{m}</option>
               ))}
@@ -190,7 +190,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
               onChange={e => handleDayChange(e.target.value)}
               disabled={!startMonth}
             >
-              <option value="">— dzień —</option>
+              <option value="">(dzień)</option>
               {days.map(d => (
                 <option key={d} value={d}>{parseInt(d)}</option>
               ))}
@@ -203,6 +203,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
                   onUpdate({ startDate: null });
                 }}
                 title="Wyczyść datę rozpoczęcia"
+                aria-label="Wyczyść"
               >✕</button>
             )}
           </div>
@@ -222,6 +223,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
                 className="close-btn"
                 onClick={() => onUpdate({ endDate: null })}
                 title="Wyczyść datę zakończenia"
+                aria-label="Wyczyść"
               >✕</button>
             )}
           </div>

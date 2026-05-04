@@ -20,7 +20,7 @@ export function AddItemModal({ title, placeholder, onAdd, onClose }: Props) {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <h3>{title}</h3>
         <form onSubmit={handleSubmit}>
           <input
@@ -29,6 +29,7 @@ export function AddItemModal({ title, placeholder, onAdd, onClose }: Props) {
             placeholder={placeholder}
             value={name}
             onChange={e => setName(e.target.value)}
+            aria-label="Nazwa elementu"
           />
           <div className="modal-actions">
             <button type="submit">Dodaj</button>

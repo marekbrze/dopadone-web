@@ -58,3 +58,19 @@
   text-overflow: ellipsis;
   max-width: 180px;
 }
+
+/* ── Responsive ── */
+
+@media (max-width: 767px) {
+  .active-event-body {
+    flex-direction: column;
+  }
+
+  .active-event-col-action-points {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border-light);
+    padding: 12px 14px 16px;
+    max-height: 40vh;
+  }
+}

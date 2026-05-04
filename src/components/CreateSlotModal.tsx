@@ -128,12 +128,14 @@ export function CreateSlotModal({
     <div className="modal-overlay" onClick={onClose}>
       <div
         className="modal"
+        role="dialog"
+        aria-modal="true"
         onClick={e => e.stopPropagation()}
         style={{ maxWidth: 420, maxHeight: 'calc(100vh - 120px)', overflowY: 'auto' }}
       >
         <div className="modal-header">
           <h2>Nowy slot</h2>
-          <button className="modal-close" onClick={onClose}>✕</button>
+          <button className="modal-close" onClick={onClose} aria-label="Zamknij">✕</button>
         </div>
 
         {tab === 'block' && (

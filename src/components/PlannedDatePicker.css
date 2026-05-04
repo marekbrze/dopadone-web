@@ -59,7 +59,7 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 3px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.14), 0 1px 4px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px rgba(28, 23, 18, 0.14), 0 1px 4px rgba(28, 23, 18, 0.08);
   min-width: 170px;
   overflow: hidden;
   font-family: 'IBM Plex Sans', sans-serif;
@@ -171,7 +171,7 @@
   font-size: 11px;
   padding: 3px 8px;
   background: var(--accent);
-  color: white;
+  color: var(--surface);
   border: none;
   border-radius: 2px;
   cursor: pointer;

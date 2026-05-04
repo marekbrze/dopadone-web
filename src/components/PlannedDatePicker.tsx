@@ -124,7 +124,7 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
             <button
               key={opt.date}
               className={`pdp-option${date === opt.date && !isNext ? ' active' : ''}`}
-              onMouseDown={e => { e.preventDefault(); pick(opt.date, false); }}
+              onClick={() => pick(opt.date, false)}
             >
               <span className="pdp-option-label">{opt.label}</span>
               {opt.label !== 'Dziś' && opt.label !== 'Jutro' && opt.label !== 'Weekend' && opt.label !== 'Następny tydzień' && (
@@ -150,7 +150,7 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
               {customDate && (
                 <button
                   className="pdp-custom-confirm"
-                  onMouseDown={e => { e.preventDefault(); pick(customDate, false); }}
+                  onClick={() => pick(customDate, false)}
                 >
                   OK
                 </button>
@@ -159,21 +159,21 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
           ) : (
             <button
               className="pdp-option pdp-option-other"
-              onMouseDown={e => { e.preventDefault(); setShowCustomInput(true); }}
+              onClick={() => setShowCustomInput(true)}
             >
               Inna data…
             </button>
           )}
           <button
             className={`pdp-option pdp-option-next${isNext ? ' active' : ''}`}
-            onMouseDown={e => { e.preventDefault(); pick(null, true); }}
+            onClick={() => pick(null, true)}
           >
             Następne / Dowolnie
           </button>
           {(hasDate || isNext) && (
             <button
               className="pdp-option pdp-option-remove"
-              onMouseDown={e => { e.preventDefault(); pick(null, false); }}
+              onClick={() => pick(null, false)}
             >
               {isNext ? 'Usuń "następne"' : 'Usuń datę'}
             </button>
