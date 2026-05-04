@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Task, Project } from '../types';
-import { addDays, formatPlannedDate, getDateOptions, parseDateInput, type DateOption } from './dateStepUtils';
+import { formatPlannedDate, getDateOptions, parseDateInput, type DateOption } from './dateStepUtils';
 import './ProcessingView.css';
 import './TodayProcessingView.css';
 

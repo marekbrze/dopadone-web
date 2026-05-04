@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  localDateStr, addDays, formatPlannedDate,
-  getDateOptions, parseDateInput, type DateOption,
+  formatPlannedDate,
+  getDateOptions, parseDateInput,
 } from './dateStepUtils';
 import './PlannedDatePicker.css';
 
@@ -72,8 +72,6 @@ export function PlannedDatePicker({ date, isNext, onChange, today }: Props) {
   const isOverdue = hasDate && date! < today;
 
   const regularOptions = dateOptions.filter(o => !o.isCustom && !o.isNext);
-  const customOption = dateOptions.find(o => o.isCustom)!;
-  const nextOption = dateOptions.find(o => o.isNext)!;
 
   const NO_HINT_LABELS = new Set(['Dziś', 'Jutro', 'Weekend', 'Następny tydzień']);
 

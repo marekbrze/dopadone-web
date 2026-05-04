@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Task, Project, Context, TaskDuration, Effort, Area, Lifter } from '../types';
-import { PlannedDatePicker } from './PlannedDatePicker';
-import { addDays, formatPlannedDate, localDateStr, getDateOptions as getDateOptionsShared, type DateOption as DateOptionShared, parseDateInput } from './dateStepUtils';
+import { formatPlannedDate, localDateStr, getDateOptions as getDateOptionsShared, type DateOption as DateOptionShared, parseDateInput } from './dateStepUtils';
 import { BatteryIcon } from './BatteryIcon';
 import './ProcessingView.css';
 
