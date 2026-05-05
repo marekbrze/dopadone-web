@@ -354,10 +354,6 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     ? getMatchingDoneTasks(displayBlock, tasks, projects)
     : [];
 
-  const blockTasksTotalDuration = blockTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
-  const displayBlockDuration = displayBlock ? displayBlock.endMinutes - displayBlock.startMinutes : 0;
-  const blockDurationOverflow = blockTasksTotalDuration > 0 && blockTasksTotalDuration > displayBlockDuration;
-
   const isCurrentlyActive = displayBlock?.id === currentBlock?.id;
   const nowSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
   const remainingSeconds = isCurrentlyActive && displayBlock
@@ -992,11 +988,6 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             {blockDoneTasks.length}/{blockUndoneTasks.length + blockDoneTasks.length}
                           </span>
                         </div>
-                        {blockDurationOverflow && (
-                          <div className="block-duration-warning">
-                            ⚠ Suma czasów ({blockTasksTotalDuration >= 60 ? `${Math.floor(blockTasksTotalDuration / 60)}h${blockTasksTotalDuration % 60 > 0 ? ` ${blockTasksTotalDuration % 60}m` : ''}` : `${blockTasksTotalDuration}m`}) przekracza blok ({displayBlockDuration}m)
-                          </div>
-                        )}
 {taskGrouping === 'none' && blockUndoneTasks.map(task => (
                           <div
                             key={task.id}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import type { Task, Project, Context, TaskDuration, Effort, Area, Lifter } from '../types';
+import type { Task, Project, Context, Effort, Area, Lifter } from '../types';
 import { formatPlannedDate, localDateStr, getDateOptions as getDateOptionsShared, type DateOption as DateOptionShared, parseDateInput } from './dateStepUtils';
 import { BatteryIcon } from './BatteryIcon';
 import './ProcessingView.css';
@@ -20,24 +20,13 @@ interface ProcessingViewProps {
 
 type ProjectPanelMode = 'list' | 'new-project' | 'convert';
 
-type ProcessingStepKind = 'project' | 'duration' | 'energy' | 'context' | 'date';
+type ProcessingStepKind = 'project' | 'energy' | 'context' | 'date';
 type ProcessingScreen = 'summary' | 'processing' | 'done';
 
 interface ProcessingStep {
   taskId: string;
   kind: ProcessingStepKind;
 }
-
-const DURATION_OPTIONS: { key: string; value: TaskDuration; label: string }[] = [
-  { key: '1', value: 5,   label: '5m' },
-  { key: '2', value: 10,  label: '10m' },
-  { key: '3', value: 15,  label: '15m' },
-  { key: '4', value: 25,  label: '25m' },
-  { key: '5', value: 45,  label: '45m' },
-  { key: '6', value: 60,  label: '1h' },
-  { key: '7', value: 90,  label: '1,5h' },
-  { key: '8', value: 120, label: '2h' },
-];
 
 const ENERGY_OPTIONS: { key: string; value: Effort; label: string; color: string }[] = [
   { key: '1', value: 'low',    label: 'Niski',   color: '#5a7a5e' },
@@ -65,7 +54,6 @@ function buildSession(tasks: Task[], projects: Project[], today: string): { sess
   const eligible = tasks.filter(t =>
     !t.done && (
       t.projectId === null ||
-      t.duration == null ||
       t.effort == null ||
       t.contextId === null ||
       needsDateStep(t, projects, today)
@@ -80,18 +68,12 @@ function buildSession(tasks: Task[], projects: Project[], today: string): { sess
   const allSteps: ProcessingStep[] = [];
   for (const task of inboxFirst) {
     if (task.projectId === null) allSteps.push({ taskId: task.id, kind: 'project' });
-    if (task.duration == null)   allSteps.push({ taskId: task.id, kind: 'duration' });
     if (task.effort == null)     allSteps.push({ taskId: task.id, kind: 'energy' });
     if (task.contextId === null) allSteps.push({ taskId: task.id, kind: 'context' });
     if (needsDateStep(task, projects, today)) allSteps.push({ taskId: task.id, kind: 'date' });
   }
 
   return { sessionTaskIds, allSteps };
-}
-
-function durationKeyForValue(value: TaskDuration | null | undefined): string | null {
-  if (value == null) return null;
-  return DURATION_OPTIONS.find(o => o.value === value)?.key ?? null;
 }
 
 function energyKeyForValue(value: Effort | null | undefined): string | null {
@@ -138,14 +120,13 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
 
   // Summary stats (live from props)
   const inboxCount = useMemo(() => tasks.filter(t => !t.done && t.projectId === null).length, [tasks]);
-  const noDurationCount = useMemo(() => tasks.filter(t => !t.done && t.duration == null).length, [tasks]);
   const noEnergyCount = useMemo(() => tasks.filter(t => !t.done && t.effort == null).length, [tasks]);
   const noContextCount = useMemo(() => tasks.filter(t => !t.done && t.contextId === null).length, [tasks]);
   const noDateCount = useMemo(
     () => tasks.filter(t => !t.done && needsDateStep(t, projects, today)).length,
     [tasks, projects, today]
   );
-  const nothingToDo = inboxCount === 0 && noDurationCount === 0 && noEnergyCount === 0 && noContextCount === 0 && noDateCount === 0;
+  const nothingToDo = inboxCount === 0 && noEnergyCount === 0 && noContextCount === 0 && noDateCount === 0;
 
   const currentStep = allSteps[currentStepIndex] ?? null;
   const currentTask = useMemo(
@@ -183,9 +164,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
 
   const initPendingFromTask = useCallback((task: Task | null, kind: ProcessingStepKind) => {
     if (!task) return;
-    if (kind === 'duration') {
-      setPendingOptionKey(durationKeyForValue(task.duration));
-    } else if (kind === 'energy') {
+    if (kind === 'energy') {
       setPendingOptionKey(energyKeyForValue(task.effort));
     } else if (kind === 'context') {
       setPendingOptionKey(contextKeyForId(task.contextId, contexts));
@@ -448,7 +427,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
         return;
       }
 
-      // Duration, Context or Date step
+      // Energy, Context or Date step
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
 
@@ -471,15 +450,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
         e.preventDefault();
         if (pendingOptionKey === null) return;
 
-        if (currentStep.kind === 'duration') {
-          const opt = DURATION_OPTIONS.find(o => o.key === pendingOptionKey);
-          if (opt) {
-            onUpdateTask(currentStep.taskId, { duration: opt.value }).then(() => {
-              markStepCompleted(currentStep.taskId, 'duration');
-              advanceStep(allSteps, currentStepIndex);
-            });
-          }
-        } else if (currentStep.kind === 'energy') {
+        if (currentStep.kind === 'energy') {
           const opt = ENERGY_OPTIONS.find(o => o.key === pendingOptionKey);
           if (opt) {
             onUpdateTask(currentStep.taskId, { effort: opt.value }).then(() => {
@@ -505,12 +476,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
 
       // Option key selection
       const lowerKey = e.key.toLowerCase();
-      if (currentStep.kind === 'duration') {
-        if (DURATION_OPTIONS.some(o => o.key === lowerKey)) {
-          e.preventDefault();
-          setPendingOptionKey(lowerKey);
-        }
-      } else if (currentStep.kind === 'energy') {
+      if (currentStep.kind === 'energy') {
         if (ENERGY_OPTIONS.some(o => o.key === lowerKey)) {
           e.preventDefault();
           setPendingOptionKey(lowerKey);
@@ -563,10 +529,6 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
                   <div className="proc-stat-number">{inboxCount}</div>
                   <div className="proc-stat-label">Inbox</div>
                 </div>
-                <div className={`proc-stat-card${noDurationCount === 0 ? ' zero' : ''}`}>
-                  <div className="proc-stat-number">{noDurationCount}</div>
-                  <div className="proc-stat-label">Bez czasu</div>
-                </div>
                 <div className={`proc-stat-card${noEnergyCount === 0 ? ' zero' : ''}`}>
                   <div className="proc-stat-number">{noEnergyCount}</div>
                   <div className="proc-stat-label">Bez energii</div>
@@ -612,8 +574,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   if (!currentTask || !currentStep) return null;
 
   const taskStepsInSession = allSteps.filter(s => s.taskId === currentStep.taskId);
-  const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', duration: 'Czas', energy: 'Energia', context: 'Kontekst', date: 'Data' };
-  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', duration: 'Czas', energy: 'Energia', context: 'Kontekst', date: 'Data' };
+  const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', energy: 'Energia', context: 'Kontekst', date: 'Data' };
+  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', energy: 'Energia', context: 'Kontekst', date: 'Data' };
 
   const doneTaskCount = sessionTaskIds.filter(id => isTaskFullyProcessed(id, allSteps, completedSteps)).length;
   const progressPct = sessionTaskIds.length > 0 ? (doneTaskCount / sessionTaskIds.length) * 100 : 0;
@@ -749,24 +711,6 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               taskName={currentTask.name}
               mode={projectPanelMode}
               onModeChange={setProjectPanelMode}
-            />
-          )}
-
-          {currentStep.kind === 'duration' && (
-            <OptionStepPanel
-              options={DURATION_OPTIONS.map(o => ({ key: o.key, label: o.label, icon: null }))}
-              pendingKey={pendingOptionKey}
-              onSelect={setPendingOptionKey}
-              onConfirm={() => {
-                const opt = DURATION_OPTIONS.find(o => o.key === pendingOptionKey);
-                if (opt) {
-                  onUpdateTask(currentStep.taskId, { duration: opt.value }).then(() => {
-                    markStepCompleted(currentStep.taskId, 'duration');
-                    advanceStep(allSteps, currentStepIndex);
-                  });
-                }
-              }}
-              onSkip={() => advanceStep(allSteps, currentStepIndex)}
             />
           )}
 

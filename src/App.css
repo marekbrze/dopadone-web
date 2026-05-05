@@ -458,50 +458,6 @@ body {
   color: var(--text);
 }
 
-/* ── Duration pills (reuse old effort-pill class) ────────── */
-
-.effort-pills {
-  display: flex;
-  gap: 3px;
-}
-
-.effort-pill {
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-muted);
-  cursor: pointer;
-  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  padding: 3px 6px;
-  transition: background 0.1s, color 0.1s, border-color 0.1s;
-}
-
-.effort-pill:hover {
-  background: var(--surface2);
-  border-color: var(--accent-soft);
-  color: var(--text);
-}
-
-.effort-pill.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--surface);
-}
-
-/* ── Block duration warning ──────────────────────────────── */
-
-.block-duration-warning {
-  font-size: 0.78rem;
-  color: #a07830;
-  background: rgba(160, 120, 48, 0.1);
-  border-radius: var(--radius);
-  padding: 4px 8px;
-  margin-bottom: 6px;
-}
-
 /* ── Tags ────────────────────────────────────────────────── */
 
 .tag {

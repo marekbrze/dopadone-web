@@ -98,7 +98,7 @@ export function DailyPracticeView({ tasks, projects, dailyPractices }: Props) {
     const activeProjects = projects.filter(p => !p.archived);
     const allProcessed = activeProjects.length > 0 && activeProjects.every(p => {
       const projectTasks = tasks.filter(t => t.projectId === p.id && !t.done);
-      return projectTasks.length === 0 || projectTasks.every(t => t.duration != null && t.effort != null && t.contextId != null);
+      return projectTasks.length === 0 || projectTasks.every(t => t.effort != null && t.contextId != null);
     });
     return { inbox: inboxEmpty, today: todayDone, projects: allProcessed };
   }, [tasks, projects, today, hasAnyTasks]);

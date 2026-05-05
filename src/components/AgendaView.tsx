@@ -236,10 +236,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
   const pinnedUndoneTasks = pinnedTasks.filter(t => !t.done);
   const pinnedDoneTasks   = pinnedTasks.filter(t => t.done);
 
-  const pinnedTasksTotalDuration = pinnedTasks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
-  const selectedBlockDuration = selectedBlock ? selectedBlock.endMinutes - selectedBlock.startMinutes : 0;
-  const pinnedDurationOverflow = isManual && pinnedTasksTotalDuration > 0 && pinnedTasksTotalDuration > selectedBlockDuration;
-
   const blockProjectNoteGroups = useMemo(() => {
     if (!selectedBlock) return [];
     const blockTasks = isManual
@@ -1164,11 +1160,6 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
                 </div>
               )}
               <div className="agenda-block-panel-body">
-                {pinnedDurationOverflow && (
-                  <div className="block-duration-warning">
-                    ⚠ Suma czasów zadań ({pinnedTasksTotalDuration >= 60 ? `${Math.floor(pinnedTasksTotalDuration / 60)}h${pinnedTasksTotalDuration % 60 > 0 ? ` ${pinnedTasksTotalDuration % 60}m` : ''}` : `${pinnedTasksTotalDuration}m`}) przekracza długość bloku ({selectedBlockDuration}m)
-                  </div>
-                )}
                 {isManual ? (
                   <>
                     {pinnedUndoneTasks.length === 0 && pinnedDoneTasks.length === 0

@@ -320,7 +320,7 @@ export default function App() {
     const today = new Date().toISOString().slice(0, 10);
     return data.tasks.filter(t => {
       if (t.done) return false;
-      if (t.projectId === null || t.duration == null || t.effort == null || t.contextId === null) return true;
+      if (t.projectId === null || t.effort == null || t.contextId === null) return true;
       if (!t.plannedDate) {
         if (t.isNext) return false;
         const project = data.projects.find(p => p.id === t.projectId);
@@ -461,9 +461,9 @@ export default function App() {
     const project = await addProjectForProcessing(projectName, areaId, lifterId);
     for (const name of subtaskNames) {
       if (isCloudSchema()) {
-        await db.tasks.add({ name, projectId: project.id, done: false, priority: 'medium' as const, notes: '', effort: null, contextId: null, blocking: false, duration: null });
+        await db.tasks.add({ name, projectId: project.id, done: false, priority: 'medium' as const, notes: '', effort: null, contextId: null, blocking: false });
       } else {
-        const task: Task = { id: newId(), name, projectId: project.id, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+        const task: Task = { id: newId(), name, projectId: project.id, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
         await db.tasks.put(task);
       }
     }
@@ -477,10 +477,10 @@ export default function App() {
     const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
     let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order }) as string;
-      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      const id = await db.tasks.add({ name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order }) as string;
+      task = { id, name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order };
     } else {
-      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      task = { id: newId(), name, projectId: selectedProjectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order };
       await db.tasks.put(task);
     }
   };
@@ -488,10 +488,10 @@ export default function App() {
   const addInboxTask = async (name: string): Promise<Task> => {
     let task: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
-      task = { id, name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      const id = await db.tasks.add({ name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
+      task = { id, name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
     } else {
-      task = { id: newId(), name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      task = { id: newId(), name, projectId: null, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
       await db.tasks.put(task);
     }
     return task;
@@ -501,9 +501,9 @@ export default function App() {
     const projectTasks = data?.tasks.filter(t => t.projectId === projectId) ?? [];
     const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
     if (isCloudSchema()) {
-      await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order });
+      await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order });
     } else {
-      const task: Task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null, order };
+      const task: Task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order };
       await db.tasks.put(task);
     }
   };
@@ -519,7 +519,7 @@ export default function App() {
     const baseOrder = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) : 0;
     await db.transaction('rw', db.tasks, async () => {
       for (let i = 0; i < names.length; i++) {
-        const base = { name: names[i], projectId: task.projectId, done: false as const, priority: 'low' as const, notes: '', effort: null, contextId: null, blocking: false, duration: null, order: baseOrder + i + 1 };
+        const base = { name: names[i], projectId: task.projectId, done: false as const, priority: 'low' as const, notes: '', effort: null, contextId: null, blocking: false, order: baseOrder + i + 1 };
         if (isCloudSchema()) {
           await db.tasks.add(base);
         } else {
@@ -571,10 +571,10 @@ export default function App() {
     await updateTask(task.id, { done: true });
     let newTask: Task;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null }) as string;
-      newTask = { id, name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null };
+      const id = await db.tasks.add({ name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false }) as string;
+      newTask = { id, name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false };
     } else {
-      newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false, duration: null };
+      newTask = { id: newId(), name: nextActionName, projectId: task.projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: task.contextId, blocking: false };
       await db.tasks.put(newTask);
     }
     setSelectedProjectId(task.projectId);
@@ -934,10 +934,10 @@ export default function App() {
       for (const name of initialTasks) {
         let task: Task;
         if (isCloudSchema()) {
-          const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
-          task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+          const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
+          task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
         } else {
-          task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+          task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
           await db.tasks.put(task);
         }
         createdTasks.push(task);
@@ -974,10 +974,10 @@ export default function App() {
     let task: Task;
     const projectId = event.projectId;
     if (isCloudSchema()) {
-      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null }) as string;
-      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      const id = await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false }) as string;
+      task = { id, name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
     } else {
-      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, duration: null };
+      task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false };
       await db.tasks.put(task);
     }
     const updatedTaskIds = [...event.taskIds, task.id];

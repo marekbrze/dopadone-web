@@ -29,8 +29,6 @@ export interface Project {
 
 export type Effort = 'low' | 'medium' | 'high';
 
-export type TaskDuration = 5 | 10 | 15 | 25 | 45 | 60 | 90 | 120;
-
 export interface Context {
   id: string;
   name: string;
@@ -51,7 +49,6 @@ export interface Task {
   endDate?: string | null;      // "YYYY-MM-DD"
   plannedDate?: string | null;  // "YYYY-MM-DD" — dzień, na który zadanie jest zaplanowane
   isNext?: boolean;             // true = następne/dowolnie — przetworzone, bez konkretnej daty
-  duration?: TaskDuration | null;
   order?: number;
 }
 
