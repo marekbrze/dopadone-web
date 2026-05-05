@@ -6,6 +6,7 @@ import { OnboardingWizard, SpotlightTour } from './components/OnboardingWizard';
 import type { OnboardingResult } from './components/OnboardingWizard';
 import { db } from './db';
 import { AddItemModal } from './components/AddItemModal';
+import { ImportInboxModal } from './components/ImportInboxModal';
 import { ProjectTree } from './components/ProjectTree';
 import { SettingsModal } from './components/SettingsModal';
 import { TaskDetailPanel } from './components/TaskDetailPanel';
@@ -54,7 +55,7 @@ export default function App() {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'settings' | 'inbox-add'>(null);
+  const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'settings' | 'inbox-add' | 'inbox-import'>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
@@ -216,6 +217,10 @@ export default function App() {
       if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'Space') {
         e.preventDefault();
         setModal('inbox-add');
+      }
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'I') {
+        e.preventDefault();
+        setModal('inbox-import');
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -1141,6 +1146,7 @@ export default function App() {
           onUpdateTask={updateTask}
           onDeleteTask={deleteTask}
           onAssignToProject={(taskId, projectId, clampEndDate) => moveTaskToProject(taskId, projectId, clampEndDate)}
+          onOpenImport={() => setModal('inbox-import')}
         />
       )}
 
@@ -1666,6 +1672,12 @@ export default function App() {
       {modal === 'lifter' && <AddItemModal title="Nowy podobszar" placeholder="np. Samochód" onAdd={addLifter} onClose={() => setModal(null)} />}
       {modal === 'project' && <AddItemModal title="Nowy projekt" placeholder="np. Remont łazienki" onAdd={n => addProject(n)} onClose={() => setModal(null)} />}
       {modal === 'inbox-add' && <AddItemModal title="Dodaj do Inboxu" placeholder="np. Zadzwoń do dentysty" onAdd={name => addInboxTask(name).then(() => {})} onClose={() => setModal(null)} />}
+      {modal === 'inbox-import' && (
+        <ImportInboxModal
+          onImport={async (names) => { for (const name of names) await addInboxTask(name); }}
+          onClose={() => setModal(null)}
+        />
+      )}
       {modal === 'settings' && (
         <SettingsModal
           areas={data.areas}

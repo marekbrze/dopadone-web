@@ -714,6 +714,132 @@ body {
   margin-top: 0;
 }
 
+/* ── ImportInboxModal ─────────────────────────────────────── */
+
+.import-inbox-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  padding: 32px 32px 28px;
+  width: 480px;
+  max-width: 90vw;
+  box-shadow:
+    0 2px 8px rgba(28, 23, 18, 0.08),
+    0 8px 32px rgba(28, 23, 18, 0.10);
+}
+
+.import-inbox-textarea {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 300;
+  line-height: 1.6;
+  padding: 8px 0;
+  outline: none;
+  resize: vertical;
+  min-height: 140px;
+  transition: border-color 0.15s;
+}
+
+.import-inbox-textarea:focus {
+  border-bottom-color: var(--accent);
+}
+
+.import-inbox-textarea::placeholder {
+  color: var(--text-faint);
+}
+
+.import-inbox-count {
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.import-inbox-preview {
+  max-height: 280px;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-light);
+}
+
+.import-inbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  transition: color 0.15s;
+}
+
+.import-inbox-item:last-child {
+  border-bottom: none;
+}
+
+.import-inbox-item input[type="checkbox"] {
+  accent-color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+  width: 14px;
+  height: 14px;
+}
+
+.modal-actions-primary {
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  color: var(--surface);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 18px;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.modal-actions-primary:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+}
+
+.modal-actions-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.modal-actions-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 18px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.modal-actions-cancel:hover {
+  background: var(--surface2);
+  color: var(--text);
+}
+
 /* ── PlanujModal ──────────────────────────────────────────── */
 
 .planuj-overlay {
@@ -2275,6 +2401,28 @@ body {
 .inbox-count {
   font-size: 13px;
   color: var(--text-muted);
+}
+
+.inbox-import-btn {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.inbox-import-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
 }
 
 .task-quick-add {

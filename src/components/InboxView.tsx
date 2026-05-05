@@ -15,9 +15,10 @@ interface Props {
   onUpdateTask: (id: string, updates: Partial<Task>) => void;
   onDeleteTask: (id: string) => void;
   onAssignToProject: (taskId: string, projectId: string, clampEndDate?: boolean) => void;
+  onOpenImport: () => void;
 }
 
-export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask, onUpdateTask, onDeleteTask, onAssignToProject }: Props) {
+export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask, onUpdateTask, onDeleteTask, onAssignToProject, onOpenImport }: Props) {
   const [newTaskName, setNewTaskName] = useState('');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
@@ -58,6 +59,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
         <div className="inbox-header">
           <h1 className="inbox-title">Inbox</h1>
           <span className="inbox-count">{undone.length} {undone.length === 1 ? 'zadanie' : undone.length < 5 ? 'zadania' : 'zadań'}</span>
+          <button className="inbox-import-btn" onClick={onOpenImport} title="Importuj listę zadań (Cmd+Shift+I)">Importuj</button>
         </div>
 
         <div className="inbox-add-row">
