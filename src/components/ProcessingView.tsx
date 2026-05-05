@@ -51,7 +51,7 @@ function needsDateStep(task: Task, projects: Project[], today: string): boolean 
   return !isProjectStartInFuture(project, today);
 }
 
-function buildSession(tasks: Task[], projects: Project[], areas: Area[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
+function buildSession(tasks: Task[], projects: Project[], _areas: Area[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
   const eligible = tasks.filter(t =>
     !t.done && (
       t.projectId === null ||
@@ -839,12 +839,6 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               areas={areas}
               pendingKey={pendingOptionKey}
               onSelect={setPendingOptionKey}
-              onConfirm={(areaId) => {
-                onUpdateTask(currentStep.taskId, { areaId }).then(() => {
-                  markStepCompleted(currentStep.taskId, 'area');
-                  advanceStep(allSteps, currentStepIndex);
-                });
-              }}
               onConfirmKey={(areaId) => {
                 onUpdateTask(currentStep.taskId, { areaId }).then(() => {
                   markStepCompleted(currentStep.taskId, 'area');
@@ -980,12 +974,11 @@ interface AreaStepPanelProps {
   areas: Area[];
   pendingKey: string | null;
   onSelect: (key: string) => void;
-  onConfirm: (areaId: string) => void;
   onConfirmKey: (areaId: string) => void;
   onSkip: () => void;
 }
 
-function AreaStepPanel({ areas, pendingKey, onSelect, onConfirm, onConfirmKey, onSkip }: AreaStepPanelProps) {
+function AreaStepPanel({ areas, pendingKey, onSelect, onConfirmKey, onSkip }: AreaStepPanelProps) {
   return (
     <div className="proc-option-step">
       <div className="proc-step-hint">Wybierz obszar klawiszem lub klikiem · pomiń <kbd>Esc</kbd></div>
