@@ -7,6 +7,7 @@ import { CreateSlotModal } from './CreateSlotModal';
 import { WorkBlockModal } from './WorkBlockModal';
 import { TaskDetailPanel } from './TaskDetailPanel';
 import { PlannedDatePicker } from './PlannedDatePicker';
+import { PlanujModal } from './PlanujModal';
 import { renderMarkdown } from '../utils/renderMarkdown';
 
 interface Props {
@@ -201,7 +202,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   const resizeMovedRef = useRef(false);
   const [pendingSlot, setPendingSlot] = useState<{ startMinutes: number; endMinutes: number } | null>(null);
   const [mobileAgendaOpen, setMobileAgendaOpen] = useState(false);
-  const [agendaWidth, setAgendaWidth] = useState(220);
+  const [showPlanuj, setShowPlanuj] = useState(false);  const [agendaWidth, setAgendaWidth] = useState(220);
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({});
   const agendaPanelResizing = useRef(false);
   const agendaPanelResizeStartX = useRef(0);
@@ -577,6 +578,9 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
               Przegląd <span className="today-processing-badge">{todayProcessingCount}</span>
             </button>
           )}
+          <button className="planuj-header-btn" onClick={() => setShowPlanuj(true)}>
+            Planuj
+          </button>
         </div>
 
         {/* Mobile: current block summary bar */}
@@ -1467,6 +1471,16 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
           onSave={data => { onUpdateWorkBlock(editingBlock.id, data); setEditingBlock(null); }}
           onDelete={() => { onDeleteWorkBlock(editingBlock.id); setEditingBlock(null); setSelectedBlockId(null); }}
           onClose={() => setEditingBlock(null)}
+        />
+      )}
+      {showPlanuj && (
+        <PlanujModal
+          areas={areas}
+          projects={projects}
+          tasks={tasks}
+          todayStr={todayStr}
+          onUpdateTask={onUpdateTask}
+          onClose={() => setShowPlanuj(false)}
         />
       )}
     </>

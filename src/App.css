@@ -714,6 +714,232 @@ body {
   margin-top: 0;
 }
 
+/* ── PlanujModal ──────────────────────────────────────────── */
+
+.planuj-overlay {
+  z-index: 200;
+}
+
+.planuj-modal {
+  width: 560px;
+  max-height: 80vh;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.planuj-modal .modal-header {
+  padding: 24px 28px 16px;
+  margin-bottom: 0;
+}
+
+.planuj-tabs {
+  display: flex;
+  gap: 0;
+  padding: 0 28px;
+  border-bottom: 1px solid var(--border-light);
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.planuj-tabs::-webkit-scrollbar { display: none; }
+
+.planuj-tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 400;
+  padding: 10px 16px 8px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.planuj-tab:hover {
+  color: var(--text);
+}
+
+.planuj-tab.active {
+  color: var(--text);
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+
+.planuj-tab:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.planuj-content {
+  padding: 20px 28px 24px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.planuj-project-group {
+  margin-bottom: 20px;
+}
+
+.planuj-project-group:last-child {
+  margin-bottom: 0;
+}
+
+.planuj-project-header {
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.planuj-task {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 0;
+  gap: 12px;
+  transition: background 0.15s;
+}
+
+.planuj-task.planned {
+  background: var(--surface2);
+  padding: 6px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius);
+}
+
+.planuj-task-name {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+  line-height: 1.4;
+  flex: 1;
+  min-width: 0;
+}
+
+.planuj-task.planned .planuj-task-name {
+  color: var(--text-muted);
+}
+
+.planuj-action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.planuj-action-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+.planuj-action-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.planuj-action-btn.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--surface);
+}
+
+.planuj-action-btn.checked:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent-soft);
+}
+
+.planuj-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.planuj-empty {
+  padding: 32px 28px;
+  text-align: center;
+  color: var(--text-faint);
+  font-size: 14px;
+}
+
+/* ── Planuj button in today header ────────────────────────── */
+
+.planuj-header-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 5px 13px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.planuj-header-btn:hover {
+  background: var(--surface2);
+  border-color: var(--accent-soft);
+  color: var(--text);
+}
+
+.planuj-header-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Mobile ───────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+  .planuj-modal {
+    width: 100vw;
+    max-height: 100vh;
+    height: 100vh;
+    border-radius: 0;
+    border: none;
+  }
+
+  .planuj-modal .modal-header {
+    padding: 20px 20px 12px;
+  }
+
+  .planuj-tabs {
+    padding: 0 20px;
+  }
+
+  .planuj-content {
+    padding: 16px 20px 20px;
+  }
+
+  .planuj-action-btn {
+    padding: 5px 10px;
+    font-size: 9px;
+  }
+}
+
 /* ── SplitTaskModal ──────────────────────────────────────── */
 
 .split-task-original {
