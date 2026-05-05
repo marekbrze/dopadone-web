@@ -28,6 +28,7 @@ import { UpdateBanner } from './components/UpdateBanner';
 import { AmbientSoundWidget } from './components/AmbientSoundWidget';
 import { PlannedDatePicker } from './components/PlannedDatePicker';
 import { DailyPracticeView } from './components/DailyPracticeView';
+import { ZakupyView } from './components/ZakupyView';
 import './App.css';
 
 function newId() {
@@ -764,6 +765,58 @@ export default function App() {
     });
   };
 
+  // Zakupy helpers
+  const zakupyArea = data.areas.find(a => a.isSystem && a.name === 'Zakupy');
+  const isZakupyActive = !!zakupyArea && selectedAreaId === zakupyArea.id;
+
+  const addZakupyShop = async (name: string) => {
+    if (!zakupyArea) return;
+    const siblings = data.projects.filter(p => p.areaId === zakupyArea.id);
+    const order = siblings.length > 0 ? Math.max(...siblings.map(p => p.order ?? 0)) + 1 : 0;
+    if (isCloudSchema()) {
+      await db.projects.add({ name, areaId: zakupyArea.id, lifterId: null, order });
+    } else {
+      const proj: Project = { id: newId(), name, areaId: zakupyArea.id, lifterId: null, order };
+      await db.projects.put(proj);
+    }
+  };
+
+  const renameZakupyShop = async (projectId: string, name: string) => {
+    await updateProject(projectId, { name });
+  };
+
+  const addZakupyItem = async (name: string, projectId: string) => {
+    const projectTasks = data.tasks.filter(t => t.projectId === projectId);
+    const order = projectTasks.length > 0 ? Math.max(...projectTasks.map(t => t.order ?? 0)) + 1 : 0;
+    if (isCloudSchema()) {
+      await db.tasks.add({ name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order });
+    } else {
+      const task: Task = { id: newId(), name, projectId, done: false, priority: 'medium', notes: '', effort: null, contextId: null, blocking: false, order };
+      await db.tasks.put(task);
+    }
+  };
+
+  const reorderZakupyItem = async (taskId: string, afterTaskId: string | null) => {
+    const task = data.tasks.find(t => t.id === taskId);
+    if (!task || !task.projectId) return;
+    const siblings = data.tasks
+      .filter(t => t.projectId === task.projectId && !t.done && t.id !== taskId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    const insertIdx = afterTaskId === null
+      ? 0
+      : siblings.findIndex(t => t.id === afterTaskId) + 1;
+    siblings.splice(insertIdx, 0, task);
+    const updates = siblings.map((t, i) => ({ id: t.id, order: i }));
+    await db.transaction('rw', db.tasks, async () => {
+      for (const u of updates) await db.tasks.update(u.id, { order: u.order });
+    });
+    setData(d => {
+      if (!d) return d;
+      const map = new Map(updates.map(u => [u.id, u.order]));
+      return { ...d, tasks: d.tasks.map(t => map.has(t.id) ? { ...t, order: map.get(t.id)! } : t) };
+    });
+  };
+
   const handleGapDragOver = (e: React.DragEvent, insertAfterProjectId: string | null) => {
     if (!dragPayload || dragPayload.kind !== 'project') return;
     e.preventDefault();
@@ -1269,9 +1322,24 @@ export default function App() {
         />
       )}
 
+      {currentView === 'plan' && isZakupyActive && zakupyArea && (
+        <ZakupyView
+          area={zakupyArea}
+          projects={data.projects}
+          tasks={data.tasks}
+          onAddShop={addZakupyShop}
+          onRenameShop={renameZakupyShop}
+          onDeleteShop={deleteProject}
+          onAddItem={addZakupyItem}
+          onUpdateItem={updateTask}
+          onDeleteItem={deleteTask}
+          onReorderItem={reorderZakupyItem}
+        />
+      )}
+
       <main
         className={`columns${(selectedTask || editingLifterId !== null || editingProjectId !== null) ? ' panel-open' : ''}`}
-        style={currentView !== 'plan' ? { display: 'none' } : undefined}
+        style={currentView !== 'plan' || isZakupyActive ? { display: 'none' } : undefined}
       >
         {/* Column 1: Lifters */}
         <section

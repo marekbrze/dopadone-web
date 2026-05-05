@@ -5351,3 +5351,354 @@ body {
     flex: none;
   }
 }
+
+/* ── Zakupy View ──────────────────────────────────────────── */
+
+.zakupy-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 48px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.zakupy-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px 24px;
+  text-align: center;
+}
+
+.zakupy-empty-text {
+  color: var(--text-muted);
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.zakupy-all-bought {
+  text-align: center;
+  padding: 16px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border-light);
+}
+
+/* Shop section */
+.zakupy-shop {
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+  margin-bottom: 8px;
+}
+
+.zakupy-shop:last-of-type {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.zakupy-shop-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 4px 8px;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+.zakupy-shop-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  padding: 4px 0;
+  flex: 1;
+  text-align: left;
+  transition: color 0.15s;
+}
+
+.zakupy-shop-name:hover {
+  color: var(--accent);
+}
+
+.zakupy-shop-toggle {
+  font-size: 10px;
+  color: var(--text-faint);
+  width: 12px;
+  flex-shrink: 0;
+}
+
+.zakupy-shop-label {
+  flex: 1;
+}
+
+.zakupy-shop-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-faint);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.zakupy-shop-name-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  padding: 4px 0;
+  outline: none;
+}
+
+.zakupy-shop-body {
+  padding: 0 0 4px;
+}
+
+.zakupy-shop-empty {
+  color: var(--text-faint);
+  font-size: 13px;
+  padding: 8px 24px 12px;
+  font-style: italic;
+}
+
+/* Item row */
+.zakupy-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 24px 6px 4px;
+  min-height: 36px;
+  transition: background 0.1s, opacity 0.15s;
+  border-radius: var(--radius);
+}
+
+.zakupy-item:hover {
+  background: var(--surface2);
+}
+
+.zakupy-item.bought {
+  opacity: 0.5;
+}
+
+.zakupy-item.bought .zakupy-item-name {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.zakupy-item.dragging {
+  opacity: 0.4;
+}
+
+.zakupy-item.drop-above {
+  box-shadow: inset 0 2px 0 0 var(--accent);
+}
+
+.zakupy-checkbox {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.zakupy-item-name {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  cursor: text;
+  word-break: break-word;
+}
+
+.zakupy-item-edit-input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  outline: none;
+  padding: 0;
+}
+
+.zakupy-item-delete {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.zakupy-item:hover .zakupy-item-delete {
+  opacity: 1;
+}
+
+.zakupy-item-delete:hover {
+  color: var(--text);
+}
+
+/* Quick add */
+.zakupy-quick-add {
+  padding: 4px 4px 4px;
+}
+
+.zakupy-quick-add input {
+  width: 100%;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  padding: 8px 0 6px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.zakupy-quick-add input:focus {
+  border-bottom-color: var(--accent);
+}
+
+.zakupy-quick-add input::placeholder {
+  color: var(--text-faint);
+  font-weight: 300;
+}
+
+/* Bought section */
+.zakupy-bought-section {
+  margin-top: 4px;
+}
+
+.zakupy-bought-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text-faint);
+  padding: 6px 4px;
+  transition: color 0.15s;
+}
+
+.zakupy-bought-toggle:hover {
+  color: var(--text-muted);
+}
+
+/* Add shop */
+.zakupy-add-shop {
+  padding: 20px 4px 0;
+  border-top: 1px solid var(--border-light);
+  margin-top: 12px;
+}
+
+.zakupy-add-shop-btn {
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 18px;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.zakupy-add-shop-btn:hover {
+  background: var(--surface2);
+  color: var(--text);
+  border-color: var(--accent-soft);
+}
+
+.zakupy-new-shop-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zakupy-new-shop-inline input {
+  flex: 1;
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  padding: 8px 0;
+  outline: none;
+}
+
+.zakupy-new-shop-inline input::placeholder {
+  color: var(--text-faint);
+  font-weight: 300;
+}
+
+.zakupy-inline-confirm {
+  background: var(--accent);
+  color: var(--surface);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  transition: background 0.15s;
+}
+
+.zakupy-inline-confirm:hover {
+  background: var(--accent-soft);
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .zakupy-view {
+    padding: 16px 16px 32px;
+  }
+
+  .zakupy-item {
+    padding: 10px 16px 10px 4px;
+    min-height: 44px;
+  }
+
+  .zakupy-checkbox {
+    width: 20px;
+    height: 20px;
+  }
+
+  .zakupy-item-delete {
+    opacity: 1;
+    padding: 4px 8px;
+  }
+
+  .zakupy-shop-header {
+    padding: 10px 4px 6px;
+  }
+}
