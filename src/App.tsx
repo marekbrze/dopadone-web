@@ -815,6 +815,8 @@ export default function App() {
   };
 
   const deleteArea = async (id: string) => {
+    const area = data.areas.find(a => a.id === id);
+    if (area?.isSystem) return;
     const lifterIds = data.lifters.filter(l => l.areaId === id).map(l => l.id);
     const rootIds = data.projects.filter(p => p.areaId === id).map(p => p.id);
     const allProjectIds = new Set(rootIds.flatMap(rid => collectProjectIds(rid)));

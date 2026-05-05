@@ -1,4 +1,4 @@
-import type { AppState, Effort } from './types'
+import type { AppState, Area, Effort } from './types'
 import { db, isCloudSchema } from './db'
 
 const STORAGE_KEY = 'dopadone-data'
@@ -16,6 +16,7 @@ export const defaultData: AppState = {
     { id: crypto.randomUUID(), name: 'Dom', color: '#4CAF50' },
     { id: crypto.randomUUID(), name: 'Praca', color: '#2196F3' },
     { id: crypto.randomUUID(), name: 'Zdrowie', color: '#FF5722' },
+    { id: crypto.randomUUID(), name: 'Zakupy', color: '#8B7355', isSystem: true },
   ],
   lifters: [],
   projects: [],
@@ -118,7 +119,7 @@ export async function loadData(): Promise<AppState> {
     // Cloud mode: don't seed defaults — data comes from sync
     if (isCloudSchema()) return { areas: [], lifters: [], projects: [], tasks: [], contexts: [], workBlocks: [], events: [], projectNotes: [], dailyPractices: [] }
     const migrated = await migrateFromLocalStorage()
-    if (migrated) return migrated
+    if (migrated) return ensureSystemAreas(migrated)
     // Fresh local install: seed with defaults
     await db.transaction('rw', [db.areas, db.contexts, db.workBlocks], async () => {
       await db.areas.bulkAdd(defaultData.areas)
@@ -126,5 +127,12 @@ export async function loadData(): Promise<AppState> {
     })
     return defaultData
   }
-  return queryAllData()
+  return ensureSystemAreas(await queryAllData())
+}
+
+async function ensureSystemAreas(data: AppState): Promise<AppState> {
+  if (data.areas.some(a => a.isSystem && a.name === 'Zakupy')) return data;
+  const zakupy: Area = { id: crypto.randomUUID(), name: 'Zakupy', color: '#8B7355', isSystem: true };
+  await db.areas.add(zakupy);
+  return { ...data, areas: [...data.areas, zakupy] };
 }

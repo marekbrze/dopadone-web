@@ -377,7 +377,8 @@ export function SettingsModal({
                         <span className="drag-handle">⠿</span>
                         <span className="settings-area-swatch" style={{ background: area.color }} />
                         <span className="settings-area-name">{area.name}</span>
-                        <button className="delete-btn" onClick={() => onDeleteArea(area.id)} aria-label="Usuń">✕</button>
+                        {!area.isSystem && <button className="delete-btn" onClick={() => onDeleteArea(area.id)} aria-label="Usuń">✕</button>}
+                        {area.isSystem && <span className="settings-area-system">system</span>}
                       </div>
                       {areaLifters.map(lifter => (
                         <div key={lifter.id} className="settings-lifter-row">

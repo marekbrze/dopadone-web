@@ -434,6 +434,33 @@
   background: var(--surface2);
 }
 
+/* ── Area step ── */
+.proc-area-system-badge {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-faint);
+  padding: 1px 4px;
+  border: 1px solid var(--border);
+  margin-left: -2px;
+}
+
+/* ── Sidebar area separator ── */
+.proc-sidebar-area-sep {
+  padding: 8px 20px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-faint);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border-light, var(--border));
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 /* ── Bottom row (skip + convert) ── */
 .proc-project-bottom {
   display: flex;

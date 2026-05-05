@@ -7,6 +7,7 @@ export interface Area {
   name: string;
   color: string;
   order?: number;
+  isSystem?: boolean;
 }
 
 export interface Lifter {
@@ -39,6 +40,7 @@ export interface Task {
   id: string;
   name: string;
   projectId: string | null;
+  areaId?: string | null;
   done: boolean;
   priority: 'low' | 'medium' | 'high';
   notes: string;

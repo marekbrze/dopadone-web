@@ -20,7 +20,7 @@ interface ProcessingViewProps {
 
 type ProjectPanelMode = 'list' | 'new-project' | 'convert';
 
-type ProcessingStepKind = 'project' | 'energy' | 'context' | 'date';
+type ProcessingStepKind = 'area' | 'project' | 'energy' | 'context' | 'date';
 type ProcessingScreen = 'summary' | 'processing' | 'done';
 
 interface ProcessingStep {
@@ -35,6 +35,7 @@ const ENERGY_OPTIONS: { key: string; value: Effort; label: string; color: string
 ];
 
 const OPTION_KEYS = ['1','2','3','4','5','6','7','8','9','0','a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t'];
+const AREA_KEYS  = ['1','2','3','4','5','6','7','8','9','0','a','b','c','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t']; // 'd' reserved for mark-done
 
 function isProjectStartInFuture(project: Project | null | undefined, today: string): boolean {
   if (!project?.startDate) return false;
@@ -50,22 +51,35 @@ function needsDateStep(task: Task, projects: Project[], today: string): boolean 
   return !isProjectStartInFuture(project, today);
 }
 
-function buildSession(tasks: Task[], projects: Project[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
+function buildSession(tasks: Task[], projects: Project[], areas: Area[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
   const eligible = tasks.filter(t =>
     !t.done && (
       t.projectId === null ||
+      t.areaId == null ||
       t.effort == null ||
       t.contextId === null ||
       needsDateStep(t, projects, today)
     )
   );
+
+  // Area phase: inbox tasks without area
+  const areaPhaseTasks = eligible.filter(t => t.projectId === null && !t.areaId);
+
+  // Processing phase: all eligible tasks, inbox first
   const inboxFirst = [
     ...eligible.filter(t => t.projectId === null),
     ...eligible.filter(t => t.projectId !== null),
   ];
 
-  const sessionTaskIds = inboxFirst.map(t => t.id);
+  const sessionTaskIds = [...new Set([...areaPhaseTasks, ...inboxFirst].map(t => t.id))];
   const allSteps: ProcessingStep[] = [];
+
+  // Area phase steps (first)
+  for (const task of areaPhaseTasks) {
+    allSteps.push({ taskId: task.id, kind: 'area' });
+  }
+
+  // Processing steps
   for (const task of inboxFirst) {
     if (task.projectId === null) allSteps.push({ taskId: task.id, kind: 'project' });
     if (task.effort == null)     allSteps.push({ taskId: task.id, kind: 'energy' });
@@ -126,7 +140,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     () => tasks.filter(t => !t.done && needsDateStep(t, projects, today)).length,
     [tasks, projects, today]
   );
-  const nothingToDo = inboxCount === 0 && noEnergyCount === 0 && noContextCount === 0 && noDateCount === 0;
+  const noAreaCount = useMemo(() => tasks.filter(t => !t.done && t.projectId === null && !t.areaId).length, [tasks]);
+  const nothingToDo = inboxCount === 0 && noEnergyCount === 0 && noContextCount === 0 && noDateCount === 0 && noAreaCount === 0;
 
   const currentStep = allSteps[currentStepIndex] ?? null;
   const currentTask = useMemo(
@@ -134,11 +149,28 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     [currentStep, tasks]
   );
 
+  // Effective area for the current task
+  const currentTaskAreaId = useMemo(() => {
+    if (!currentTask) return null;
+    if (currentTask.areaId) return currentTask.areaId;
+    if (currentTask.projectId) {
+      const project = projects.find(p => p.id === currentTask.projectId);
+      return project?.areaId ?? null;
+    }
+    return null;
+  }, [currentTask, projects]);
+
   // Filtered + sorted projects for project step
   const filteredProjects = useMemo(() => {
-    const filtered = projectQuery.trim()
+    let filtered = projectQuery.trim()
       ? projects.filter(p => p.name.toLowerCase().includes(projectQuery.toLowerCase()))
       : projects;
+
+    // Filter by task's area when in project step
+    if (currentTaskAreaId && currentStep?.kind === 'project') {
+      filtered = filtered.filter(p => p.areaId === currentTaskAreaId);
+    }
+
     return [...filtered].sort((a, b) => {
       const areaA = areas.find(ar => ar.id === a.areaId);
       const areaB = areas.find(ar => ar.id === b.areaId);
@@ -151,7 +183,40 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
       if (lifterA !== lifterB) return lifterA.localeCompare(lifterB);
       return (a.order ?? 0) - (b.order ?? 0);
     });
-  }, [projects, areas, lifters, projectQuery]);
+  }, [projects, areas, lifters, projectQuery, currentTaskAreaId, currentStep]);
+
+  // Detect if still in area phase (has uncompleted area steps)
+  const isAreaPhase = useMemo(() => {
+    return allSteps.some(s => s.kind === 'area' && !completedSteps.has(`${s.taskId}:area`));
+  }, [allSteps, completedSteps]);
+
+  // Sidebar tasks grouped by area
+  const sidebarGroups = useMemo(() => {
+    if (isAreaPhase) {
+      return [{ area: null, taskIds: sessionTaskIds }];
+    }
+    const groups: { area: Area | null; taskIds: string[] }[] = [];
+    const areaOrder = new Map(areas.map((a, i) => [a.id, a.order ?? i]));
+    for (const taskId of sessionTaskIds) {
+      const task = tasks.find(t => t.id === taskId);
+      if (!task) continue;
+      const effArea = task.areaId
+        ? (areas.find(a => a.id === task.areaId) ?? null)
+        : task.projectId
+          ? (areas.find(a => a.id === projects.find(p => p.id === task.projectId)?.areaId) ?? null)
+          : null;
+      let group = groups.find(g => (g.area?.id ?? null) === (effArea?.id ?? null));
+      if (!group) { group = { area: effArea, taskIds: [] }; groups.push(group); }
+      group.taskIds.push(taskId);
+    }
+    groups.sort((a, b) => {
+      if (!a.area && !b.area) return 0;
+      if (!a.area) return 1;
+      if (!b.area) return -1;
+      return (areaOrder.get(a.area.id) ?? 999) - (areaOrder.get(b.area.id) ?? 999);
+    });
+    return groups;
+  }, [isAreaPhase, sessionTaskIds, tasks, projects, areas]);
 
   const resetStepState = useCallback(() => {
     setProjectQuery('');
@@ -210,7 +275,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   }, [tasks, resetStepState, initPendingFromTask]);
 
   const startSession = useCallback(() => {
-    const { sessionTaskIds: ids, allSteps: steps } = buildSession(tasks, projects, today);
+    const { sessionTaskIds: ids, allSteps: steps } = buildSession(tasks, projects, areas, today);
     if (steps.length === 0) return;
     setSessionTaskIds(ids);
     setAllSteps(steps);
@@ -385,6 +450,70 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
     const handler = (e: KeyboardEvent) => {
       if (!currentStep) return;
 
+      if (currentStep.kind === 'area') {
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        // 'd' — mark done
+        if (e.key === 'd') {
+          e.preventDefault();
+          markTaskDone(currentStep.taskId, allSteps, currentStepIndex);
+          return;
+        }
+        const lowerKey = e.key.toLowerCase();
+        const areaIdx = AREA_KEYS.indexOf(lowerKey);
+        if (areaIdx >= 0 && areaIdx < areas.length) {
+          e.preventDefault();
+          const area = areas[areaIdx];
+          onUpdateTask(currentStep.taskId, { areaId: area.id }).then(() => {
+            markStepCompleted(currentStep.taskId, 'area');
+            advanceStep(allSteps, currentStepIndex);
+          });
+          return;
+        }
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setPendingOptionKey(prev => {
+            const ci = prev ? AREA_KEYS.indexOf(prev) : -1;
+            return AREA_KEYS[Math.min(ci + 1, areas.length - 1)] ?? null;
+          });
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setPendingOptionKey(prev => {
+            const ci = prev ? AREA_KEYS.indexOf(prev) : 0;
+            return AREA_KEYS[Math.max(ci - 1, 0)] ?? null;
+          });
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (pendingOptionKey) {
+            const idx = AREA_KEYS.indexOf(pendingOptionKey);
+            if (idx >= 0 && idx < areas.length) {
+              const area = areas[idx];
+              onUpdateTask(currentStep.taskId, { areaId: area.id }).then(() => {
+                markStepCompleted(currentStep.taskId, 'area');
+                advanceStep(allSteps, currentStepIndex);
+              });
+            }
+          }
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          markStepCompleted(currentStep.taskId, 'area');
+          advanceStep(allSteps, currentStepIndex);
+          return;
+        }
+        if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          goBack(allSteps, currentStepIndex);
+          return;
+        }
+        return;
+      }
+
       if (currentStep.kind === 'project') {
         if (projectPanelMode !== 'list') return;
         if (e.key === 'ArrowDown') {
@@ -525,6 +654,10 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
             <>
               <div className="proc-summary-title">Do przetworzenia</div>
               <div className="proc-stats">
+                <div className={`proc-stat-card${noAreaCount === 0 ? ' zero' : ''}`}>
+                  <div className="proc-stat-number">{noAreaCount}</div>
+                  <div className="proc-stat-label">Bez obszaru</div>
+                </div>
                 <div className={`proc-stat-card${inboxCount === 0 ? ' zero' : ''}`}>
                   <div className="proc-stat-number">{inboxCount}</div>
                   <div className="proc-stat-label">Inbox</div>
@@ -574,8 +707,8 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   if (!currentTask || !currentStep) return null;
 
   const taskStepsInSession = allSteps.filter(s => s.taskId === currentStep.taskId);
-  const stepLabels: Record<ProcessingStepKind, string> = { project: 'Projekt', energy: 'Energia', context: 'Kontekst', date: 'Data' };
-  const stepTagLabels: Record<ProcessingStepKind, string> = { project: 'Inbox', energy: 'Energia', context: 'Kontekst', date: 'Data' };
+  const stepLabels: Record<ProcessingStepKind, string> = { area: 'Obszar', project: 'Projekt', energy: 'Energia', context: 'Kontekst', date: 'Data' };
+  const stepTagLabels: Record<ProcessingStepKind, string> = { area: 'Obszar', project: 'Inbox', energy: 'Energia', context: 'Kontekst', date: 'Data' };
 
   const doneTaskCount = sessionTaskIds.filter(id => isTaskFullyProcessed(id, allSteps, completedSteps)).length;
   const progressPct = sessionTaskIds.length > 0 ? (doneTaskCount / sessionTaskIds.length) * 100 : 0;
@@ -595,36 +728,50 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
             <div className="proc-progress-fill" style={{ width: `${progressPct}%` }} />
           </div>
           <div className="proc-sidebar-list">
-            {sessionTaskIds.map((taskId, index) => {
-              const task = tasks.find(t => t.id === taskId);
-              if (!task) return null;
-              const isCurrent = currentStep.taskId === taskId;
-              const isDone = isTaskFullyProcessed(taskId, allSteps, completedSteps);
-              const taskSteps = allSteps.filter(s => s.taskId === taskId);
-              return (
-                <div
-                  key={taskId}
-                  className={`proc-sidebar-item${isCurrent ? ' current' : ''}${isDone ? ' done' : ''}`}
-                  onClick={() => jumpToTask(taskId, allSteps)}
-                >
-                  <span className="proc-sidebar-num">{String(index + 1).padStart(2, '0')}</span>
-                  <div className="proc-sidebar-body">
-                    <div className="proc-sidebar-name">{task.name}</div>
-                    <div className="proc-sidebar-tags">
-                      {taskSteps.map(step => {
-                        const stepDone = completedSteps.has(`${taskId}:${step.kind}`);
-                        return (
-                          <span key={step.kind} className={`proc-sidebar-tag${stepDone ? ' done-tag' : ''}`}>
-                            {stepDone ? '✓ ' : ''}{stepTagLabels[step.kind]}
-                          </span>
-                        );
-                      })}
+            {sidebarGroups.map(group => (
+              <div key={group.area?.id ?? '__none'}>
+                {!isAreaPhase && group.area && (
+                  <div className="proc-sidebar-area-sep">{group.area.name}</div>
+                )}
+                {!isAreaPhase && !group.area && sessionTaskIds.some(id => {
+                  const t = tasks.find(tt => tt.id === id);
+                  return t && !t.areaId && (!t.projectId || !projects.find(p => p.id === t.projectId)?.areaId);
+                }) && (
+                  <div className="proc-sidebar-area-sep">Bez obszaru</div>
+                )}
+                {group.taskIds.map((taskId) => {
+                  const task = tasks.find(t => t.id === taskId);
+                  if (!task) return null;
+                  const isCurrent = currentStep.taskId === taskId;
+                  const isDone = isTaskFullyProcessed(taskId, allSteps, completedSteps);
+                  const taskSteps = allSteps.filter(s => s.taskId === taskId);
+                  const globalIndex = sessionTaskIds.indexOf(taskId);
+                  return (
+                    <div
+                      key={taskId}
+                      className={`proc-sidebar-item${isCurrent ? ' current' : ''}${isDone ? ' done' : ''}`}
+                      onClick={() => jumpToTask(taskId, allSteps)}
+                    >
+                      <span className="proc-sidebar-num">{String(globalIndex + 1).padStart(2, '0')}</span>
+                      <div className="proc-sidebar-body">
+                        <div className="proc-sidebar-name">{task.name}</div>
+                        <div className="proc-sidebar-tags">
+                          {taskSteps.map(step => {
+                            const stepDone = completedSteps.has(`${taskId}:${step.kind}`);
+                            return (
+                              <span key={step.kind} className={`proc-sidebar-tag${stepDone ? ' done-tag' : ''}`}>
+                                {stepDone ? '✓ ' : ''}{stepTagLabels[step.kind]}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {isDone && <span className="proc-sidebar-check">✓</span>}
                     </div>
-                  </div>
-                  {isDone && <span className="proc-sidebar-check">✓</span>}
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </div>
 
@@ -687,6 +834,31 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           <div className="proc-divider" />
 
           {/* Step panel */}
+          {currentStep.kind === 'area' && (
+            <AreaStepPanel
+              areas={areas}
+              pendingKey={pendingOptionKey}
+              onSelect={setPendingOptionKey}
+              onConfirm={(areaId) => {
+                onUpdateTask(currentStep.taskId, { areaId }).then(() => {
+                  markStepCompleted(currentStep.taskId, 'area');
+                  advanceStep(allSteps, currentStepIndex);
+                });
+              }}
+              onConfirmKey={(areaId) => {
+                onUpdateTask(currentStep.taskId, { areaId }).then(() => {
+                  markStepCompleted(currentStep.taskId, 'area');
+                  advanceStep(allSteps, currentStepIndex);
+                });
+              }}
+              onSkip={() => {
+                markStepCompleted(currentStep.taskId, 'area');
+                advanceStep(allSteps, currentStepIndex);
+              }}
+            />
+          )}
+
+          {/* Step panel */}
           {currentStep.kind === 'project' && (
             <ProjectStepPanel
               projects={filteredProjects}
@@ -711,6 +883,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               taskName={currentTask.name}
               mode={projectPanelMode}
               onModeChange={setProjectPanelMode}
+              defaultAreaId={currentTaskAreaId}
             />
           )}
 
@@ -801,6 +974,46 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
+// ── Area step panel ─────────────────────────────────────────────────────────
+
+interface AreaStepPanelProps {
+  areas: Area[];
+  pendingKey: string | null;
+  onSelect: (key: string) => void;
+  onConfirm: (areaId: string) => void;
+  onConfirmKey: (areaId: string) => void;
+  onSkip: () => void;
+}
+
+function AreaStepPanel({ areas, pendingKey, onSelect, onConfirm, onConfirmKey, onSkip }: AreaStepPanelProps) {
+  return (
+    <div className="proc-option-step">
+      <div className="proc-step-hint">Wybierz obszar klawiszem lub klikiem · pomiń <kbd>Esc</kbd></div>
+      <div className="proc-options-grid">
+        {areas.map((area, i) => {
+          const key = AREA_KEYS[i] ?? '?';
+          const isHighlighted = pendingKey === key;
+          return (
+            <button
+              key={area.id}
+              className={`proc-option-card${isHighlighted ? ' highlighted' : ''}`}
+              onMouseEnter={() => onSelect(key)}
+              onClick={() => onConfirmKey(area.id)}
+            >
+              <span className="proc-option-label">{area.name}</span>
+              {area.isSystem && <span className="proc-area-system-badge">sys</span>}
+              <span className="proc-option-key">{key}</span>
+            </button>
+          );
+        })}
+      </div>
+      <button className="proc-skip-btn" onClick={onSkip}>
+        Pomiń <kbd>Esc</kbd>
+      </button>
+    </div>
+  );
+}
+
 type ProjectGroup = {
   areaId: string; areaName: string;
   lifterId: string | null; lifterName: string | null;
@@ -840,9 +1053,10 @@ interface ProjectStepPanelProps {
   taskName: string;
   mode: ProjectPanelMode;
   onModeChange: (mode: ProjectPanelMode) => void;
+  defaultAreaId?: string | null;
 }
 
-function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip, onCreateProject, onConvertToProject, onCreateLifter, taskName, mode, onModeChange }: ProjectStepPanelProps) {
+function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputRef, listRef, onQueryChange, onSelect, onConfirm, onSkip, onCreateProject, onConvertToProject, onCreateLifter, taskName, mode, onModeChange, defaultAreaId }: ProjectStepPanelProps) {
   const [newProjName, setNewProjName] = useState('');
   const [newProjAreaId, setNewProjAreaId] = useState('');
   const [newProjLifterId, setNewProjLifterId] = useState<string | null>(null);
@@ -861,14 +1075,14 @@ function ProjectStepPanel({ projects, areas, lifters, query, cursorIndex, inputR
 
   const openNewProject = () => {
     setNewProjName(query);
-    setNewProjAreaId(areas[0]?.id ?? '');
+    setNewProjAreaId(defaultAreaId || areas[0]?.id || '');
     setNewProjLifterId(null);
     onModeChange('new-project');
   };
 
   const openConvert = () => {
     setConvProjName(taskName);
-    setConvAreaId(areas[0]?.id ?? '');
+    setConvAreaId(defaultAreaId || areas[0]?.id || '');
     setConvLifterId(null);
     setConvSubtasks('');
     onModeChange('convert');
