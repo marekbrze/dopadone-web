@@ -51,13 +51,23 @@ function needsDateStep(task: Task, projects: Project[], today: string): boolean 
   return !isProjectStartInFuture(project, today);
 }
 
-function buildSession(tasks: Task[], projects: Project[], _areas: Area[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
+function isZakupyTask(t: Task, projects: Project[], zakupyAreaId: string | null): boolean {
+  if (!zakupyAreaId) return false;
+  if (t.areaId === zakupyAreaId) return true;
+  if (t.projectId) return projects.find(p => p.id === t.projectId)?.areaId === zakupyAreaId;
+  return false;
+}
+
+function buildSession(tasks: Task[], projects: Project[], areas: Area[], today: string): { sessionTaskIds: string[]; allSteps: ProcessingStep[] } {
+  const zakupyAreaId = areas.find(a => a.isSystem && a.name === 'Zakupy')?.id ?? null;
+  const isZakupy = (t: Task) => isZakupyTask(t, projects, zakupyAreaId);
+
   const eligible = tasks.filter(t =>
     !t.done && (
       t.projectId === null ||
       t.areaId == null ||
-      t.effort == null ||
-      t.contextId === null ||
+      (!isZakupy(t) && t.effort == null) ||
+      (!isZakupy(t) && t.contextId === null) ||
       needsDateStep(t, projects, today)
     )
   );
@@ -82,8 +92,8 @@ function buildSession(tasks: Task[], projects: Project[], _areas: Area[], today:
   // Processing steps
   for (const task of inboxFirst) {
     if (task.projectId === null) allSteps.push({ taskId: task.id, kind: 'project' });
-    if (task.effort == null)     allSteps.push({ taskId: task.id, kind: 'energy' });
-    if (task.contextId === null) allSteps.push({ taskId: task.id, kind: 'context' });
+    if (!isZakupy(task) && task.effort == null)     allSteps.push({ taskId: task.id, kind: 'energy' });
+    if (!isZakupy(task) && task.contextId === null) allSteps.push({ taskId: task.id, kind: 'context' });
     if (needsDateStep(task, projects, today)) allSteps.push({ taskId: task.id, kind: 'date' });
   }
 
@@ -131,11 +141,12 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
 
   const today = useMemo(() => localDateStr(), []);
   const dateOptions = useMemo(() => getDateOptions(today), [today]);
+  const zakupyAreaId = useMemo(() => areas.find(a => a.isSystem && a.name === 'Zakupy')?.id ?? null, [areas]);
 
   // Summary stats (live from props)
   const inboxCount = useMemo(() => tasks.filter(t => !t.done && t.projectId === null).length, [tasks]);
-  const noEnergyCount = useMemo(() => tasks.filter(t => !t.done && t.effort == null).length, [tasks]);
-  const noContextCount = useMemo(() => tasks.filter(t => !t.done && t.contextId === null).length, [tasks]);
+  const noEnergyCount = useMemo(() => tasks.filter(t => !t.done && t.effort == null && !isZakupyTask(t, projects, zakupyAreaId)).length, [tasks, projects, zakupyAreaId]);
+  const noContextCount = useMemo(() => tasks.filter(t => !t.done && t.contextId === null && !isZakupyTask(t, projects, zakupyAreaId)).length, [tasks, projects, zakupyAreaId]);
   const noDateCount = useMemo(
     () => tasks.filter(t => !t.done && needsDateStep(t, projects, today)).length,
     [tasks, projects, today]
@@ -466,7 +477,11 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
           const area = areas[areaIdx];
           onUpdateTask(currentStep.taskId, { areaId: area.id }).then(() => {
             markStepCompleted(currentStep.taskId, 'area');
-            advanceStep(allSteps, currentStepIndex);
+            const steps = (zakupyAreaId && area.id === zakupyAreaId)
+              ? allSteps.filter(s => !(s.taskId === currentStep.taskId && (s.kind === 'energy' || s.kind === 'context')))
+              : allSteps;
+            if (steps !== allSteps) setAllSteps(steps);
+            advanceStep(steps, currentStepIndex);
           });
           return;
         }
@@ -494,7 +509,11 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               const area = areas[idx];
               onUpdateTask(currentStep.taskId, { areaId: area.id }).then(() => {
                 markStepCompleted(currentStep.taskId, 'area');
-                advanceStep(allSteps, currentStepIndex);
+                const steps = (zakupyAreaId && area.id === zakupyAreaId)
+                  ? allSteps.filter(s => !(s.taskId === currentStep.taskId && (s.kind === 'energy' || s.kind === 'context')))
+                  : allSteps;
+                if (steps !== allSteps) setAllSteps(steps);
+                advanceStep(steps, currentStepIndex);
               });
             }
           }
@@ -633,7 +652,7 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
   }, [
     screen, currentStep, currentStepIndex, allSteps,
     filteredProjects, projectCursorIndex, projectPanelMode, pendingOptionKey,
-    contexts, dateOptions, nothingToDo, today,
+    contexts, dateOptions, nothingToDo, today, zakupyAreaId, setAllSteps,
     onUpdateTask, markStepCompleted, advanceStep, goBack, startSession, markTaskDone, pickDate,
   ]);
 
@@ -842,7 +861,11 @@ export function ProcessingView({ tasks, projects, areas, lifters, contexts, onUp
               onConfirmKey={(areaId) => {
                 onUpdateTask(currentStep.taskId, { areaId }).then(() => {
                   markStepCompleted(currentStep.taskId, 'area');
-                  advanceStep(allSteps, currentStepIndex);
+                  const steps = (zakupyAreaId && areaId === zakupyAreaId)
+                    ? allSteps.filter(s => !(s.taskId === currentStep.taskId && (s.kind === 'energy' || s.kind === 'context')))
+                    : allSteps;
+                  if (steps !== allSteps) setAllSteps(steps);
+                  advanceStep(steps, currentStepIndex);
                 });
               }}
               onSkip={() => {
