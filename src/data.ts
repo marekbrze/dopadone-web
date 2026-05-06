@@ -130,8 +130,13 @@ export async function loadData(): Promise<AppState> {
   return ensureSystemAreas(await queryAllData())
 }
 
-async function ensureSystemAreas(data: AppState): Promise<AppState> {
+export async function ensureSystemAreas(data: AppState): Promise<AppState> {
   if (data.areas.some(a => a.isSystem && a.name === 'Zakupy')) return data;
+  if (isCloudSchema()) {
+    const id = await db.areas.add({ name: 'Zakupy', color: '#8B7355', isSystem: true }) as string;
+    const zakupy: Area = { id, name: 'Zakupy', color: '#8B7355', isSystem: true };
+    return { ...data, areas: [...data.areas, zakupy] };
+  }
   const zakupy: Area = { id: crypto.randomUUID(), name: 'Zakupy', color: '#8B7355', isSystem: true };
   await db.areas.add(zakupy);
   return { ...data, areas: [...data.areas, zakupy] };

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { liveQuery } from 'dexie';
 import type { AppState, Area, Lifter, Project, Task, Context, WorkBlock, CalendarEvent, DragPayload, ProjectNote, BlockTemplate } from './types';
-import { loadData, queryAllData, isNewUser, seedFromOnboarding } from './data';
+import { loadData, queryAllData, isNewUser, seedFromOnboarding, ensureSystemAreas } from './data';
 import { OnboardingWizard, SpotlightTour } from './components/OnboardingWizard';
 import type { OnboardingResult } from './components/OnboardingWizard';
 import { db } from './db';
@@ -138,13 +138,14 @@ export default function App() {
   useEffect(() => {
     if (!dataInitialized) return;
     const subscription = liveQuery(() => queryAllData()).subscribe({
-      next: (updated) => {
-        const wasEmpty = prevAreasCount.current === 0 && updated.areas.length > 0;
-        prevAreasCount.current = updated.areas.length;
+      next: async (updated) => {
+        const withSystem = await ensureSystemAreas(updated);
+        const wasEmpty = prevAreasCount.current === 0 && withSystem.areas.length > 0;
+        prevAreasCount.current = withSystem.areas.length;
         if (wasEmpty) {
-          applyInitialData(updated);
+          applyInitialData(withSystem);
         } else {
-          setData(updated);
+          setData(withSystem);
         }
       },
       error: (err) => console.error('liveQuery error:', err),
