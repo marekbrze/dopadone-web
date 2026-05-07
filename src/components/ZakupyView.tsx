@@ -1,6 +1,12 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Area, Project, Task } from '../types';
 import { RowMenuButton } from './RowMenuButton';
+import { localDateStr } from './dateStepUtils';
+
+function isCompletedToday(task: Task, today: string): boolean {
+  if (!task.completedAt) return false;
+  return localDateStr(new Date(task.completedAt)) === today;
+}
 
 interface Props {
   area: Area;
@@ -60,6 +66,8 @@ export function ZakupyView({
   const shopProjects = projects
     .filter(p => p.areaId === area.id && !p.archived)
     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+  const today = useMemo(() => localDateStr(), []);
 
   const allItems = tasks.filter(t =>
     shopProjects.some(p => p.id === t.projectId)
@@ -171,10 +179,9 @@ export function ZakupyView({
           .filter(t => t.projectId === project.id)
           .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
         const undone = shopTasks.filter(t => !t.done);
-        const done = shopTasks.filter(t => t.done);
+        const done = shopTasks.filter(t => t.done && isCompletedToday(t, today));
         const isEmpty = shopTasks.length === 0;
-        const autoCollapsed = undone.length === 0 && done.length > 0;
-        const isCollapsed = state.collapsed || autoCollapsed;
+        const isCollapsed = state.collapsed;
 
         return (
           <section
@@ -198,7 +205,7 @@ export function ZakupyView({
               ) : (
                 <button
                   className="zakupy-shop-name"
-                  onClick={() => updateShopState(project.id, { collapsed: !isCollapsed })}
+                  onClick={() => updateShopState(project.id, { collapsed: !state.collapsed })}
                   aria-expanded={!isCollapsed}
                 >
                   <span className="zakupy-shop-toggle">

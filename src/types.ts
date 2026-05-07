@@ -42,6 +42,7 @@ export interface Task {
   projectId: string | null;
   areaId?: string | null;
   done: boolean;
+  completedAt?: string | null;  // ISO 8601 — set when done flips to true, cleared when flipped to false
   priority: 'low' | 'medium' | 'high';
   notes: string;
   effort: Effort | null;

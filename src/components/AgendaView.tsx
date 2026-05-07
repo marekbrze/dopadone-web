@@ -41,6 +41,11 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function isCompletedToday(task: Task, today: string): boolean {
+  if (!task.completedAt) return false;
+  return toDateString(new Date(task.completedAt)) === today;
+}
+
 function getWeekDates(anchor: string): string[] {
   const d = new Date(anchor + 'T00:00:00');
   const day = d.getDay(); // 0=Sun
@@ -106,6 +111,7 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
 function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project[]): Task[] {
   return tasks.filter(task => {
     if (!task.done) return false;
+    if (!isCompletedToday(task, block.date)) return false;
     if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
@@ -234,7 +240,7 @@ export function AgendaView({ areas, lifters, projects, contexts, tasks, workBloc
     : [];
 
   const pinnedUndoneTasks = pinnedTasks.filter(t => !t.done);
-  const pinnedDoneTasks   = pinnedTasks.filter(t => t.done);
+  const pinnedDoneTasks   = pinnedTasks.filter(t => t.done && selectedBlock != null && isCompletedToday(t, selectedBlock.date));
 
   const blockProjectNoteGroups = useMemo(() => {
     if (!selectedBlock) return [];

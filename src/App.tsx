@@ -536,8 +536,12 @@ export default function App() {
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    await db.tasks.update(taskId, updates);
-    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...updates } : t) }) : d);
+    const finalUpdates: Partial<Task> = { ...updates };
+    if ('done' in updates) {
+      finalUpdates.completedAt = updates.done ? new Date().toISOString() : null;
+    }
+    await db.tasks.update(taskId, finalUpdates);
+    setData(d => d ? ({ ...d, tasks: d.tasks.map(t => t.id === taskId ? { ...t, ...finalUpdates } : t) }) : d);
   };
 
   const addNote = async (noteData: { title?: string; content: string }) => {

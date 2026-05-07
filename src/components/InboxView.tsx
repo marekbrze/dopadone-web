@@ -27,7 +27,7 @@ export function InboxView({ tasks, projects, areas, lifters, contexts, onAddTask
   const today = useMemo(() => localDateStr(), []);
 
   const undone = tasks.filter(t => !t.done);
-  const done = tasks.filter(t => t.done);
+  const done = tasks.filter(t => t.done && t.completedAt != null && localDateStr(new Date(t.completedAt)) === today);
   const selectedTask = tasks.find(t => t.id === selectedTaskId) ?? null;
 
   useEffect(() => {

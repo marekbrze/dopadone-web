@@ -47,6 +47,11 @@ function toDateString(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+function isCompletedToday(task: Task, today: string): boolean {
+  if (!task.completedAt) return false;
+  return toDateString(new Date(task.completedAt)) === today;
+}
+
 function formatTime(minutes: number): string {
   const h = Math.floor(minutes / 60).toString().padStart(2, '0');
   const m = (minutes % 60).toString().padStart(2, '0');
@@ -96,14 +101,15 @@ function getMatchingTasks(block: WorkBlock, tasks: Task[], projects: Project[]):
   });
 }
 
-function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project[]): Task[] {
+function getMatchingDoneTasks(block: WorkBlock, tasks: Task[], projects: Project[], today: string): Task[] {
   if (block.blockType === 'manual') {
     return (block.taskIds ?? [])
       .map(id => tasks.find(t => t.id === id))
-      .filter((t): t is Task => t !== undefined && t.done);
+      .filter((t): t is Task => t !== undefined && t.done && isCompletedToday(t, today));
   }
   return tasks.filter(task => {
     if (!task.done) return false;
+    if (!isCompletedToday(task, today)) return false;
     if (block.showOnlyDue && (!task.plannedDate || task.plannedDate > block.date)) return false;
     const project = projects.find(p => p.id === task.projectId);
     if (!project) return false;
@@ -351,7 +357,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
 
   const blockUndoneTasks = blockTasks.filter(t => !t.done);
   const blockDoneTasks = displayBlock
-    ? getMatchingDoneTasks(displayBlock, tasks, projects)
+    ? getMatchingDoneTasks(displayBlock, tasks, projects, todayStr)
     : [];
 
   const isCurrentlyActive = displayBlock?.id === currentBlock?.id;
@@ -486,7 +492,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
   );
 
   const plannedDoneTasks = React.useMemo(
-    () => tasks.filter(t => t.done && t.plannedDate != null && t.plannedDate <= todayStr),
+    () => tasks.filter(t => t.done && isCompletedToday(t, todayStr) && t.plannedDate != null && t.plannedDate <= todayStr),
     [tasks, todayStr]
   );
 
