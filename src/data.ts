@@ -130,14 +130,76 @@ export async function loadData(): Promise<AppState> {
   return ensureSystemAreas(await queryAllData())
 }
 
+let creationLock: Promise<void> | null = null;
+
+async function waitForCloudInSync(timeoutMs = 30000): Promise<'in-sync' | 'skip'> {
+  if (!isCloudSchema()) return 'in-sync';
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (r: 'in-sync' | 'skip') => {
+      if (done) return;
+      done = true;
+      sub.unsubscribe();
+      clearTimeout(timer);
+      resolve(r);
+    };
+    const sub = db.cloud.syncState.subscribe((state) => {
+      if (state.phase === 'in-sync') finish('in-sync');
+      else if (state.phase === 'error' || state.status === 'offline') finish('skip');
+    });
+    const timer = setTimeout(() => finish('skip'), timeoutMs);
+  });
+}
+
 export async function ensureSystemAreas(data: AppState): Promise<AppState> {
-  if (data.areas.some(a => a.isSystem && a.name === 'Zakupy')) return data;
-  if (isCloudSchema()) {
-    const id = await db.areas.add({ name: 'Zakupy', color: '#8B7355', isSystem: true }) as string;
-    const zakupy: Area = { id, name: 'Zakupy', color: '#8B7355', isSystem: true };
-    return { ...data, areas: [...data.areas, zakupy] };
+  const zakupys = data.areas.filter(a => a.isSystem && a.name === 'Zakupy');
+
+  if (zakupys.length > 1) {
+    const extras = zakupys.slice(1);
+    const extraIds = new Set(extras.map(a => a.id));
+    await db.areas.bulkDelete(extras.map(a => a.id));
+    return { ...data, areas: data.areas.filter(a => !extraIds.has(a.id)) };
   }
-  const zakupy: Area = { id: crypto.randomUUID(), name: 'Zakupy', color: '#8B7355', isSystem: true };
-  await db.areas.add(zakupy);
-  return { ...data, areas: [...data.areas, zakupy] };
+
+  if (zakupys.length === 1) return data;
+
+  if (creationLock) {
+    await creationLock;
+    const fresh = await queryAllData();
+    const freshZakupys = fresh.areas.filter(a => a.isSystem && a.name === 'Zakupy');
+    if (freshZakupys.length >= 1) return fresh;
+  }
+
+  let release!: () => void;
+  creationLock = new Promise<void>((r) => { release = r; });
+
+  try {
+    if (isCloudSchema()) {
+      const result = await waitForCloudInSync();
+      // Skip creation when offline/error — cloud may already have a system Zakupy we can't see yet
+      if (result === 'skip') return data;
+
+      const fresh = await queryAllData();
+      const freshZakupys = fresh.areas.filter(a => a.isSystem && a.name === 'Zakupy');
+      if (freshZakupys.length >= 1) {
+        if (freshZakupys.length > 1) {
+          const extras = freshZakupys.slice(1);
+          const extraIds = new Set(extras.map(a => a.id));
+          await db.areas.bulkDelete(extras.map(a => a.id));
+          return { ...fresh, areas: fresh.areas.filter(a => !extraIds.has(a.id)) };
+        }
+        return fresh;
+      }
+      const id = await db.areas.add({ name: 'Zakupy', color: '#8B7355', isSystem: true }) as string;
+      const zakupy: Area = { id, name: 'Zakupy', color: '#8B7355', isSystem: true };
+      return { ...fresh, areas: [...fresh.areas, zakupy] };
+    }
+
+    const zakupy: Area = { id: crypto.randomUUID(), name: 'Zakupy', color: '#8B7355', isSystem: true };
+    await db.areas.add(zakupy);
+    return { ...data, areas: [...data.areas, zakupy] };
+  } finally {
+    release();
+    creationLock = null;
+  }
 }
