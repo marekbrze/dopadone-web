@@ -246,6 +246,29 @@ export function ProjectReviewView({
     }
   }, [lifterIndex, lifterQueue]);
 
+  const handleSkipCurrentLifter = useCallback(() => {
+    const item = lifterQueue[lifterIndex];
+    if (item) {
+      setLifterStats(prev => [...prev, {
+        lifterId: item.lifterId,
+        name: item.name,
+        processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0,
+        elapsedMs: 0,
+        skipped: true,
+      }]);
+    }
+
+    const nextIndex = lifterIndex + 1;
+    if (nextIndex < lifterQueue.length) {
+      setLifterIndex(nextIndex);
+      setMarkedForArchive(new Set());
+      setStats({ processed: 0, archived: 0, tasksMarkedDone: 0, tasksAdded: 0 });
+      setScreen('lifter-summary');
+    } else {
+      setScreen('done');
+    }
+  }, [lifterIndex, lifterQueue]);
+
   // ── Processing helpers ──
 
   const advanceProject = useCallback(() => {
@@ -271,8 +294,9 @@ export function ProjectReviewView({
     if (!currentProjectId) return;
     await onArchiveProject(currentProjectId);
     setStats(s => ({ ...s, processed: s.processed + 1, archived: s.archived + 1 }));
-    advanceProject();
-  }, [currentProjectId, onArchiveProject, advanceProject]);
+    // Don't call advanceProject — the archived project is removed from activeProjectIds,
+    // so currentIndex naturally points to the next project.
+  }, [currentProjectId, onArchiveProject]);
 
   const handleSkip = useCallback(() => {
     setStats(s => ({ ...s, processed: s.processed + 1 }));
@@ -284,8 +308,8 @@ export function ProjectReviewView({
     await onDeleteProject(currentProjectId);
     setConfirmDelete(null);
     setStats(s => ({ ...s, processed: s.processed + 1 }));
-    advanceProject();
-  }, [currentProjectId, onDeleteProject, advanceProject]);
+    // Don't call advanceProject — same reason as handleArchiveCurrent.
+  }, [currentProjectId, onDeleteProject]);
 
   const handleToggleTask = useCallback(async (task: Task) => {
     const newDone = !task.done;
@@ -328,6 +352,14 @@ export function ProjectReviewView({
 
   // ── Scroll & focus effects ──
 
+  // After archive/delete, if all projects in this lifter are gone, finish the lifter.
+  useEffect(() => {
+    if (screen !== 'processing') return;
+    if (currentProject === null) {
+      finishLifter(stats);
+    }
+  }, [screen, currentProject, finishLifter, stats]);
+
   useEffect(() => {
     if (screen !== 'processing') return;
     const list = taskListRef.current;
@@ -354,6 +386,7 @@ export function ProjectReviewView({
           return;
         }
         if (e.key === 'Enter') { e.preventDefault(); handleStart(); }
+        if (e.key === 's') { e.preventDefault(); handleSkipCurrentLifter(); }
         if (e.key === 'a') { e.preventDefault(); quickAddProjectRef.current?.focus(); }
         if (e.key === 'Escape') { e.preventDefault(); onClose(); }
       };
@@ -425,7 +458,7 @@ export function ProjectReviewView({
   }, [
     screen, projectTasks, taskCursorIndex, confirmDelete, currentProjectId,
     handleToggleTask, handleArchiveCurrent, handleDeleteCurrent, handleSkip,
-    goBackProject, handleStart, handleNextLifter, handleSkipLifter, onClose,
+    goBackProject, handleStart, handleNextLifter, handleSkipLifter, handleSkipCurrentLifter, onClose,
   ]);
 
   // ── No lifters / no projects ──
@@ -491,6 +524,9 @@ export function ProjectReviewView({
           <div className="pr-summary-actions">
             <button className="proc-start-btn" onClick={handleStart}>
               Start <kbd>↵</kbd>
+            </button>
+            <button className="proc-skip-btn" onClick={handleSkipCurrentLifter}>
+              Pomiń <kbd>s</kbd>
             </button>
             <button className="proc-skip-btn" onClick={onClose}>
               Anuluj <kbd>Esc</kbd>
@@ -615,15 +651,8 @@ export function ProjectReviewView({
   // ── Render: processing ──
 
   if (!currentProject) {
-    return (
-      <div className="processing-view">
-        <div className="proc-done">
-          <div className="proc-done-icon">✓</div>
-          <div className="proc-done-title">Wszystkie projekty przetworzone</div>
-          <button className="proc-start-btn" onClick={onClose}>Zamknij</button>
-        </div>
-      </div>
-    );
+    // Project was archived/deleted — useEffect will transition to next lifter
+    return null;
   }
 
   const progressPct = activeProjectIds.length > 0 ? ((currentIndex + 1) / activeProjectIds.length) * 100 : 0;
