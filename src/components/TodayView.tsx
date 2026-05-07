@@ -490,6 +490,25 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
     [tasks, todayStr]
   );
 
+  type PlannedAreaGroup = { areaId: string | null; areaName: string; areaColor: string; areaOrder: number; tasks: Task[] };
+
+  const plannedGroupedByArea: PlannedAreaGroup[] = React.useMemo(() => {
+    const areaMap = new Map<string, PlannedAreaGroup>();
+    for (const task of plannedTasks) {
+      const project = projects.find(p => p.id === task.projectId);
+      const areaId = project?.areaId ?? null;
+      const area = areas.find(a => a.id === areaId);
+      const key = areaId ?? '__no_area__';
+      if (!areaMap.has(key)) {
+        areaMap.set(key, { areaId, areaName: area?.name ?? 'Bez obszaru', areaColor: area?.color ?? '#888', areaOrder: (area as any)?.order ?? 999, tasks: [] });
+      }
+      areaMap.get(key)!.tasks.push(task);
+    }
+    const result = [...areaMap.values()];
+    result.sort((a, b) => a.areaOrder - b.areaOrder);
+    return result;
+  }, [plannedTasks, projects, areas]);
+
   const plannedGroupedByContext: ContextGroup[] = React.useMemo(() => {
     const contextMap = new Map<string, ContextGroup>();
     for (const task of plannedTasks) {
@@ -1290,12 +1309,34 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                         onChange={e => setAndSaveGrouping(e.target.value as TaskGrouping)}
                       >
                         <option value="none">Brak grupowania</option>
+                        <option value="area">Obszar</option>
                         <option value="context">Kontekst</option>
                         <option value="effort">Wysiłek</option>
                       </select>
                     </div>
                     {plannedExpanded && (
                       <div className="today-planned-list">
+                        {taskGrouping === 'area' && plannedGroupedByArea.map(areaGroup => (
+                          <div key={areaGroup.areaId ?? '__no_area__'} className="agenda-task-area-group">
+                            <div className="agenda-task-area-header" style={{ borderLeftColor: areaGroup.areaColor }}>{areaGroup.areaName}</div>
+                            {areaGroup.tasks.map(task => {
+                              const project = projects.find(p => p.id === task.projectId);
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="today-task-item"
+                                  onClick={() => setSelectedTaskId(prev => prev === task.id ? null : task.id)}
+                                >
+                                  <input type="checkbox" checked={false} onChange={() => onUpdateTask(task.id, { done: true })} onClick={e => e.stopPropagation()} />
+                                  <span className="today-task-name">{task.name}</span>
+                                  {project && <span className="today-planned-project">{project.name}</span>}
+                                  <PlannedDatePicker date={task.plannedDate} isNext={task.isNext} today={todayStr} onChange={(date, isNext) => onUpdateTask(task.id, { plannedDate: date, isNext: isNext ?? false })} />
+                                  <span className="today-priority-dot" style={{ background: priorityColors[task.priority] }} title={task.priority} />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ))}
                         {taskGrouping === 'context' && plannedGroupedByContext.map(ctxGroup => (
                           <div key={ctxGroup.contextId ?? '__no_context__'} className="agenda-task-context-group">
                             <div className="agenda-task-context-header">
@@ -1340,7 +1381,7 @@ export function TodayView({ areas, lifters, projects, tasks, contexts, workBlock
                             })}
                           </div>
                         ))}
-                        {(taskGrouping === 'none' || taskGrouping === 'area') && plannedTasks.map(task => {
+                        {taskGrouping === 'none' && plannedTasks.map(task => {
                           const project = projects.find(p => p.id === task.projectId);
                           return (
                             <div
