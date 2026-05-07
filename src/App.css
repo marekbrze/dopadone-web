@@ -1837,6 +1837,28 @@ body {
   margin-top: 0;
 }
 
+.move-area-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 7px 14px;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  align-self: flex-start;
+}
+
+.move-area-btn:hover {
+  background: var(--surface2);
+  border-color: var(--border);
+  color: var(--text);
+}
+
 .archive-project-btn {
   background: transparent;
   border: 1px solid var(--border);
@@ -1856,6 +1878,84 @@ body {
 .archive-project-btn:hover {
   background: var(--surface2);
   border-color: var(--border);
+  color: var(--text);
+}
+
+.move-project-field {
+  margin-bottom: 20px;
+}
+
+.move-project-field label {
+  display: block;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.move-project-field select,
+.move-project-field input[type="text"] {
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text);
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 15px;
+  font-weight: 300;
+  padding: 8px 0;
+  outline: none;
+  transition: border-color 0.15s;
+  appearance: none;
+}
+
+.move-project-field select {
+  cursor: pointer;
+}
+
+.move-project-field select:focus,
+.move-project-field input[type="text"]:focus {
+  border-bottom-color: var(--accent);
+}
+
+.move-project-field input[type="text"]::placeholder {
+  color: var(--text-faint);
+}
+
+.move-project-lifter-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.move-project-lifter-row select,
+.move-project-lifter-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.move-project-new-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'IBM Plex Sans', Helvetica Neue, Arial, sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.move-project-new-btn:hover {
+  background: var(--surface2);
   color: var(--text);
 }
 

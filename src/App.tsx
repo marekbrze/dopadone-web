@@ -13,6 +13,7 @@ import { TaskDetailPanel } from './components/TaskDetailPanel';
 import { RowMenuButton } from './components/RowMenuButton';
 import { ItemDetailPanel } from './components/ItemDetailPanel';
 import { ProjectDetailPanel } from './components/ProjectDetailPanel';
+import { MoveProjectModal } from './components/MoveProjectModal';
 import { AgendaView } from './components/AgendaView';
 import { TodayView } from './components/TodayView';
 import { InboxView } from './components/InboxView';
@@ -57,6 +58,7 @@ export default function App() {
   const [editingLifterId, setEditingLifterId] = useState<string | null>(null);
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [modal, setModal] = useState<null | 'area' | 'lifter' | 'project' | 'settings' | 'inbox-add' | 'inbox-import'>(null);
+  const [movingProjectId, setMovingProjectId] = useState<string | null>(null);
   const [expandedColumns, setExpandedColumns] = useState<Set<string>>(new Set(['lifters']));
   const [showPlanDone, setShowPlanDone] = useState(false);
   const [showArchivedProjects, setShowArchivedProjects] = useState(false);
@@ -715,6 +717,47 @@ export default function App() {
     if (!project || project.lifterId === targetLifterId) return;
     await db.projects.update(projectId, { lifterId: targetLifterId });
     setData(d => d ? ({ ...d, projects: d.projects.map(p => p.id === projectId ? { ...p, lifterId: targetLifterId } : p) }) : d);
+  };
+
+  const moveProjectToArea = async (projectId: string, targetAreaId: string, targetLifterId: string | null, newLifterName?: string) => {
+    const project = data.projects.find(p => p.id === projectId);
+    if (!project || project.areaId === targetAreaId) return;
+
+    let lifterId = targetLifterId;
+    if (newLifterName) {
+      let lifter: Lifter;
+      if (isCloudSchema()) {
+        const id = await db.lifters.add({ name: newLifterName, areaId: targetAreaId }) as string;
+        lifter = { id, name: newLifterName, areaId: targetAreaId };
+      } else {
+        lifter = { id: newId(), name: newLifterName, areaId: targetAreaId };
+        await db.lifters.put(lifter);
+      }
+      lifterId = lifter.id;
+    }
+
+    const projectTasks = data.tasks.filter(t => t.projectId === projectId);
+
+    await db.transaction('rw', [db.projects, db.tasks], async () => {
+      await db.projects.update(projectId, { areaId: targetAreaId, lifterId });
+      if (projectTasks.length > 0) {
+        await db.tasks.where('projectId').equals(projectId).modify({ areaId: targetAreaId });
+      }
+    });
+
+    setData(d => {
+      if (!d) return d;
+      const lifterToAdd = newLifterName ? { id: lifterId!, name: newLifterName, areaId: targetAreaId } as Lifter : null;
+      return {
+        ...d,
+        lifters: lifterToAdd ? [...d.lifters, lifterToAdd] : d.lifters,
+        projects: d.projects.map(p => p.id === projectId ? { ...p, areaId: targetAreaId, lifterId } : p),
+        tasks: d.tasks.map(t => t.projectId === projectId ? { ...t, areaId: targetAreaId } : t),
+      };
+    });
+
+    setEditingProjectId(null);
+    setMovingProjectId(null);
   };
 
   const handleProjectDragEnd = () => {
@@ -1731,6 +1774,7 @@ export default function App() {
                 if (lifterId) moveProjectToLifter(editingProjectId, lifterId);
                 else updateProject(editingProjectId, { lifterId: null });
               }}
+              onMoveToArea={() => setMovingProjectId(editingProjectId)}
               onArchive={() => { archiveProject(editingProjectId); setEditingProjectId(null); }}
               onDelete={() => { deleteProject(editingProjectId); setEditingProjectId(null); }}
               onClose={() => setEditingProjectId(null)}
@@ -1767,6 +1811,19 @@ export default function App() {
           onClose={() => setModal(null)}
         />
       )}
+      {movingProjectId && (() => {
+        const project = data.projects.find(p => p.id === movingProjectId);
+        if (!project) return null;
+        return (
+          <MoveProjectModal
+            projectAreaId={project.areaId}
+            areas={data.areas}
+            lifters={data.lifters}
+            onMove={(areaId, lifterId, newLifterName) => moveProjectToArea(movingProjectId, areaId, lifterId, newLifterName)}
+            onClose={() => setMovingProjectId(null)}
+          />
+        );
+      })()}
       {showTour && (
         <SpotlightTour
           onDone={() => {

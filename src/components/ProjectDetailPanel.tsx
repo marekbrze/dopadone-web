@@ -8,6 +8,7 @@ interface Props {
   lifters: Lifter[];
   onUpdate: (updates: Partial<Project>) => void;
   onMoveToLifter: (lifterId: string | null) => void;
+  onMoveToArea: () => void;
   onArchive: () => void;
   onDelete: () => void;
   onClose: () => void;
@@ -39,7 +40,7 @@ function buildStartDate(year: string, month: string, day: string): string | null
   return `${year}-${month}-${day}`;
 }
 
-export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveToLifter, onArchive, onDelete, onClose }: Props) {
+export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveToLifter, onMoveToArea, onArchive, onDelete, onClose }: Props) {
   const [localName, setLocalName] = useState(project.name);
   const [pendingEndDate, setPendingEndDate] = useState<string | null | undefined>(undefined);
 
@@ -230,6 +231,7 @@ export function ProjectDetailPanel({ project, tasks, lifters, onUpdate, onMoveTo
         </div>
 
         <div className="project-danger-zone">
+          <button className="move-area-btn" onClick={onMoveToArea}>Przenieś do innego obszaru</button>
           <button className="archive-project-btn" onClick={onArchive}>Archiwizuj projekt</button>
           <button className="delete-task-btn" onClick={onDelete}>Usuń projekt</button>
         </div>
