@@ -65,7 +65,6 @@ function buildSession(tasks: Task[], projects: Project[], areas: Area[], today: 
   const eligible = tasks.filter(t =>
     !t.done && (
       t.projectId === null ||
-      t.areaId == null ||
       (!isZakupy(t) && t.effort == null) ||
       (!isZakupy(t) && t.contextId === null) ||
       needsDateStep(t, projects, today)
